@@ -58,7 +58,7 @@ void benchmark(int ntests, int npoints, int ndims, int cospherical)
     /* Accumulate total number of facets and vertices created: */
     nfacets += polytoop_getnumfacets(polytoop);
     nridges += polytoop_getnumridges(polytoop);
-    nverts += polytoop_gettotalnumvertices(polytoop);
+    nverts += polytoop_getnumvertices(polytoop);
 
     /* Clean up: */
     polytoop_delete(polytoop);

@@ -1,32 +1,16 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(polytoop C)
+project(polytoop LANGUAGES C)
+
+# Only debug and release:
+set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "" FORCE)
 
 if(UNIX)
-  set(CMAKE_ASM_NASM_FLAGS "-f elf64 -DUNIX" CACHE STRING "" FORCE)
-
   set(CMAKE_C_FLAGS "-fvisibility=hidden -fPIC -no-pie -Wall -Wextra -std=c99 -pedantic" CACHE STRING "" FORCE)
-  if(MEMCHECK)
-    # valgind and AddressSanitizer don't mix
-    set(CMAKE_C_FLAGS_DEBUG "-g ${CMAKE_C_FLAGS}" CACHE STRING "" FORCE)
-  else()
-    # enable AddressSanitizer
-    if (CMAKE_COMPILER_IS_GNUCC)
-      # gcc
-      set(CMAKE_C_FLAGS_DEBUG "-g -fsanitize=address -static-libasan ${CMAKE_C_FLAGS}" CACHE STRING "" FORCE)
-    else()
-      # clang
-      set(CMAKE_C_FLAGS_DEBUG "-g -fsanitize=address ${CMAKE_C_FLAGS}" CACHE STRING "" FORCE)
-    endif()
-  endif()
   set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG -s ${CMAKE_C_FLAGS}" CACHE STRING "" FORCE)
-  set(CMAKE_C_FLAGS_MINSIZEREL "-Os -DNDEBUG -s ${CMAKE_C_FLAGS}" CACHE STRING "" FORCE)
-  set(CMAKE_C_FLAGS_RELWITHDEBINFO "-g -O2 -DNDEBUG ${CMAKE_C_FLAGS}" CACHE STRING "" FORCE)
 endif()
 
 if (MSVC)
-  set(CMAKE_ASM_NASM_FLAGS "-f win64 -DWIN64" CACHE STRING "" FORCE)
-
   # Replace dynamic runtime library (/MD) with static runtime library (/MT):
   set(variables CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE)
   foreach(variable ${variables})
@@ -40,7 +24,24 @@ if (MSVC)
   # No manifest:
   set(CMAKE_EXE_LINKER_FLAGS "/MANIFEST:NO" CACHE STRING "" FORCE)  # no EXE manifest
   set(CMAKE_SHARED_LINKER_FLAGS "/MANIFEST:NO" CACHE STRING "" FORCE)  # no DLL manifest
+
+  # Remove unused flags:
+  unset(CMAKE_C_FLAGS_MINSIZEREL CACHE)
+  unset(CMAKE_C_FLAGS_RELWITHDEBINFO CACHE)
+  unset(CMAKE_EXE_LINKER_FLAGS_MINSIZEREL CACHE)
+  unset(CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO CACHE)
+  unset(CMAKE_MODULE_LINKER_FLAGS_MINSIZEREL CACHE)
+  unset(CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO CACHE)
+  unset(CMAKE_SHARED_LINKER_FLAGS_MINSIZEREL CACHE)
+  unset(CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO CACHE)
+  unset(CMAKE_STATIC_LINKER_FLAGS_MINSIZEREL CACHE)
+  unset(CMAKE_STATIC_LINKER_FLAGS_RELWITHDEBINFO CACHE)
+  unset(CMAKE_RC_FLAGS_MINSIZEREL CACHE)
+  unset(CMAKE_RC_FLAGS_RELWITHDEBINFO CACHE)
 endif()
+
+# Default install dir:
+set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/.." CACHE STRING "" FORCE)
 
 # Switches to enable examples and/or tests
 option(EXAMPLES_ENABLED "enable examples" ON)
