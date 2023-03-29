@@ -513,7 +513,7 @@ void lqformq(int m, int n, double const* dcmp, double* matq)
   matrix_unit(n, matq);
 
   /* Apply orthogonal transformation Q_1 * ... * Q_{n - 1} (last to first): */
-  for (i = m < n ? m - 1 : n - 2; i >= 0; --i) {
+  for (i = m < n ? m - 1 : n - 1; i >= 0; --i) {
     /* Squared norm of Householder vector v: */
     vtv = 1.0 + vector_normsq(n - i - 1, &dcmp[i * n + i + 1]);
 

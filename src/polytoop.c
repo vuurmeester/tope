@@ -1568,7 +1568,7 @@ int polytoop_getnumridges(Polytoop* polytoop)
 
 
 
-int polytoop_gettotalnumvertices(Polytoop* polytoop)
+int polytoop_getnumvertices(Polytoop* polytoop)
 {
   return polytoop->nverts;
 }

@@ -43,7 +43,7 @@ int polytoop_getnumfacets(Polytoop* polytoop);
 int polytoop_getnumridges(Polytoop* polytoop);
 
 /** Total number of vertices. */
-int polytoop_gettotalnumvertices(Polytoop* polytoop);
+int polytoop_getnumvertices(Polytoop* polytoop);
 
 /** Get vertex index. */
 int polytoop_getvertexindex(Polytoop* polytoop, polytoop_Facet* facet, int ivertex);
