@@ -1156,7 +1156,6 @@ void polytoop_fromplanes(Polytoop* polytoop, int n, int d, double* normals,
   int ivert;
   int nfacets;
   int* p;
-  double dist;
   double* mata;
   double* b;
   double* c;
@@ -1205,7 +1204,7 @@ void polytoop_fromplanes(Polytoop* polytoop, int n, int d, double* normals,
   points = malloc(n * d * sizeof(double));
   for (i = 0; i < n; ++i) {
     memcpy(&points[i * d], &normals[i * d], d * sizeof(double));
-    dist = dists[i] - vec_dot(d, x, &normals[i * d]);
+    double dist = dists[i] - vec_dot(d, x, &normals[i * d]);
     assert(dist > 0.0);
     vec_scale(d, &points[i * d], 1.0 / dist);
   }
@@ -1228,40 +1227,27 @@ void polytoop_fromplanes(Polytoop* polytoop, int n, int d, double* normals,
   points = malloc(nfacets * d * sizeof(double));
   for (facet = recpolytoop->firstfacet, ifacet = 0; facet != NULL;
        facet = facet->next, ++ifacet) {
-    /* Get vertices and centroid: */
-    vec_reset(d, centroid);
+    /* Get vertices: */
     for (ivert = 0; ivert < d; ++ivert) {
       polytoop_vertex_getposition(polytoop_facet_getvertex(facet, ivert),
                                   &verts[ivert * d]);
-      vec_add(d, centroid, &verts[ivert * d]);
-    }
-    vec_scale(d, centroid, 1.0 / (double)d);
-
-    /* Vertices relative to first vertex: */
-    for (ivert = 0; ivert < d - 1; ++ivert) {
-      memcpy(&dcmp[ivert * d], &verts[(ivert + 1) * d], d * sizeof(double));
-      vec_sub(d, &dcmp[ivert * d], &verts[0 * d]);
     }
 
-    /* LQ decomposition of vertices: */
-    lqdc(d - 1, d, dcmp, p);
+    /* Simplex analysis (replaces verts with span): */
+    double vol;
+    analysesimplex(d, d, verts, &vol, centroid);
 
-    /* Q-matrix:*/
-    lqformq(d - 1, d, dcmp, matq);
-
-    /* Last vector of Q is normal: */
-    memcpy(normal, &matq[(d - 1) * d], d * sizeof(double));
-
-    /* Plane distance from origin: */
-    dist = vec_dot(d, normal, centroid);
-    if (dist < 0.0) {
-      vec_neg(d, normal);
-      dist *= -1.0;
+    /* Construct normal: */
+    memcpy(normal, centroid, d * sizeof(double));
+    for (i = 0; i < d - 1; ++i) {
+      double fac = vec_dot(d, normal, &verts[i * d]);
+      vec_adds(d, normal, &verts[i * d], -fac);
     }
+    double dist2 = vec_nrmsq(d, normal);
 
     /* Construct vertex position: */
     memcpy(&points[ifacet * d], normal, d * sizeof(double));
-    vec_scale(d, &points[ifacet * d], 1.0 / dist);
+    vec_scale(d, &points[ifacet * d], 1.0 / dist2);
     vec_add(d, &points[ifacet * d], x);
   }
 
