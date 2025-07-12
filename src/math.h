@@ -1,5 +1,4 @@
-#ifndef __math_h__
-#define __math_h__
+#pragma once
 
 #include <stdio.h>
 
@@ -12,75 +11,66 @@
 #endif
 
 /** Add a vector to another. */
-void vector_add(int n, double* x, double const* y);
+void vec_add(int n, double* x, double const* y);
 
 /** Subtract a vector from another. */
-void vector_subtract(int n, double* x, double const* y);
+void vec_sub(int n, double* x, double const* y);
 
 /** Add a scaled vector to another. */
-void vector_add_scaled(int n, double* x, double const* y, double scale);
+void vec_adds(int n, double* x, double const* y, double scale);
 
 /** Scale a vector. */
-void vector_scale(int n, double* x, double scale);
+void vec_scale(int n, double* x, double scale);
 
 /** Negate a vector. */
-void vector_negate(int n, double* x);
+void vec_neg(int n, double* x);
 
 /** Set all components of a vector. */
-void vector_set(int n, double* x, double scalar);
+void vec_set(int n, double* x, double scalar);
 
 /** Reset all components of a vector. */
-void vector_reset(int n, double* x);
+void vec_reset(int n, double* x);
 
 /** Inner product of two vectors. */
-double vector_ip(int n, double const* x, double const* y);
+double vec_dot(int n, double const* x, double const* y);
 
 /** Squared norm of a vector. */
-double vector_normsq(int n, double const* x);
+double vec_nrmsq(int n, double const* x);
 
 /** Norm of a vector. */
-double vector_norm(int n, double const* x);
+double vec_norm(int n, double const* x);
 
 /** Normalize the vector. */
-void vector_normalize(int n, double* x);
+void vec_normalize(int n, double* x);
 
 /** Sum of elements of a vector. */
-double vector_sum(int n, double const* x);
-
-/** Print a matrix to a buffer. */
-void matrix_sprint(int m, int n, double const* mat, char* str);
-
-/** Print a matrix to stdout. */
-void matrix_print(int m, int n, double const* mat);
-
-/** Print a matrix. */
-void matrix_fprint(int m, int n, double const* mat, FILE* outstream);
-
-/** Axis-aligned bounding box of a point set. */
-void boundingbox(int npoints,
-  int ndims,
-  double const* points,
-  int* minindices,
-  int* maxindices,
-  double* minima,
-  double* maxima);
-
-/** Compute volume, centroid and span of multidimensional simplex. */
-void analysesimplex(int npoints,
-  int ndims,
-  double const* points,
-  double* volume,
-  double* centroid,
-  double* span);
+double vec_sum(int n, double const* x);
 
 /** Maximum element of a vector. */
-int vector_maxindex(int n, double const* x);
+int vec_maxindex(int n, double const* x);
 
 /** Minimum element of a vector. */
-int vector_minindex(int n, double const* x);
+int vec_minindex(int n, double const* x);
 
 /** Print a vector to stdout. */
-void vector_print(int n, double const* x);
+void vec_print(int n, double const* x);
+
+/** Print a matrix to a buffer. */
+void mat_sprint(int m, int n, double const* mat, char* str);
+
+/** Print a matrix to stdout. */
+void mat_print(int m, int n, double const* mat);
+
+/** Print a matrix. */
+void mat_fprint(int m, int n, double const* mat, FILE* outstream);
+
+/** Axis-aligned bounding box of a point set. */
+void boundingbox(int npoints, int ndims, double const* points, int* minindices,
+                 int* maxindices, double* minima, double* maxima);
+
+/** Compute volume, centroid and span of multidimensional simplex. */
+void analysesimplex(int npoints, int ndims, double const* points,
+                    double* volume, double* centroid, double* span);
 
 /** LQ = PA decomposition. Returns determinant. */
 double lqdc(int m, int n, double* mat, int* p);
@@ -98,7 +88,8 @@ void lqformq(int m, int n, double const* dcmp, double* matq);
     return value == -1: unbounded
     return value == -2: infeasible
 */
-int linprog_rn(int m, int n, double const* mata, double const* b, double const* c, double* x);
+int linprog_rn(int m, int n, double const* mata, double const* b,
+               double const* c, double* x);
 
 /** Solve linear program with Dantzig's simplex method.
     Canonical form.
@@ -111,6 +102,5 @@ int linprog_rn(int m, int n, double const* mata, double const* b, double const* 
     return value == -1: unbounded
     return value == -2: infeasible
   */
-int linprog_cn(int meq, int mineq, int n, double const* mata, double const* b, double const* c, double* x);
-
-#endif
+int linprog_cn(int meq, int mineq, int n, double const* mata, double const* b,
+               double const* c, double* x);

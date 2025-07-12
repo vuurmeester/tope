@@ -1,5 +1,4 @@
-#ifndef __allocator_h__
-#define __allocator_h__
+#pragma once
 
 typedef struct _Allocator Allocator;
 
@@ -20,5 +19,3 @@ void allocator_clear(Allocator* allocator);
 
 /** Release the allocator object, and all memory still associated with it. */
 void allocator_delete(Allocator* allocator);
-
-#endif  /* __allocator_h__ */

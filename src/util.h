@@ -1,5 +1,4 @@
-#ifndef __util_h__
-#define __util_h__
+#pragma once
 
 /* alloca: */
 #ifdef _WIN32
@@ -16,5 +15,3 @@ double random_getdouble();
 
 /** Time difference [s] since last call. */
 double polytoop_clock_gettimediff();
-
-#endif

@@ -64,7 +64,7 @@ int main()
   polytoop_interpolate(polytoop, xi, indices, weights);
 
   /* Sum of weights should be 1: */
-  if (fabs(vector_sum(DIM + 1, weights) - 1.0) > 1.0e-6) {
+  if (fabs(vec_sum(DIM + 1, weights) - 1.0) > 1.0e-6) {
     return -1;
   }
 
@@ -75,7 +75,7 @@ int main()
     for (ivertex = 0; ivertex < polytoop_facet_getnumvertices(facet); ++ivertex) {
       polytoop_vertex_getposition(polytoop_facet_getvertex(facet, ivertex), &positions[ivertex * DIM]);
     }
-    matrix_print(polytoop_facet_getnumvertices(facet), DIM, positions);
+    mat_print(polytoop_facet_getnumvertices(facet), DIM, positions);
     free(positions);
   }
 
