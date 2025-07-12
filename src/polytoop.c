@@ -1637,15 +1637,16 @@ void polytoop_interpolate(Polytoop* polytoop, double const* xi, int* indices,
   assert(polytoop->isdelaunay);
 
   /* Some space for various tasks: */
-  xiprime = alloca((polytoop->dim - 1) * sizeof(double));
-  verts = alloca((polytoop->dim - 1) * (polytoop->dim - 1) * sizeof(double));
-  matq = alloca((polytoop->dim - 1) * (polytoop->dim - 1) * sizeof(double));
-  normal = alloca((polytoop->dim - 1) * sizeof(double));
-  vec = alloca((polytoop->dim - 1) * sizeof(double));
-  centroid = alloca((polytoop->dim - 1) * sizeof(double));
+  int dim = polytoop->dim - 1;
+  xiprime = alloca(dim * sizeof(double));
+  verts = alloca(dim * dim * sizeof(double));
+  matq = alloca(dim * dim * sizeof(double));
+  normal = alloca(dim * sizeof(double));
+  vec = alloca(dim * sizeof(double));
+  centroid = alloca(dim * sizeof(double));
 
   /* Transform xi to local coordinates: */
-  for (i = 0; i < polytoop->dim - 1; ++i) {
+  for (i = 0; i < dim; ++i) {
     xiprime[i] = (xi[i] - polytoop->shift[i]) / polytoop->scales[i];
   }
 
@@ -1665,45 +1666,50 @@ void polytoop_interpolate(Polytoop* polytoop, double const* xi, int* indices,
       /* On demand construction of ridge normal and centroid (d - 1): */
       if (ridge->normal == NULL) {
         /* Matrix of vertex coordinates: */
-        for (ivertex = 0; ivertex < polytoop->dim - 1; ++ivertex) {
-          memcpy(&verts[ivertex * (polytoop->dim - 1)],
+        for (ivertex = 0; ivertex < dim; ++ivertex) {
+          memcpy(&verts[ivertex * dim],
                  ridge->vertices[ivertex]->position,
-                 (polytoop->dim - 1) * sizeof(double));
+                 dim * sizeof(double));
         }
 
         /* Analyse ridge simplex: */
-        ridge->centroid = allocator_alloc(polytoop->allocator,
-                                          (polytoop->dim - 1) * sizeof(double));
-        analysesimplex(polytoop->dim - 1, polytoop->dim - 1, verts,
-                       &ridge->volume, ridge->centroid, matq);
+        ridge->centroid =
+            allocator_alloc(polytoop->allocator, dim * sizeof(double));
+        analysesimplex(dim, dim, verts,
+                       &ridge->volume, ridge->centroid);
 
-        /* Last row of LQ decomposition is the normal, save it: */
-        ridge->normal = allocator_alloc(polytoop->allocator,
-                                        (polytoop->dim - 1) * sizeof(double));
-        memcpy(ridge->normal, &matq[(polytoop->dim - 2) * (polytoop->dim - 1)],
-               (polytoop->dim - 1) * sizeof(double));
+        /* Construct normal: */
+        ridge->normal =
+            allocator_alloc(polytoop->allocator, dim * sizeof(double));
+        memcpy(ridge->normal, ridge->centroid, dim * sizeof(double));
+        vec_sub(dim, ridge->normal, currentfacet->centroid);
+        for (i = 0; i < dim - 1; ++i) {
+          double fac = vec_dot(dim, ridge->normal, &verts[i * dim]);
+          vec_adds(dim, ridge->normal, &verts[i * dim], -fac);
+        }
+        vec_normalize(dim, ridge->normal);
       }
 
       /* Retrieve normal, centroid, volume: */
-      memcpy(normal, ridge->normal, (polytoop->dim - 1) * sizeof(double));
-      memcpy(centroid, ridge->centroid, (polytoop->dim - 1) * sizeof(double));
+      memcpy(normal, ridge->normal, dim * sizeof(double));
+      memcpy(centroid, ridge->centroid, dim * sizeof(double));
       volume = ridge->volume;
 
       /* Facet centroid to ridge centroid: */
-      memcpy(vec, centroid, (polytoop->dim - 1) * sizeof(double));
-      vec_sub(polytoop->dim - 1, vec, currentfacet->centroid);
+      memcpy(vec, centroid, dim * sizeof(double));
+      vec_sub(dim, vec, currentfacet->centroid);
 
       /* Normal wants to be outward pointing: */
-      if (vec_dot(polytoop->dim - 1, vec, normal) < 0.0) {
-        vec_neg(polytoop->dim - 1, normal);
+      if (vec_dot(dim, vec, normal) < 0.0) {
+        vec_neg(dim, normal);
       }
 
       /* Ridge centroid to interpolation point: */
-      memcpy(vec, xiprime, (polytoop->dim - 1) * sizeof(double));
-      vec_sub(polytoop->dim - 1, vec, centroid);
+      memcpy(vec, xiprime, dim * sizeof(double));
+      vec_sub(dim, vec, centroid);
 
       /* Height of interpolation point above ridge: */
-      h = vec_dot(polytoop->dim - 1, vec, normal);
+      h = vec_dot(dim, vec, normal);
 
       /* Weight for this ridge: */
       weights[iridge] = -h * volume;
@@ -1712,7 +1718,7 @@ void polytoop_interpolate(Polytoop* polytoop, double const* xi, int* indices,
       /* Index for this ridge: */
       indices[iridge] =
           ((polytoop_Vertex*)
-               currentfacet->vertices.values[polytoop->dim - 1 - iridge])
+               currentfacet->vertices.values[dim - iridge])
               ->index;
 
       /* Keep track of maximum height (if not boundary ridge): */

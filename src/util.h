@@ -14,4 +14,4 @@ void memswp(void* ptr1, void* ptr2, int numbytes);
 double random_getdouble();
 
 /** Time difference [s] since last call. */
-double polytoop_clock_gettimediff();
+double clock_gettimediff();

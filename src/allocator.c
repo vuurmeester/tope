@@ -64,13 +64,13 @@ void* allocator_alloc(Allocator* allocator, int size)
   }
 
   if (allocator->freeptrs[index]) {
-    /* Recycle previously free'd memory. */
+    /* Recycle previously freed memory. */
     ret = allocator->freeptrs[index];
     allocator->freeptrs[index] = *(void**)ret;
     return ret;
   }
 
-  if ((char*)allocator->freeptr > (char*)allocator->firstblock + sizeof(Block) +
+  if ((char*)allocator->freeptr > (char*)(allocator->firstblock + 1) +
                                       allocator->blocksize - outsize) {
     Block* block;
 
