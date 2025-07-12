@@ -1,18 +1,19 @@
 #include <assert.h>
 #include <float.h>
-#include <string.h>
 #include <math.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include "util.h"
 #include "math.h"
+#include "util.h"
 
 #define EPS 1.0e-12
 
 
 
-int linprog_rn(int m, int n, double const* mata, double const* b, double const* c, double* x)
+int linprog_rn(int m, int n, double const* mata, double const* b,
+               double const* c, double* x)
 {
   int i;
   int j;
@@ -53,8 +54,7 @@ int linprog_rn(int m, int n, double const* mata, double const* b, double const* 
 
         /* First positive number, could be basic. */
         jpos = i;
-      }
-      else if (mata[i * n + j] < 0.0) {
+      } else if (mata[i * n + j] < 0.0) {
         /* Negative number, not basic: */
         jpos = -1;
         break;
@@ -64,7 +64,7 @@ int linprog_rn(int m, int n, double const* mata, double const* b, double const* 
     if (jpos >= 0) {
       /* Basic variable. */
       basis[jpos] = j;
-      --nart;  /* one less artificial variable required */
+      --nart; /* one less artificial variable required */
     }
   }
 
@@ -83,13 +83,13 @@ int linprog_rn(int m, int n, double const* mata, double const* b, double const* 
    *             1    -c^T  0 | 0  minus phase 2 objective
    *             1     0    1 | 0  minus phase 1 objective
    */
-  for (i = 0; i < m; ++i) {  /* A (m x n)*/
+  for (i = 0; i < m; ++i) { /* A (m x n)*/
     for (j = 0; j < n; ++j) {
       tableau[i * ncols + j] = mata[i * n + j];
     }
   }
   iart = 0;
-  for (i = 0; i < m; ++i) {  /* I (m x nart) */
+  for (i = 0; i < m; ++i) { /* I (m x nart) */
     for (j = 0; j < nart; ++j) {
       tableau[i * ncols + n + j] = 0.0;
     }
@@ -99,48 +99,48 @@ int linprog_rn(int m, int n, double const* mata, double const* b, double const* 
       ++iart;
     }
   }
-  for (i = 0; i < m; ++i) {  /* b (m x 1)*/
+  for (i = 0; i < m; ++i) { /* b (m x 1)*/
     tableau[i * ncols + n + nart + 0] = b[i];
   }
 
-  for (j = 0; j < n; ++j) {  /* -c^T (1 x n)*/
+  for (j = 0; j < n; ++j) { /* -c^T (1 x n)*/
     tableau[m * ncols + j] = -c[j];
   }
-  for (j = 0; j < nart; ++j) {  /* 0 (1 x nart) */
+  for (j = 0; j < nart; ++j) { /* 0 (1 x nart) */
     tableau[m * ncols + n + j] = 0.0;
   }
-  tableau[m * ncols + n + nart + 0] = 0.0;  /* 0 (1 x 1) */
+  tableau[m * ncols + n + nart + 0] = 0.0; /* 0 (1 x 1) */
 
-  for (j = 0; j < n; ++j) {  /* 0 (1 x n)*/
+  for (j = 0; j < n; ++j) { /* 0 (1 x n)*/
     tableau[(m + 1) * ncols + j] = 0.0;
   }
-  for (j = 0; j < nart; ++j) {  /* 1 (1 x nart) */
+  for (j = 0; j < nart; ++j) { /* 1 (1 x nart) */
     tableau[(m + 1) * ncols + n + j] = 1.0;
   }
-  tableau[(m + 1) * ncols + n + nart + 0] = 0.0;  /* 0 (1 x 1) */
+  tableau[(m + 1) * ncols + n + nart + 0] = 0.0; /* 0 (1 x 1) */
 
   /* Make sure the basis coefficients are 1: */
   for (i = 0; i < m; ++i) {
-    vector_scale(ncols, &tableau[i * ncols], 1.0 / tableau[i * ncols + basis[i]]);
+    vec_scale(ncols, &tableau[i * ncols], 1.0 / tableau[i * ncols + basis[i]]);
   }
 
   /* Make the tableau proper by subtracting each of the artificial rows from the
    * phase 1 objective: */
   for (i = 0; i < m; ++i) {
     if (basis[i] >= n) {
-      vector_subtract(ncols, &tableau[(m + 1) * ncols], &tableau[i * ncols]);
+      vec_sub(ncols, &tableau[(m + 1) * ncols], &tableau[i * ncols]);
     }
   }
 
   ret = 0;
   niter = 0;
-  isphase1 = nart > 0 ? 1 : 0;  /* go directly to phase II if nart == 0 */
+  isphase1 = nart > 0 ? 1 : 0; /* go directly to phase II if nart == 0 */
   while (1) {
     ++niter;
 
 #ifdef PRINT
     printf("phase %s:\n", isphase1 ? "I" : "II");
-    matrix_print(nrows, ncols, tableau);
+    mat_print(nrows, ncols, tableau);
     printf("basis:");
     for (i = 0; i < m; ++i) {
       printf(" %d", basis[i]);
@@ -148,8 +148,9 @@ int linprog_rn(int m, int n, double const* mata, double const* b, double const* 
     printf("\n");
 #endif
 
-    /* Entering variable (pivot column) is most negative entry in objective function: */
-    cpiv = vector_minindex(n, &tableau[(m + isphase1) * ncols]);
+    /* Entering variable (pivot column) is most negative entry in objective
+     * function: */
+    cpiv = vec_minindex(n, &tableau[(m + isphase1) * ncols]);
     if (tableau[(m + isphase1) * ncols + cpiv] > -EPS) {
       if (isphase1) {
         /* No negative entry found in phase I objective. */
@@ -162,14 +163,14 @@ int linprog_rn(int m, int n, double const* mata, double const* b, double const* 
         /* Feasible point found, switch to phase II: */
         isphase1 = 0;
         continue;
-      }
-      else {
+      } else {
         /* No negative entry found in phase II objective, done. */
         break;
       }
     }
 
-    /* Leaving / blocking variable (pivot row) is given by the minimum ratio of rhs/pivotcolumn: */
+    /* Leaving / blocking variable (pivot row) is given by the minimum ratio of
+     * rhs/pivotcolumn: */
     minrat = DBL_MAX;
     rpiv = -1;
     for (i = 0; i < m; ++i) {
@@ -198,14 +199,16 @@ int linprog_rn(int m, int n, double const* mata, double const* b, double const* 
 
     /* Perform pivot: */
     /* Scale row rpiv: */
-    vector_scale(ncols, &tableau[rpiv * ncols], 1.0 / tableau[rpiv * ncols + cpiv]);
+    vec_scale(ncols, &tableau[rpiv * ncols],
+              1.0 / tableau[rpiv * ncols + cpiv]);
 
     /* Subtract row rpiv from others: */
     for (i = 0; i < nrows; ++i) {
       if (i == rpiv) {
         continue;
       }
-      vector_add_scaled(ncols, &tableau[i * ncols], &tableau[rpiv * ncols], -tableau[i * ncols + cpiv]);
+      vec_adds(ncols, &tableau[i * ncols], &tableau[rpiv * ncols],
+               -tableau[i * ncols + cpiv]);
     }
 
     /* cpiv enters, rpiv leaves basis: */
@@ -213,7 +216,7 @@ int linprog_rn(int m, int n, double const* mata, double const* b, double const* 
   }
 
   /* Extract solution from tableau: */
-  vector_reset(n, x);
+  vec_reset(n, x);
   for (i = 0; i < m; ++i) {
     x[basis[i]] = tableau[i * ncols + n + nart];
   }
@@ -226,17 +229,18 @@ int linprog_rn(int m, int n, double const* mata, double const* b, double const* 
 
 
 
-int linprog_cn(int meq, int mineq, int n, double const* mata, double const* b, double const* c, double* x)
+int linprog_cn(int meq, int mineq, int n, double const* mata, double const* b,
+               double const* c, double* x)
 {
-  int i;  /* generic counter */
-  int j;  /* generic counter */
-  int ret;  /* return value */
-  int nrows;  /* total number of equations */
-  int ncols;  /* total number of variables */
-  double* aprime;  /* augmented matrix with slack variables */
-  double* bprime;  /* augmented rhs (negative for equality constraints) */
-  double* cprime;  /* augmented objective function (zero for slack variables) */
-  double* xprime;  /* augmented solution (with slack variables) */
+  int i;          /* generic counter */
+  int j;          /* generic counter */
+  int ret;        /* return value */
+  int nrows;      /* total number of equations */
+  int ncols;      /* total number of variables */
+  double* aprime; /* augmented matrix with slack variables */
+  double* bprime; /* augmented rhs (negative for equality constraints) */
+  double* cprime; /* augmented objective function (zero for slack variables) */
+  double* xprime; /* augmented solution (with slack variables) */
 
   /* Total size: */
   nrows = meq + mineq;
@@ -252,18 +256,18 @@ int linprog_cn(int meq, int mineq, int n, double const* mata, double const* b, d
    *  A' =  A1  -A1      0  meq
    *        A2  -A2      I  mineq
    */
-  for (i = 0; i < nrows; ++i) {  /* [A (m x n), -A (m x n)]*/
+  for (i = 0; i < nrows; ++i) { /* [A (m x n), -A (m x n)]*/
     for (j = 0; j < n; ++j) {
       aprime[i * ncols + j] = mata[i * n + j];
       aprime[i * ncols + n + j] = -mata[i * n + j];
     }
   }
-  for (i = 0; i < meq; ++i) {  /* 0 (meq x mineq) */
+  for (i = 0; i < meq; ++i) { /* 0 (meq x mineq) */
     for (j = 0; j < mineq; ++j) {
       aprime[i * ncols + n + n + j] = 0.0;
     }
   }
-  for (i = 0; i < mineq; ++i) {  /* I (mineq x mineq)*/
+  for (i = 0; i < mineq; ++i) { /* I (mineq x mineq)*/
     for (j = 0; j < mineq; ++j) {
       aprime[(meq + i) * ncols + n + n + j] = 0.0;
     }
@@ -274,9 +278,8 @@ int linprog_cn(int meq, int mineq, int n, double const* mata, double const* b, d
   for (i = 0; i < nrows; ++i) {
     if (b[i] < 0.0) {
       bprime[i] = -b[i];
-      vector_negate(ncols, &aprime[i * ncols]);
-    }
-    else {
+      vec_neg(ncols, &aprime[i * ncols]);
+    } else {
       bprime[i] = b[i];
     }
   }
@@ -284,18 +287,18 @@ int linprog_cn(int meq, int mineq, int n, double const* mata, double const* b, d
   /* c' = [c; -c; 0]: */
   memcpy(cprime, c, n * sizeof(double));
   memcpy(&cprime[n], c, n * sizeof(double));
-  vector_negate(n, &cprime[n]);
-  vector_reset(mineq, &cprime[n + n]);
+  vec_neg(n, &cprime[n]);
+  vec_reset(mineq, &cprime[n + n]);
 
   /* x' = 0_{ncols x 1}: */
-  vector_reset(ncols, xprime);
+  vec_reset(ncols, xprime);
 
   /* Solve: */
   ret = linprog_rn(nrows, ncols, aprime, bprime, cprime, xprime);
 
   /* Copy answer: */
-  memcpy(x, xprime, n * sizeof(double));  /* x+ */
-  vector_subtract(n, x, &xprime[n]);  /* x+ - x- */
+  memcpy(x, xprime, n * sizeof(double)); /* x+ */
+  vec_sub(n, x, &xprime[n]);             /* x+ - x- */
 
   return ret;
 }

@@ -18,18 +18,18 @@ struct _HashEntry {
 };
 
 struct _HashMap {
-  int capacity;  /* current capacity */
-  unsigned mask;  /* for efficient modulo */
-  int size;  /* number of elements */
-  void* data;  /* userdata */
-  unsigned(*hashfunc)(void*, void*);   /* hash function */
-  int (*compar)(void*, void*, void*);  /* key comparison function */
-  void (*freekey)(void*);  /* key deletion function */
-  void (*freeval)(void*);  /* value deletion function */
-  void (*freedata)(void*);  /* user data deletion function */
-  HashEntry** entries;  /* chain pointers */
+  int capacity;                       /* current capacity */
+  unsigned mask;                      /* for efficient modulo */
+  int size;                           /* number of elements */
+  void* data;                         /* userdata */
+  unsigned (*hashfunc)(void*, void*); /* hash function */
+  int (*compar)(void*, void*, void*); /* key comparison function */
+  void (*freekey)(void*);             /* key deletion function */
+  void (*freeval)(void*);             /* value deletion function */
+  void (*freedata)(void*);            /* user data deletion function */
+  HashEntry** entries;                /* chain pointers */
   Allocator* allocator;
-  HashEntry* first;  /* first entry in linked list */
+  HashEntry* first; /* first entry in linked list */
   HashEntry* last;  /* last entry in linked list */
 };
 
@@ -51,7 +51,7 @@ static void resize(HashMap* hashmap, int newcap)
 
   /* Find a spot for all the entries in the new array: */
   for (entry = hashmap->first; entry != NULL; entry = entry->nextinlist) {
-    index = entry->hash & hashmap->mask;  /* new index */
+    index = entry->hash & hashmap->mask; /* new index */
     entry->nextinchain = NULL;
     pentry = &hashmap->entries[index];
     while (*pentry) {
@@ -63,7 +63,8 @@ static void resize(HashMap* hashmap, int newcap)
 
 
 
-HashMap* hashmap_new(unsigned(*hashfunc)(void* key, void* data), int (*compar)(void* key1, void* key2, void* data))
+HashMap* hashmap_new(unsigned (*hashfunc)(void* key, void* data),
+                     int (*compar)(void* key1, void* key2, void* data))
 {
   int i;
   HashMap* hashmap;
@@ -108,10 +109,7 @@ void hashmap_delete(HashMap* hashmap)
 
 
 
-void hashmap_setdata(HashMap* hashmap, void* data)
-{
-  hashmap->data = data;
-}
+void hashmap_setdata(HashMap* hashmap, void* data) { hashmap->data = data; }
 
 
 
@@ -136,10 +134,7 @@ void hashmap_setfreedata(HashMap* hashmap, void (*freedata)(void* data))
 
 
 
-int hashmap_getsize(HashMap* hashmap)
-{
-  return hashmap->size;
-}
+int hashmap_getsize(HashMap* hashmap) { return hashmap->size; }
 
 
 
@@ -154,7 +149,8 @@ HashEntry* hashmap_insert(HashMap* hashmap, void* key, void* value)
   index = hash & hashmap->mask;
   pentry = &hashmap->entries[index];
   while (*pentry) {
-    if ((*pentry)->hash == hash && hashmap->compar(key, (*pentry)->key, hashmap->data) == 0) {
+    if ((*pentry)->hash == hash &&
+        hashmap->compar(key, (*pentry)->key, hashmap->data) == 0) {
       /* Found existing key/value pair. Replace them: */
       if (hashmap->freekey && key != (*pentry)->key) {
         hashmap->freekey((*pentry)->key);
@@ -186,8 +182,7 @@ HashEntry* hashmap_insert(HashMap* hashmap, void* key, void* value)
     assert(hashmap->last == NULL && hashmap->size == 0);
     hashmap->first = *pentry;
     (*pentry)->previnlist = NULL;
-  }
-  else {
+  } else {
     assert(hashmap->last->nextinlist == NULL);
     hashmap->last->nextinlist = *pentry;
     (*pentry)->previnlist = hashmap->last;
@@ -235,14 +230,12 @@ static void remove(HashMap* hashmap, HashEntry** pentry)
   /* Update linked list: */
   if (next) {
     next->previnlist = prev;
-  }
-  else {
+  } else {
     hashmap->last = prev;
   }
   if (prev) {
     prev->nextinlist = next;
-  }
-  else {
+  } else {
     hashmap->first = next;
   }
 
@@ -250,7 +243,8 @@ static void remove(HashMap* hashmap, HashEntry** pentry)
   --hashmap->size;
 
   /* Halve capacity if loadfactor < 30% */
-  if (10 * hashmap->size < 3 * hashmap->capacity && hashmap->capacity > MIN_CAP) {
+  if (10 * hashmap->size < 3 * hashmap->capacity &&
+      hashmap->capacity > MIN_CAP) {
     resize(hashmap, hashmap->capacity >> 1);
   }
 }
@@ -287,7 +281,8 @@ void hashmap_remove(HashMap* hashmap, void* key)
 
   /* Find key in chain: */
   while (*pentry) {
-    if ((*pentry)->hash == hash && hashmap->compar(key, (*pentry)->key, hashmap->data) == 0) {
+    if ((*pentry)->hash == hash &&
+        hashmap->compar(key, (*pentry)->key, hashmap->data) == 0) {
       /* Found it. Remove entry: */
       remove(hashmap, pentry);
 
@@ -401,42 +396,24 @@ void hashmap_getarrays(HashMap* hashmap, void** keys, void** values)
 
 
 
-HashEntry* hashmap_first(HashMap* hashmap)
-{
-  return hashmap->first;
-}
+HashEntry* hashmap_first(HashMap* hashmap) { return hashmap->first; }
 
 
 
-HashEntry* hashmap_last(HashMap* hashmap)
-{
-  return hashmap->last;
-}
+HashEntry* hashmap_last(HashMap* hashmap) { return hashmap->last; }
 
 
 
-HashEntry* hashentry_next(HashEntry* entry)
-{
-  return entry->nextinlist;
-}
+HashEntry* hashentry_next(HashEntry* entry) { return entry->nextinlist; }
 
 
 
-HashEntry* hashentry_prev(HashEntry* entry)
-{
-  return entry->previnlist;
-}
+HashEntry* hashentry_prev(HashEntry* entry) { return entry->previnlist; }
 
 
 
-void* hashentry_getkey(HashEntry* entry)
-{
-  return entry->key;
-}
+void* hashentry_getkey(HashEntry* entry) { return entry->key; }
 
 
 
-void* hashentry_getvalue(HashEntry* entry)
-{
-  return entry->value;
-}
+void* hashentry_getvalue(HashEntry* entry) { return entry->value; }

@@ -36,8 +36,8 @@ void benchmark(int ntests, int nplanes, int ndims)
       for (idim = 0; idim < ndims; ++idim) {
         normals[iplane * ndims + idim] = random_getdouble() - 0.5;
       }
-      vector_normalize(ndims, &normals[iplane * ndims]);
-      dists[iplane] = 0.1 + random_getdouble() + vector_ip(ndims, center, &normals[iplane * ndims]);
+      vec_normalize(ndims, &normals[iplane * ndims]);
+      dists[iplane] = 0.1 + random_getdouble() + vec_dot(ndims, center, &normals[iplane * ndims]);
     }
 
     /* Create polytoop object: */

@@ -1,6 +1,3 @@
-#ifndef __hashmap_h__
-#define __hashmap_h__
-
 #include "allocator.h"
 
 typedef struct _HashMap HashMap;
@@ -58,5 +55,3 @@ void* hashentry_getkey(HashEntry* entry);
 
 /** Value. */
 void* hashentry_getvalue(HashEntry* entry);
-
-#endif  /* __hashmap_h__ */

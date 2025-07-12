@@ -45,7 +45,7 @@ void benchmark(int ntests, int npoints, int ndims, int cospherical)
         points[ipoint * ndims + idim] = random_getdouble() - 0.5;
       }
       if (cospherical) {
-        vector_normalize(ndims, &points[ipoint * ndims]);
+        vec_normalize(ndims, &points[ipoint * ndims]);
       }
     }
 
@@ -102,7 +102,7 @@ void benchqhull(int ntests, int npoints, int ndims, int cospherical)
         points[ipoint * ndims + idim] = random_getdouble() - 0.5;
       }
       if (cospherical) {
-        vector_normalize(ndims, &points[ipoint * ndims]);
+        vec_normalize(ndims, &points[ipoint * ndims]);
       }
     }
 

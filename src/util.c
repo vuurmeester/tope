@@ -1,11 +1,11 @@
-#include <string.h>
 #include <limits.h>
+#include <string.h>
 #ifdef _WIN32
-  #include <windows.h>
+#include <windows.h>
 #else
-  #define _POSIX_C_SOURCE 199309L
-  #include <sys/time.h>
-  #include <time.h>
+#define _POSIX_C_SOURCE 199309L
+#include <sys/time.h>
+#include <time.h>
 #endif
 
 #include "util.h"
@@ -18,9 +18,7 @@ static double s_time = 0.0;
 
 void memswp(void* ptr1, void* ptr2, int numbytes)
 {
-  void* tmp;
-
-  tmp = alloca(numbytes);
+  void* tmp = alloca(numbytes);
   memcpy(tmp, ptr1, numbytes);
   memcpy(ptr1, ptr2, numbytes);
   memcpy(ptr2, tmp, numbytes);

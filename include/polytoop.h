@@ -1,9 +1,4 @@
-#ifndef __polytoop_h__
-#define __polytoop_h__
-
-#ifdef __cplusplus
-extern "C" {
-#endif
+#pragma once
 
 typedef struct _Polytoop Polytoop;
 typedef struct _polytoop_Facet polytoop_Facet;
@@ -22,13 +17,16 @@ void polytoop_setmerge(Polytoop* polytoop, int merge);
 void polytoop_clear(Polytoop* polytoop);
 
 /** Create polytoop from planes. */
-void polytoop_fromplanes(Polytoop* polytoop, int nplanes, int dim, double* normals, double* distances);
+void polytoop_fromplanes(Polytoop* polytoop, int nplanes, int dim,
+                         double* normals, double* distances);
 
 /** Create polytoop from point cloud. */
-void polytoop_frompoints(Polytoop* polytoop, int npoints, int dim, double* points);
+void polytoop_frompoints(Polytoop* polytoop, int npoints, int dim,
+                         double* points);
 
 /** Delaunay triangulation. */
-void polytoop_delaunay(Polytoop* polytoop, int npoints, int dim, double* points);
+void polytoop_delaunay(Polytoop* polytoop, int npoints, int dim,
+                       double* points);
 
 /** Add vertex to existing polytoop (increment). */
 void polytoop_addvertex(Polytoop* polytoop, double* point);
@@ -46,18 +44,18 @@ int polytoop_getnumridges(Polytoop* polytoop);
 int polytoop_getnumvertices(Polytoop* polytoop);
 
 /** Get vertex index. */
-int polytoop_getvertexindex(Polytoop* polytoop, polytoop_Facet* facet, int ivertex);
+int polytoop_getvertexindex(Polytoop* polytoop, polytoop_Facet* facet,
+                            int ivertex);
 
 /** Interpolate if polytoop is Delaunay grid. */
-void polytoop_interpolate(Polytoop* polytoop, double const* xi, int* indices, double* weights);
+void polytoop_interpolate(Polytoop* polytoop, double const* xi, int* indices,
+                          double* weights);
 
 /** First facet. */
 polytoop_Facet* polytoop_firstfacet(Polytoop* polytoop);
 
 /** First vertex. */
 polytoop_Vertex* polytoop_firstvertex(Polytoop* polytoop);
-
-
 
 /** Next facet. */
 polytoop_Facet* polytoop_facet_nextfacet(polytoop_Facet* facet);
@@ -86,16 +84,8 @@ int polytoop_facet_getnumvertices(polytoop_Facet* facet);
 /** Get facet vertex. */
 polytoop_Vertex* polytoop_facet_getvertex(polytoop_Facet* facet, int ivertex);
 
-
-
 /** Next vertex. */
 polytoop_Vertex* polytoop_vertex_nextvertex(polytoop_Vertex* vertex);
 
 /** Vertex position. */
 void polytoop_vertex_getposition(polytoop_Vertex* vertex, double* position);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif  /* __polytoop_h__ */

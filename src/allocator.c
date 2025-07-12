@@ -1,13 +1,17 @@
-#include <stdlib.h>  /* memcpy */
-#include <string.h>  /* malloc, realloc, free */
 #include <assert.h>
+#include <stdlib.h> /* memcpy */
+#include <string.h> /* malloc, realloc, free */
 
 #include "allocator.h"
 
 #define MAXSIZE 256
 #define FIRST_BLOCKSIZE (8 * MAXSIZE)
-#define NPOOLS 8  /* 32, 64, 96, 128, 160, 192, 224, 256 */
-#define OUTSIZE(insize, outsize, i) {i = (insize - 1) >> 5; outsize = (i + 1) << 5;}
+#define NPOOLS 8 /* 32, 64, 96, 128, 160, 192, 224, 256 */
+#define OUTSIZE(insize, outsize, i)                                            \
+  {                                                                            \
+    i = (insize - 1) >> 5;                                                     \
+    outsize = (i + 1) << 5;                                                    \
+  }
 
 typedef struct _Block Block;
 struct _Block {
@@ -66,7 +70,8 @@ void* allocator_alloc(Allocator* allocator, int size)
     return ret;
   }
 
-  if ((char*)allocator->freeptr > (char*)allocator->firstblock + sizeof(Block) + allocator->blocksize - outsize) {
+  if ((char*)allocator->freeptr > (char*)allocator->firstblock + sizeof(Block) +
+                                      allocator->blocksize - outsize) {
     Block* block;
 
     /* Allocate new block: */
@@ -116,7 +121,8 @@ void allocator_free(Allocator* allocator, void* mem, int size)
 
 
 
-void* allocator_realloc(Allocator* allocator, void* oldmem, int oldsize, int newsize)
+void* allocator_realloc(Allocator* allocator, void* oldmem, int oldsize,
+                        int newsize)
 {
   int oldindex;
   int newindex;
