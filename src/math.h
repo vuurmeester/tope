@@ -69,8 +69,8 @@ void boundingbox(int npoints, int ndims, double const* points, int* minindices,
                  int* maxindices, double* minima, double* maxima);
 
 /** Compute volume, centroid and span of multidimensional simplex. */
-void analysesimplex(int npoints, int ndims, double const* points,
-                    double* volume, double* centroid, double* span);
+void analysesimplex(int npoints, int ndims, double* points,
+                    double* volume, double* centroid);
 
 /** LQ = PA decomposition. Returns determinant. */
 double lqdc(int m, int n, double* mat, int* p);

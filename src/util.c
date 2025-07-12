@@ -134,7 +134,7 @@ unsigned clock_getticks()
 
 
 
-double polytoop_clock_gettimediff()
+double clock_gettimediff()
 {
   double newTime = polytoop_clock_gettime();
   double diff = newTime - s_time;

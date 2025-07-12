@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -312,40 +313,57 @@ void boundingbox(int npoints, int ndims, double const* vertices,
 
 
 
-void analysesimplex(int npoints, int ndims, double const* points,
-                    double* volume, double* centroid, double* span)
+void analysesimplex(int npoints, int ndims, double* points, double* volume,
+                    double* centroid)
 {
-  int i;
-  double* lqdcmp;
-  int* p;
+  assert(npoints <= ndims + 1);
 
   /* Accumulate centroid: */
   vec_reset(ndims, centroid);
-  for (i = 0; i < npoints; ++i) {
+  for (int i = 0; i < npoints; ++i) {
     vec_add(ndims, centroid, &points[i * ndims]);
   }
   vec_scale(ndims, centroid, 1.0 / (double)npoints);
 
-  /* Determine directions: */
-  for (i = 0; i < npoints - 1; ++i) {
-    memcpy(&span[i * ndims], &points[(i + 1) * ndims], ndims * sizeof(double));
-    vec_sub(ndims, &span[i * ndims], &points[0 * ndims]);
+  /* Subtract last point from all points: */
+  for (int i = 0; i < npoints - 1; ++i) {
+    vec_sub(ndims, &points[i * ndims], &points[(npoints - 1) * ndims]);
   }
+  memset(&points[(npoints - 1) * ndims], 0, ndims * sizeof(double));
 
-  /* LQ decomposition: */
-  lqdcmp = alloca((npoints - 1) * ndims * sizeof(double));
-  memcpy(lqdcmp, span, (npoints - 1) * ndims * sizeof(double));
-  p = alloca((npoints - 1) * sizeof(int));
-  lqdc(npoints - 1, ndims, lqdcmp, p);
+  *volume = 1.0;
+  for (int i = 0; i < npoints - 1; ++i) {
+    // Get pivot:
+    double maxnormsq = 0.0;
+    int pivot = -1;
+    for (int j = i; j < npoints - 1; ++j) {
+      double normsq = vec_nrmsq(ndims, &points[j * ndims]);
+      if (normsq > maxnormsq) {
+        maxnormsq = normsq;
+        pivot = j;
+      }
+    }
 
-  /* Volume: */
-  *volume = fabs(lqdcmp[0 * ndims + 0]);
-  for (i = 1; i < npoints - 1; ++i) {
-    *volume *= fabs(lqdcmp[i * ndims + i]) / (double)(i + 1);
+    // Update volume:
+    double nrm = sqrt(maxnormsq);
+    *volume *= nrm / (double)(i + 1);
+    assert(nrm > 0.0);
+
+    // Perform pivot:
+    if (pivot > i) {
+      memswp(&points[i * ndims], &points[pivot * ndims],
+             ndims * sizeof(double));
+    }
+
+    // Normalize:
+    vec_scale(ndims, &points[i * ndims], 1.0 / nrm);
+
+    // Orthogonalize (subtract projection of row i from those below):
+    for (int j = i + 1; j < npoints - 1; ++j) {
+      double fac = vec_dot(ndims, &points[i * ndims], &points[j * ndims]);
+      vec_adds(ndims, &points[j * ndims], &points[i * ndims], -fac);
+    }
   }
-
-  /* Directions: */
-  lqformq(npoints - 1, ndims, lqdcmp, span);
 }
 
 
@@ -443,57 +461,6 @@ double lqdc(int m, int n, double* matrix, int* p)
   }
 
   return det;
-}
-
-
-
-void lqbs(int m, int n, double const* dcmp, int const* p, double const* b,
-          double* x, double tol)
-{
-  int i;
-  int mindim;
-  double beta;
-  double tolabsA00;
-  double ip;
-
-  /* Relative tolerance: */
-  tolabsA00 = tol * fabs(dcmp[0]);
-
-  /* Minimum dimension: */
-  mindim = m < n ? m : n;
-
-  /* Calculate x = L \ (P * b): */
-  if (p) {
-    for (i = 0; i < mindim; ++i) {
-      x[i] = b[p[i]];
-    }
-  } else {
-    memcpy(x, b, mindim * sizeof(double));
-  }
-  for (i = 0; i < mindim; ++i) {
-    if (fabs(dcmp[i * n + i]) <= tolabsA00) {
-      vec_reset(n - i, &x[i]);
-      m = i;
-      break;
-    }
-    x[i] -= vec_dot(i, &dcmp[i * n], x);
-    x[i] /= dcmp[i * n + i];
-  }
-
-  /* Replace x <-- Q' * x: */
-  for (i = mindim - 1; i >= 0; --i) {
-    /* Determine beta: */
-    beta = 1.0 + vec_nrmsq(n - i - 1, &dcmp[i * n + i + 1]);
-    beta = 2.0 / beta; /* 2 / (v^T v) */
-
-    /* Determine inner product: */
-    ip = x[i] + vec_dot(n - i - 1, &dcmp[i * n + i + 1], &x[i + 1]);
-
-    /* Transform the vector: */
-    ip *= beta;
-    x[i] -= ip;
-    vec_adds(n - i - 1, &x[i + 1], &dcmp[i * n + i + 1], -ip);
-  }
 }
 
 
