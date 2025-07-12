@@ -75,9 +75,6 @@ void analysesimplex(int npoints, int ndims, double* points,
 /** LQ = PA decomposition. Returns determinant. */
 double lqdc(int m, int n, double* mat, int* p);
 
-/** Form n x n matrix Q from LQ decomposition. */
-void lqformq(int m, int n, double const* dcmp, double* matq);
-
 /** Solve linear program with Dantzig's simplex method.
     Restricted normal form.
     Maximimize c^T x
