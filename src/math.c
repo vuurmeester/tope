@@ -283,19 +283,16 @@ void boundingbox(int npoints, int ndims, double const* vertices,
                  int* minindices, int* maxindices, double* minima,
                  double* maxima)
 {
-  int i;
-  int j;
-
   /* Initialize minima and maxima: */
-  for (j = 0; j < ndims; ++j) {
+  for (int j = 0; j < ndims; ++j) {
     minima[j] = HUGE_VAL;
     maxima[j] = -HUGE_VAL;
   }
 
   /* Loop over vertices: */
-  for (i = 0; i < npoints; ++i) {
+  for (int i = 0; i < npoints; ++i) {
     /* Loop over dimensions: */
-    for (j = 0; j < ndims; ++j) {
+    for (int j = 0; j < ndims; ++j) {
       if (vertices[i * ndims + j] < minima[j]) {
         /* Update minimum of dimension j: */
         minindices[j] = i;
@@ -364,101 +361,4 @@ void analysesimplex(int npoints, int ndims, double* points, double* volume,
       vec_adds(ndims, &points[j * ndims], &points[i * ndims], -fac);
     }
   }
-}
-
-
-
-double lqdc(int m, int n, double* matrix, int* p)
-{
-  int i;
-  int j;
-  int pivot;
-  int mindim;
-  double det;
-  double alfa;
-  double alfa1;
-  double alfamax;
-  double beta;
-  double ip;
-
-  /* Initialize determinant and permutation vector p: */
-  det = 1.0;
-  if (p) {
-    for (i = 0; i < m; ++i) {
-      p[i] = i;
-    }
-  }
-
-  mindim = m < n ? m : n;
-  alfamax = 0.0;
-  for (i = 0; i < mindim; ++i) {
-    /* Squared norm of row i: */
-    alfa = vec_nrmsq(n - i, &matrix[i * n + i]);
-
-    if (p) {
-      /* Get largest row norm on top: */
-      pivot = i;
-
-      /* Find pivot row: */
-      for (j = i + 1; j < m; ++j) {
-        alfa1 = vec_nrmsq(n - i, &matrix[j * n + i]);
-        if (alfa1 > alfa) {
-          alfa = alfa1;
-          pivot = j;
-        }
-      }
-
-      /* Pivot: */
-      if (pivot > i) {
-        /* Flip parity for each pivot: */
-        det *= -1.0;
-
-        /* Swap rows i and pivot: */
-        memswp(&matrix[pivot * n], &matrix[i * n], n * sizeof(double));
-
-        /* Adjust permutation vector: */
-        memswp(&p[i], &p[pivot], sizeof(int));
-      }
-    }
-
-    if (alfa > alfamax) {
-      alfamax = alfa;
-    } else if (!(alfa > 1.0e-24 * alfamax)) {
-      det = 0.0;
-      break;
-    }
-
-    /* Norm of row i: */
-    alfa = sqrt(alfa);
-
-    /* Make sign opposite to x_1: */
-    if (matrix[i * n + i] > 0.0) {
-      alfa = -alfa;
-    }
-
-    beta = matrix[i * n + i] - alfa;
-
-    /* Normalize v_2.. so that v1 = 1: */
-    vec_scale(n - i - 1, &matrix[i * n + i + 1], 1.0 / beta);
-
-    beta /= alfa;
-
-    /* Transform lower triangle of submatrix (i:m,i:n): */
-    matrix[i * n + i] = alfa;
-    for (j = i + 1; j < m; ++j) {
-      /* v^T x: */
-      ip = matrix[j * n + i] +
-           vec_dot(n - i - 1, &matrix[i * n + i + 1], &matrix[j * n + i + 1]);
-
-      /* x - 2 v^T x / (v^T v) v: */
-      ip *= beta;
-      matrix[j * n + i] += ip; /* v1 == 1 */
-      vec_adds(n - i - 1, &matrix[j * n + i + 1], &matrix[i * n + i + 1], ip);
-    }
-
-    /* Update determinant: */
-    det *= -alfa;
-  }
-
-  return det;
 }

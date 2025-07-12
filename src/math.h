@@ -72,9 +72,6 @@ void boundingbox(int npoints, int ndims, double const* points, int* minindices,
 void analysesimplex(int npoints, int ndims, double* points,
                     double* volume, double* centroid);
 
-/** LQ = PA decomposition. Returns determinant. */
-double lqdc(int m, int n, double* mat, int* p);
-
 /** Solve linear program with Dantzig's simplex method.
     Restricted normal form.
     Maximimize c^T x
