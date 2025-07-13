@@ -6,20 +6,12 @@
 
 typedef struct _Ridge Ridge;
 typedef struct _Point Point;
-typedef struct _HashEntry HashEntry;
-
-struct _HashEntry {
-  unsigned hash;
-  Ridge* ridge;
-};
 
 typedef struct _HashMap {
-  int cap;                            /* current capacity */
-  int len;                            /* number of elements */
-  void* data;                         /* userdata */
-  unsigned (*hashfunc)(void*, void*); /* hash function */
-  int (*compar)(void*, void*, void*); /* key comparison function */
-  HashEntry* entries;                 /* entries */
+  int cap; /* current capacity */
+  int len; /* number of elements */
+  unsigned* hashes;
+  Ridge** ridges; /* entries */
 } HashMap;
 
 typedef struct _Array {

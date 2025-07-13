@@ -429,56 +429,6 @@ static void addfacet(Polytoop* polytoop, polytoop_Facet* facet, Ridge** ridges)
   }
 }
 
-static unsigned hashvertset(void* ptr, void* data)
-{
-  int i;
-  int d;
-  int nverts;
-  unsigned ret;
-  polytoop_Vertex** verts;
-
-  /* Dimension: */
-  d = *(int*)data;
-
-  /* Vertices: */
-  nverts = d - 1;
-  verts = ptr;
-
-  /* Sum vertex id's: */
-  ret = 0;
-  for (i = 0; i < nverts; ++i) {
-    ret += verts[i]->index;
-  }
-
-  return ret;
-}
-
-
-
-/* Compare sets of d - 1 sorted vertices (for ordering ridges): */
-static int compvertsets(void* ptr1, void* ptr2, void* data)
-{
-  int i;
-  int d;
-  polytoop_Vertex** vertset1;
-  polytoop_Vertex** vertset2;
-
-  d = *(int*)data;
-  vertset1 = ptr1;
-  vertset2 = ptr2;
-
-  for (i = 0; i < d - 1; ++i) {
-    if (vertset1[i]->index < vertset2[i]->index) {
-      return -1;
-    }
-    if (vertset1[i]->index > vertset2[i]->index) {
-      return 1;
-    }
-  }
-
-  return 0;
-}
-
 
 
 /* Create initial simplex, add outside vertices, etc: */
@@ -591,19 +541,19 @@ static void initialsimplex(Polytoop* polytoop, int npoints, Point** points)
     }
 
     /* Add ridges: */
-    for (j = 0; j < polytoop->dim; ++j) {
+    for (j = 0; j < d; ++j) {
       /* Ridge verts: */
       for (k = 0; k < j; ++k) {
         ridgeverts[k] = facet->vertices.values[k];
       }
-      for (k = j + 1; k < polytoop->dim; ++k) {
+      for (k = j + 1; k < d; ++k) {
         ridgeverts[k - 1] = facet->vertices.values[k];
       }
 
-      facetridges[j] = hashmap_retrieve(polytoop->newridges, ridgeverts);
+      facetridges[j] = hashmap_retrieve(polytoop->newridges, d, ridgeverts);
       if (!facetridges[j]) {
         facetridges[j] = create_ridge(polytoop, ridgeverts);
-        hashmap_insert(polytoop->newridges, facetridges[j]);
+        hashmap_insert(polytoop->newridges, d, facetridges[j]);
       }
     }
 
@@ -661,6 +611,8 @@ static void addpoint(Polytoop* polytoop, polytoop_Facet* facet, Point* apex)
   polytoop_Vertex** ridgeverts;
   Ridge** facetridges;
   Ridge* newridge;
+
+  int d = polytoop->dim;
 
   /* Allocations: */
   newfacets = array_new();
@@ -814,11 +766,11 @@ static void addpoint(Polytoop* polytoop, polytoop_Facet* facet, Point* apex)
       ridgeverts[size++] = vertex;
 
       /* Get or create new ridge: */
-      newridge = hashmap_retrieve(polytoop->newridges, ridgeverts);
+      newridge = hashmap_retrieve(polytoop->newridges, d, ridgeverts);
       if (!newridge) {
         /* Create new ridge: */
         newridge = create_ridge(polytoop, ridgeverts);
-        hashmap_insert(polytoop->newridges, newridge);
+        hashmap_insert(polytoop->newridges, d, newridge);
       }
       facetridges[ivertex + 1] = newridge;
     }
@@ -978,8 +930,7 @@ Polytoop* polytoop_new()
 
   polytoop->merge = 0;
 
-  polytoop->newridges = hashmap_new(hashvertset, compvertsets);
-  hashmap_setdata(polytoop->newridges, &polytoop->dim);
+  polytoop->newridges = hashmap_new();
 
   return polytoop;
 }
