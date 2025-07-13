@@ -432,7 +432,7 @@ static void addfacet(Polytoop* polytoop, polytoop_Facet* facet, Ridge** ridges)
 
 
 /* Create initial simplex, add outside vertices, etc: */
-static void initialsimplex(Polytoop* polytoop, int npoints, Point** points)
+static void initialsimplex(Polytoop* polytoop, int npoints, Point* points)
 {
   int i;
   int j;
@@ -456,7 +456,7 @@ static void initialsimplex(Polytoop* polytoop, int npoints, Point** points)
   for (i = 0; i < npoints; ++i) {
     double dist = 0.0;
     for (j = 0; j < d; ++j) {
-      double coord = points[i]->pos[j] - 0.5;
+      double coord = points[i].pos[j] - 0.5;
       dist += coord * coord;
     }
     if (dist > maxdist) {
@@ -470,8 +470,8 @@ static void initialsimplex(Polytoop* polytoop, int npoints, Point** points)
 
   /* Initialize span (positions w.r.t. first point): */
   for (i = 1; i < npoints; ++i) {
-    memcpy(&span[(i - 1) * d], points[i]->pos, d * sizeof(double));
-    vec_sub(d, &span[(i - 1) * d], points[0]->pos);
+    memcpy(&span[(i - 1) * d], points[i].pos, d * sizeof(double));
+    vec_sub(d, &span[(i - 1) * d], points[0].pos);
   }
 
   /* Permutation vector: */
@@ -510,7 +510,7 @@ static void initialsimplex(Polytoop* polytoop, int npoints, Point** points)
   /* Initialize polytoop center to initial simplex centroid: */
   vec_reset(polytoop->dim, polytoop->center);
   for (i = 0; i < polytoop->dim + 1; ++i) {
-    vec_add(polytoop->dim, polytoop->center, points[p[i]]->pos);
+    vec_add(polytoop->dim, polytoop->center, points[p[i]].pos);
   }
   vec_scale(polytoop->dim, polytoop->center, 1.0 / (double)(polytoop->dim + 1));
 
@@ -518,7 +518,7 @@ static void initialsimplex(Polytoop* polytoop, int npoints, Point** points)
   polytoop_Vertex** vertices =
       alloca((polytoop->dim + 1) * sizeof(polytoop_Vertex*));
   for (i = 0; i < polytoop->dim + 1; ++i) {
-    vertices[i] = vertex_new(polytoop, points[p[i]]->pos, points[p[i]]->index);
+    vertices[i] = vertex_new(polytoop, points[p[i]].pos, points[p[i]].index);
   }
 
   Ridge** facetridges = alloca(polytoop->dim * sizeof(Ridge*));
@@ -568,7 +568,7 @@ static void initialsimplex(Polytoop* polytoop, int npoints, Point** points)
     polytoop_Facet* facet;
     for (facet = polytoop->firstfacet; facet != NULL; facet = facet->next) {
       /* Vector from facet centroid to vertex: */
-      memcpy(vec, points[p[i]]->pos, polytoop->dim * sizeof(double));
+      memcpy(vec, points[p[i]].pos, polytoop->dim * sizeof(double));
       vec_sub(polytoop->dim, vec, facet->centroid);
 
       /* Distance to facet: */
@@ -576,8 +576,8 @@ static void initialsimplex(Polytoop* polytoop, int npoints, Point** points)
 
       /* If above facet, add it to outside set and move on. */
       if (h > EPS) {
-        points[p[i]]->height = h;
-        facet_addoutside(polytoop, facet, points[p[i]]);
+        points[p[i]].height = h;
+        facet_addoutside(polytoop, facet, points + p[i]);
         break;
       }
     }
@@ -876,7 +876,7 @@ static void addpoint(Polytoop* polytoop, polytoop_Facet* facet, Point* apex)
 
 
 
-static void build(Polytoop* polytoop, int npoints, Point** points)
+static void build(Polytoop* polytoop, int npoints, Point* points)
 {
   assert(npoints >= polytoop->dim + 1);
 
@@ -1141,14 +1141,6 @@ earlycleanup:
 void polytoop_frompoints(Polytoop* polytoop, int npoints, int dim,
                          double* orgpoints)
 {
-  int idim;
-  int ipoint;
-  int* minindices;
-  int* maxindices;
-  double* minima;
-  double* maxima;
-  Point** points;
-
   /* Clear polytoop: */
   polytoop_clear(polytoop);
 
@@ -1163,10 +1155,10 @@ void polytoop_frompoints(Polytoop* polytoop, int npoints, int dim,
       allocator_alloc(polytoop->allocator, polytoop->dim * sizeof(double));
 
   /* Bounding box: */
-  minindices = alloca(polytoop->dim * sizeof(int));
-  maxindices = alloca(polytoop->dim * sizeof(int));
-  minima = alloca(polytoop->dim * sizeof(double));
-  maxima = alloca(polytoop->dim * sizeof(double));
+  int* minindices = alloca(polytoop->dim * sizeof(int));
+  int* maxindices = alloca(polytoop->dim * sizeof(int));
+  double* maxima = alloca(polytoop->dim * sizeof(double));
+  double* minima = alloca(polytoop->dim * sizeof(double));
   boundingbox(npoints, polytoop->dim, orgpoints, minindices, maxindices, minima,
               maxima);
 
@@ -1178,16 +1170,15 @@ void polytoop_frompoints(Polytoop* polytoop, int npoints, int dim,
   memcpy(polytoop->shift, minima, polytoop->dim * sizeof(double));
 
   /* Points array: */
-  points = malloc(npoints * (sizeof(Point*)));
-  for (ipoint = 0; ipoint < npoints; ++ipoint) {
-    points[ipoint] = malloc(sizeof(Point));
-    points[ipoint]->next = NULL;
-    points[ipoint]->d = polytoop->dim;
-    points[ipoint]->index = ipoint;
-    points[ipoint]->height = 0.0;
-    points[ipoint]->pos = malloc(polytoop->dim * sizeof(double));
-    for (idim = 0; idim < polytoop->dim; ++idim) {
-      points[ipoint]->pos[idim] =
+  Point* points = malloc(npoints * (sizeof(Point)));
+  double* positions = malloc(npoints * dim * sizeof(double));
+  for (int ipoint = 0; ipoint < npoints; ++ipoint) {
+    points[ipoint].next = NULL;
+    points[ipoint].index = ipoint;
+    points[ipoint].height = 0.0;
+    points[ipoint].pos = positions + ipoint * dim;
+    for (int idim = 0; idim < polytoop->dim; ++idim) {
+      points[ipoint].pos[idim] =
           (orgpoints[ipoint * polytoop->dim + idim] - polytoop->shift[idim]) /
           polytoop->scales[idim];
     }
@@ -1197,10 +1188,7 @@ void polytoop_frompoints(Polytoop* polytoop, int npoints, int dim,
   build(polytoop, npoints, points);
 
   /* Clean up: */
-  for (ipoint = npoints - 1; ipoint >= 0; --ipoint) {
-    free(points[ipoint]->pos);
-    free(points[ipoint]);
-  }
+  free(positions);
   free(points);
 }
 
@@ -1219,7 +1207,6 @@ void polytoop_delaunay(Polytoop* polytoop, int npoints, int dim,
   Ridge* ridge;
   Ridge** ridges;
   polytoop_Facet* facet;
-  Point** points;
 
   /* Reciprocal of dimension: */
   recd = 1.0 / (double)dim;
@@ -1249,46 +1236,40 @@ void polytoop_delaunay(Polytoop* polytoop, int npoints, int dim,
   polytoop->scales[dim] = 1.0;
 
   /* Points array: */
-  points = malloc((npoints + 1) * sizeof(Point*));
+  Point* points = malloc((npoints + 1) * sizeof(Point));
+  double* positions = malloc((npoints + 1) * (dim + 1) * sizeof(double));
   for (ipoint = 0; ipoint < npoints + 1; ++ipoint) {
-    points[ipoint] = allocator_alloc(polytoop->allocator, sizeof(Point));
-    points[ipoint]->next = NULL;
-    points[ipoint]->d = polytoop->dim;
-    points[ipoint]->index = ipoint;
-    points[ipoint]->height = 0.0;
-    points[ipoint]->pos =
-        allocator_alloc(polytoop->allocator, polytoop->dim * sizeof(double));
+    points[ipoint].next = NULL;
+    points[ipoint].index = ipoint;
+    points[ipoint].height = 0.0;
+    points[ipoint].pos = positions + ipoint * (dim + 1);
 
     if (ipoint < npoints) {
       /* Transformed point: */
       for (i = 0; i < dim; ++i) {
-        points[ipoint]->pos[i] =
+        points[ipoint].pos[i] =
             (orgpoints[ipoint * dim + i] - polytoop->shift[i]) /
             polytoop->scales[i];
       }
 
       /* Create paraboloid in extra dimension: */
-      points[ipoint]->pos[dim] = recd * vec_nrmsq(dim, points[ipoint]->pos);
+      points[ipoint].pos[dim] = recd * vec_nrmsq(dim, points[ipoint].pos);
     }
   }
 
   /* Add point above paraboloid to guarantee full dimensionality: */
-  vec_reset(dim, points[npoints]->pos);
+  vec_reset(dim, points[npoints].pos);
   for (ipoint = 0; ipoint < npoints; ++ipoint) {
-    vec_add(dim, points[npoints]->pos, points[ipoint]->pos);
+    vec_add(dim, points[npoints].pos, points[ipoint].pos);
   }
-  vec_scale(dim, points[npoints]->pos, 1.0 / (double)npoints);
-  points[npoints]->pos[dim] = 2.0;
+  vec_scale(dim, points[npoints].pos, 1.0 / (double)npoints);
+  points[npoints].pos[dim] = 2.0;
 
   /* Construct convex polytoop of paraboloid: */
   build(polytoop, npoints + 1, points);
 
   /* Clean up: */
-  for (ipoint = npoints; ipoint >= 0; --ipoint) {
-    allocator_free(polytoop->allocator, points[ipoint]->pos,
-                   polytoop->dim * sizeof(double));
-    allocator_free(polytoop->allocator, points[ipoint], sizeof(Point));
-  }
+  free(positions);
   free(points);
 
   /* Remove upper delaunay surfaces: */
@@ -1364,7 +1345,6 @@ void polytoop_addvertex(Polytoop* polytoop, double* point)
 
   /* Initialize apex: */
   apex.next = NULL;
-  apex.d = polytoop->dim;
   apex.index = polytoop->nverts;
   apex.height = 0.0;
   apex.pos = pos;

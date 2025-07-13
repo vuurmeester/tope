@@ -78,7 +78,7 @@ struct _polytoop_Vertex {
 struct _Point {
   Point* next;
 
-  int d;
+  //int d;
   int index;
   double height;
   double* pos;

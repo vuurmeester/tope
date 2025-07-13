@@ -10,8 +10,11 @@
 /** Swap memory content. */
 void memswp(void* ptr1, void* ptr2, int numbytes);
 
+/** Reset random number generator. */
+void random_reset(void);
+
 /** Random number between 0 and 1. */
-double random_getdouble();
+double random_getdouble(void);
 
 /** Time difference [s] since last call. */
-double clock_gettimediff();
+double clock_gettimediff(void);

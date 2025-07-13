@@ -27,7 +27,11 @@ void memswp(void* ptr1, void* ptr2, int numbytes)
 
 
 
-unsigned random_getuint()
+void random_reset() { s_seed = 0; }
+
+
+
+static unsigned random_getuint()
 {
   s_seed = 1664525U * s_seed + 1013904223U;
   return s_seed;
