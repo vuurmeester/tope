@@ -47,6 +47,7 @@ struct _polytoop_Facet {
   double volume;
   double* centroid;
   double* normal;     /* outward pointing plane normal */
+  double dist;        /* distance from origin */
   Array ridges;       /* d+ adjacent ridges */
   Array vertices;     /* d+ adjacent vertices */
   Point* outsidehead; /* visible points list */
@@ -78,7 +79,6 @@ struct _polytoop_Vertex {
 struct _Point {
   Point* next;
 
-  //int d;
   int index;
   double height;
   double* pos;
