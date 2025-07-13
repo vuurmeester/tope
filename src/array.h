@@ -5,14 +5,14 @@
 #include "allocator.h"
 
 typedef struct _Array {
-  int len;
-  int cap;
   void** values;
+  int cap;
+  int len;
 } Array;
 
 
 
-Array array_new(void);
+Array array_new(int cap, Allocator* alc);
 void array_delete(Array* arr, Allocator* alc);
 void array_append(Array* arr, void* value, Allocator* alc);
 void array_remove(Array* arr, int i);
