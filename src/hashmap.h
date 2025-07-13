@@ -2,11 +2,11 @@
 
 #include "types.h"
 
-/** Create hashmap. */
-HashMap* hashmap_new(void);
+/** Initialize hashmap. */
+void hashmap_init(HashMap* hashmap);
 
-/** Delete hashmap. */
-void hashmap_delete(HashMap* hashmap);
+/** Release hashmap. */
+void hashmap_destroy(HashMap* hashmap);
 
 /** Insert ridge. */
 void hashmap_insert(HashMap* hashmap, int d, Ridge* ridge);
@@ -15,4 +15,4 @@ void hashmap_insert(HashMap* hashmap, int d, Ridge* ridge);
 void hashmap_clear(HashMap* hashmap);
 
 /** Retrieve ridge by its vertices. */
-Ridge* hashmap_retrieve(HashMap* hashmap, int d, polytoop_Vertex** verts);
+Ridge* hashmap_retrieve(HashMap hashmap, int d, polytoop_Vertex** verts);

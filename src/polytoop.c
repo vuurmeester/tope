@@ -525,7 +525,7 @@ static void initialsimplex(Polytoop* polytoop, int npoints, Point** points)
   polytoop_Vertex** ridgeverts =
       alloca((polytoop->dim - 1) * sizeof(polytoop_Vertex*));
 
-  hashmap_clear(polytoop->newridges);
+  hashmap_clear(&polytoop->newridges);
 
   /* Create facets: */
   for (i = 0; i < polytoop->dim + 1; ++i) {
@@ -553,7 +553,7 @@ static void initialsimplex(Polytoop* polytoop, int npoints, Point** points)
       facetridges[j] = hashmap_retrieve(polytoop->newridges, d, ridgeverts);
       if (!facetridges[j]) {
         facetridges[j] = create_ridge(polytoop, ridgeverts);
-        hashmap_insert(polytoop->newridges, d, facetridges[j]);
+        hashmap_insert(&polytoop->newridges, d, facetridges[j]);
       }
     }
 
@@ -731,7 +731,7 @@ static void addpoint(Polytoop* polytoop, polytoop_Facet* facet, Point* apex)
   ridgeverts = alloca((polytoop->dim - 1) * sizeof(polytoop_Vertex*));
   facetridges = alloca(polytoop->dim * sizeof(Ridge*));
 
-  hashmap_clear(polytoop->newridges);
+  hashmap_clear(&polytoop->newridges);
 
   /* Form new facets: */
   for (iridge = 0; iridge < horizonridges.len; ++iridge) {
@@ -770,7 +770,7 @@ static void addpoint(Polytoop* polytoop, polytoop_Facet* facet, Point* apex)
       if (!newridge) {
         /* Create new ridge: */
         newridge = create_ridge(polytoop, ridgeverts);
-        hashmap_insert(polytoop->newridges, d, newridge);
+        hashmap_insert(&polytoop->newridges, d, newridge);
       }
       facetridges[ivertex + 1] = newridge;
     }
@@ -930,7 +930,7 @@ Polytoop* polytoop_new()
 
   polytoop->merge = 0;
 
-  polytoop->newridges = hashmap_new();
+  hashmap_init(&polytoop->newridges);
 
   return polytoop;
 }
@@ -940,7 +940,7 @@ Polytoop* polytoop_new()
 void polytoop_delete(Polytoop* polytoop)
 {
   polytoop_clear(polytoop);
-  hashmap_delete(polytoop->newridges);
+  hashmap_destroy(&polytoop->newridges);
   allocator_delete(polytoop->allocator);
   free(polytoop);
 }
@@ -996,7 +996,7 @@ void polytoop_clear(Polytoop* polytoop)
                  polytoop->dim * sizeof(double));
 #endif
 
-  hashmap_clear(polytoop->newridges);
+  hashmap_clear(&polytoop->newridges);
   polytoop->nfacets = 0;
   polytoop->firstfacet = NULL;
   polytoop->lastfacet = NULL;

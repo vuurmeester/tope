@@ -36,7 +36,7 @@ struct _Polytoop {
   int nverts;
   polytoop_Vertex* firstvertex;
   int merge;
-  HashMap* newridges;
+  HashMap newridges;
 };
 
 struct _polytoop_Facet {
