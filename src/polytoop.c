@@ -136,7 +136,7 @@ static Ridge* create_ridge(Polytoop* polytoop, polytoop_Vertex** vertices)
 {
   int i;
   Ridge* ridge;
-  
+
   /* Create ridge: */
   ridge = allocator_alloc(polytoop->allocator, sizeof(Ridge));
   ridge->next = NULL;
@@ -603,8 +603,7 @@ static void initialsimplex(Polytoop* polytoop, int npoints, Point** points)
       facetridges[j] = hashmap_retrieve(polytoop->newridges, ridgeverts);
       if (!facetridges[j]) {
         facetridges[j] = create_ridge(polytoop, ridgeverts);
-        hashmap_insert(polytoop->newridges, facetridges[j]->vertices,
-                       facetridges[j]);
+        hashmap_insert(polytoop->newridges, facetridges[j]);
       }
     }
 
@@ -819,7 +818,7 @@ static void addpoint(Polytoop* polytoop, polytoop_Facet* facet, Point* apex)
       if (!newridge) {
         /* Create new ridge: */
         newridge = create_ridge(polytoop, ridgeverts);
-        hashmap_insert(polytoop->newridges, newridge->vertices, newridge);
+        hashmap_insert(polytoop->newridges, newridge);
       }
       facetridges[ivertex + 1] = newridge;
     }

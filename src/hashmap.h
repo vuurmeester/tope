@@ -15,10 +15,10 @@ void hashmap_delete(HashMap* hashmap);
 void hashmap_setdata(HashMap* hashmap, void* data);
 
 /** Insert key/value pair. */
-HashEntry* hashmap_insert(HashMap* hashmap, void* key, void* value);
+void hashmap_insert(HashMap* hashmap, Ridge* ridge);
 
 /** Remove all key/value pairs. */
 void hashmap_clear(HashMap* hashmap);
 
 /** Retrieve value by key. */
-void* hashmap_retrieve(HashMap* hashmap, void* key);
+Ridge* hashmap_retrieve(HashMap* hashmap, polytoop_Vertex** verts);
