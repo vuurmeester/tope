@@ -3,6 +3,7 @@
 #include <polytoop.h>
 
 #include "allocator.h"
+#include "array.h"
 
 typedef struct _Ridge Ridge;
 typedef struct _Point Point;
@@ -13,12 +14,6 @@ typedef struct _HashMap {
   unsigned* hashes;
   Ridge** ridges; /* entries */
 } HashMap;
-
-typedef struct _Array {
-  int len;
-  int cap;
-  void** values;
-} Array;
 
 struct _Polytoop {
   Allocator* allocator;
