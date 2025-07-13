@@ -10,24 +10,16 @@ typedef struct _HashEntry HashEntry;
 
 struct _HashEntry {
   unsigned hash;
-  void* key;
-  void* value;
-  HashEntry* nextinchain;
-  HashEntry* nextinlist;
-  HashEntry* previnlist;
+  Ridge* ridge;
 };
 
 typedef struct _HashMap {
   int cap;                            /* current capacity */
-  unsigned mask;                      /* for efficient modulo */
   int len;                            /* number of elements */
   void* data;                         /* userdata */
   unsigned (*hashfunc)(void*, void*); /* hash function */
   int (*compar)(void*, void*, void*); /* key comparison function */
-  HashEntry** entries;                /* chain pointers */
-  Allocator* allocator;
-  HashEntry* first; /* first entry in linked list */
-  HashEntry* last;  /* last entry in linked list */
+  HashEntry* entries;                 /* entries */
 } HashMap;
 
 typedef struct _Array {
