@@ -283,16 +283,19 @@ void boundingbox(int npoints, int ndims, double const* vertices,
                  int* minindices, int* maxindices, double* minima,
                  double* maxima)
 {
+  int i;
+  int j;
+
   /* Initialize minima and maxima: */
-  for (int j = 0; j < ndims; ++j) {
+  for (j = 0; j < ndims; ++j) {
     minima[j] = HUGE_VAL;
     maxima[j] = -HUGE_VAL;
   }
 
   /* Loop over vertices: */
-  for (int i = 0; i < npoints; ++i) {
+  for (i = 0; i < npoints; ++i) {
     /* Loop over dimensions: */
-    for (int j = 0; j < ndims; ++j) {
+    for (j = 0; j < ndims; ++j) {
       if (vertices[i * ndims + j] < minima[j]) {
         /* Update minimum of dimension j: */
         minindices[j] = i;
@@ -313,27 +316,30 @@ void boundingbox(int npoints, int ndims, double const* vertices,
 void analysesimplex(int npoints, int ndims, double* points, double* volume,
                     double* centroid)
 {
+  int i;
+  int j;
+
   assert(npoints <= ndims + 1);
 
   /* Accumulate centroid: */
   vec_reset(ndims, centroid);
-  for (int i = 0; i < npoints; ++i) {
+  for (i = 0; i < npoints; ++i) {
     vec_add(ndims, centroid, &points[i * ndims]);
   }
   vec_scale(ndims, centroid, 1.0 / (double)npoints);
 
   /* Subtract last point from all points: */
-  for (int i = 0; i < npoints - 1; ++i) {
+  for (i = 0; i < npoints - 1; ++i) {
     vec_sub(ndims, &points[i * ndims], &points[(npoints - 1) * ndims]);
   }
   memset(&points[(npoints - 1) * ndims], 0, ndims * sizeof(double));
 
   *volume = 1.0;
-  for (int i = 0; i < npoints - 1; ++i) {
-    // Get pivot:
+  for (i = 0; i < npoints - 1; ++i) {
+    /* Get pivot: */
     double maxnormsq = 0.0;
     int pivot = -1;
-    for (int j = i; j < npoints - 1; ++j) {
+    for (j = i; j < npoints - 1; ++j) {
       double normsq = vec_nrmsq(ndims, &points[j * ndims]);
       if (normsq > maxnormsq) {
         maxnormsq = normsq;
@@ -341,22 +347,22 @@ void analysesimplex(int npoints, int ndims, double* points, double* volume,
       }
     }
 
-    // Update volume:
+    /* Update volume: */
     double nrm = sqrt(maxnormsq);
     *volume *= nrm / (double)(i + 1);
     assert(nrm > 0.0);
 
-    // Perform pivot:
+    /* Perform pivot: */
     if (pivot > i) {
       memswp(&points[i * ndims], &points[pivot * ndims],
              ndims * sizeof(double));
     }
 
-    // Normalize:
+    /* Normalize: */
     vec_scale(ndims, &points[i * ndims], 1.0 / nrm);
 
-    // Orthogonalize (subtract projection of row i from those below):
-    for (int j = i + 1; j < npoints - 1; ++j) {
+    /* Orthogonalize (subtract projection of row i from those below): */
+    for (j = i + 1; j < npoints - 1; ++j) {
       double fac = vec_dot(ndims, &points[i * ndims], &points[j * ndims]);
       vec_adds(ndims, &points[j * ndims], &points[i * ndims], -fac);
     }

@@ -1,13 +1,25 @@
 #pragma once
 
-#include <stdio.h>
-
 #define _USE_MATH_DEFINES
 #include <math.h>
 #undef _USE_MATH_DEFINES
 
+#include <stdio.h>
+
+#ifndef M_PI
+#define M_PI 3.1415926535898
+#endif
+
 #ifndef M_2PI
 #define M_2PI (2.0 * M_PI)
+#endif
+
+#ifndef M_SQRT2
+#define M_SQRT2 1.4142135623731
+#endif
+
+#ifndef M_SQRT1_2
+#define M_SQRT1_2 (0.5 * M_SQRT2)
 #endif
 
 /** Add a vector to another. */
@@ -69,8 +81,8 @@ void boundingbox(int npoints, int ndims, double const* points, int* minindices,
                  int* maxindices, double* minima, double* maxima);
 
 /** Compute volume, centroid and span of multidimensional simplex. */
-void analysesimplex(int npoints, int ndims, double* points,
-                    double* volume, double* centroid);
+void analysesimplex(int npoints, int ndims, double* points, double* volume,
+                    double* centroid);
 
 /** Solve linear program with Dantzig's simplex method.
     Restricted normal form.

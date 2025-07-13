@@ -43,6 +43,8 @@ endif()
 # Default install dir:
 set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/.." CACHE STRING "" FORCE)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # Switches to enable examples and/or tests
 option(EXAMPLES_ENABLED "enable examples" ON)
 option(TESTS_ENABLED "enable tests" ON)

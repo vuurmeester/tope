@@ -1,5 +1,3 @@
-#include <limits.h>
-#include <string.h>
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -7,6 +5,9 @@
 #include <sys/time.h>
 #include <time.h>
 #endif
+
+#include <limits.h>
+#include <string.h>
 
 #include "util.h"
 
