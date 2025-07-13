@@ -26,6 +26,8 @@ void benchmark(int ntests, int npoints, int ndims, int cospherical)
   double* points;
   Polytoop* polytoop;
 
+  random_reset();
+
   points = malloc(npoints * ndims * sizeof(double));
 
   printf("***** polytoop test *****\n");
@@ -133,45 +135,35 @@ void benchqhull(int ntests, int npoints, int ndims, int cospherical)
 
 int main()
 {
-#ifndef NDEBUG
-  benchmark(1, 64, 8, 0);
-  benchqhull(1, 64, 8, 0);
-  return 0;
-#endif
+//#ifndef NDEBUG
+//  benchmark(1, 64, 8, 0);
+//  benchqhull(1, 64, 8, 0);
+//  return 0;
+//#endif
 
   /* 4D non-cospherical: */
   benchmark(200, 32, 4, 0);
-  benchqhull(200, 32, 4, 0);
   benchmark(200, 64, 4, 0);
-  benchqhull(200, 64, 4, 0);
 
   /* 3D non-cospherical: */
   benchmark(200, 64, 3, 0);
-  benchqhull(200, 64, 3, 0);
   benchmark(200, 128, 3, 0);
-  benchqhull(200, 128, 3, 0);
  
   /* 3D cospherical: */
   benchmark(200, 64, 3, 1);
-  benchqhull(200, 64, 3, 1);
   benchmark(200, 128, 3, 1);
-  benchqhull(200, 128, 3, 1);
 
   /* Many small hulls: */
   benchmark(2000, 16, 3, 1);
-  benchqhull(2000, 16, 3, 1);
 
   /* One large polytoop: */
   benchmark(1, 20000, 3, 1);
-  benchqhull(1, 20000, 3, 1);
 
   /* Large 4D polytoop: */
   benchmark(1, 200000, 4, 0);
-  benchqhull(1, 200000, 4, 0);
 
   /* Large 5D polytoop: */
   benchmark(1, 50000, 5, 0);
-  benchqhull(1, 50000, 5, 0);
 
   return 0;
 }
