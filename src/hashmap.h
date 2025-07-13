@@ -1,24 +1,18 @@
-#include "allocator.h"
+#pragma once
 
 #include "types.h"
 
 /** Create hashmap. */
-HashMap* hashmap_new(
-  unsigned(*hashfunc)(void* key, void* data),
-  int (*compar)(void* key1, void* key2, void* data)
-);
+HashMap* hashmap_new(void);
 
 /** Delete hashmap. */
 void hashmap_delete(HashMap* hashmap);
 
-/** Set user data for comparison function. */
-void hashmap_setdata(HashMap* hashmap, void* data);
+/** Insert ridge. */
+void hashmap_insert(HashMap* hashmap, int d, Ridge* ridge);
 
-/** Insert key/value pair. */
-void hashmap_insert(HashMap* hashmap, Ridge* ridge);
-
-/** Remove all key/value pairs. */
+/** Clear hashmap for reuse. */
 void hashmap_clear(HashMap* hashmap);
 
-/** Retrieve value by key. */
-Ridge* hashmap_retrieve(HashMap* hashmap, polytoop_Vertex** verts);
+/** Retrieve ridge by its vertices. */
+Ridge* hashmap_retrieve(HashMap* hashmap, int d, polytoop_Vertex** verts);

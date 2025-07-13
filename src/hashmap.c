@@ -5,8 +5,48 @@
 #include "allocator.h"
 #include "hashmap.h"
 
-/* Minimum capacity: */
+/* Initial capacity: */
 #define MIN_CAP 8
+
+
+
+static unsigned hashvertset(int d, polytoop_Vertex** verts)
+{
+  int i;
+  int nverts;
+  unsigned ret;
+
+  /* Vertices: */
+  nverts = d - 1;
+
+  /* Sum vertex id's: */
+  ret = 0;
+  for (i = 0; i < nverts; ++i) {
+    ret += verts[i]->index;
+  }
+
+  return ret;
+}
+
+
+
+/* Compare sets of d - 1 sorted vertices (for ordering ridges): */
+static int compvertsets(int d, polytoop_Vertex** vertset1,
+                        polytoop_Vertex** vertset2)
+{
+  int i;
+
+  for (i = 0; i < d - 1; ++i) {
+    if (vertset1[i]->index < vertset2[i]->index) {
+      return -1;
+    }
+    if (vertset1[i]->index > vertset2[i]->index) {
+      return 1;
+    }
+  }
+
+  return 0;
+}
 
 
 
@@ -14,28 +54,31 @@ static void resize(HashMap* hashmap, int newcap)
 {
   int i;
   int index;
-  HashEntry* entry;
-  HashEntry** pentry;
 
-  HashEntry* newentries = calloc(newcap, sizeof(HashEntry));
+  Ridge** newridges = calloc(newcap, sizeof(Ridge*) + sizeof(unsigned));
+  unsigned* newhashes = (unsigned*)(newridges + newcap);
+  unsigned newmask = newcap - 1;
   for (i = 0; i < hashmap->cap; ++i) {
-    entry = &hashmap->entries[i];
-    if (!entry->ridge) {
+    if (!hashmap->ridges[i]) {
       continue;
     }
-    unsigned newindex = entry->hash & (newcap - 1);
-    newentries[newindex] = hashmap->entries[i];
+    unsigned newindex = hashmap->hashes[i] & newmask;
+    while (newridges[newindex]) {
+      newindex = (newindex + 1) & newmask;
+    }
+    newridges[newindex] = hashmap->ridges[i];
+    newhashes[newindex] = hashmap->hashes[i];
   }
 
-  free(hashmap->entries);
-  hashmap->entries = newentries;
+  free(hashmap->ridges);
+  hashmap->ridges = newridges;
+  hashmap->hashes = newhashes;
   hashmap->cap = newcap;
 }
 
 
 
-HashMap* hashmap_new(unsigned (*hashfunc)(void* key, void* data),
-                     int (*compar)(void* key1, void* key2, void* data))
+HashMap* hashmap_new()
 {
   int i;
   HashMap* hashmap;
@@ -43,10 +86,8 @@ HashMap* hashmap_new(unsigned (*hashfunc)(void* key, void* data),
   hashmap = malloc(sizeof(HashMap));
   hashmap->cap = MIN_CAP;
   hashmap->len = 0;
-  hashmap->data = NULL;
-  hashmap->hashfunc = hashfunc;
-  hashmap->compar = compar;
-  hashmap->entries = calloc(MIN_CAP, sizeof(HashEntry));
+  hashmap->ridges = calloc(MIN_CAP, sizeof(Ridge*) + sizeof(unsigned));
+  hashmap->hashes = (unsigned*)(hashmap->ridges + MIN_CAP);
 
   return hashmap;
 }
@@ -55,36 +96,29 @@ HashMap* hashmap_new(unsigned (*hashfunc)(void* key, void* data),
 
 void hashmap_delete(HashMap* hashmap)
 {
-  free(hashmap->entries);
+  free(hashmap->ridges);
   free(hashmap);
 }
 
 
 
-void hashmap_setdata(HashMap* hashmap, void* data) { hashmap->data = data; }
-
-
-
-void hashmap_insert(HashMap* hashmap, Ridge* ridge)
+void hashmap_insert(HashMap* hashmap, int d, Ridge* ridge)
 {
   unsigned hash;
   int index;
-  HashEntry* entry;
 
-  hash = hashmap->hashfunc(ridge->vertices, hashmap->data);
+  hash = hashvertset(d, ridge->vertices);
   index = hash & (hashmap->cap - 1);
-  entry = &hashmap->entries[index];
-  while (entry->ridge) {
-    assert(entry->hash != hash ||
-           hashmap->compar(entry->ridge->vertices, ridge->vertices,
-                           hashmap->data) != 0);
+  while (hashmap->ridges[index]) {
+    assert(hashmap->hashes[index] != hash ||
+           compvertsets(d, hashmap->ridges[index]->vertices, ridge->vertices) !=
+               0);
     index = (index + 1) & (hashmap->cap - 1);
-    entry = &hashmap->entries[index];
   }
 
   /* New entry: */
-  entry->hash = hash;
-  entry->ridge = ridge;
+  hashmap->ridges[index] = ridge;
+  hashmap->hashes[index] = hash;
 
   /* Increase size: */
   ++hashmap->len;
@@ -99,34 +133,30 @@ void hashmap_insert(HashMap* hashmap, Ridge* ridge)
 
 void hashmap_clear(HashMap* hashmap)
 {
-  memset(hashmap->entries, 0, hashmap->cap * sizeof(HashEntry));
+  memset(hashmap->ridges, 0, hashmap->cap * sizeof(Ridge*));
+  memset(hashmap->hashes, 0, hashmap->cap * sizeof(unsigned));
   hashmap->len = 0;
 }
 
 
 
-Ridge* hashmap_retrieve(HashMap* hashmap, polytoop_Vertex** verts)
+Ridge* hashmap_retrieve(HashMap* hashmap, int d, polytoop_Vertex** verts)
 {
   unsigned hash;
   int index;
-  HashEntry* entry;
 
-  if (hashmap->entries != NULL) {
-    /* Generate hash: */
-    hash = hashmap->hashfunc(verts, hashmap->data);
+  /* Generate hash: */
+  hash = hashvertset(d, verts);
 
-    /* Get proper chain: */
-    index = hash & (hashmap->cap - 1);
-    entry = &hashmap->entries[index];
+  /* Get proper chain: */
+  index = hash & (hashmap->cap - 1);
 
-    while (entry->ridge) {
-      if (entry->hash == hash &&
-          hashmap->compar(verts, entry->ridge->vertices, hashmap->data) == 0) {
-        return entry->ridge;
-      }
-      index = (index + 1) & (hashmap->cap - 1);
-      entry = &hashmap->entries[index];
+  while (hashmap->ridges[index]) {
+    if (hashmap->hashes[index] == hash &&
+        compvertsets(d, verts, hashmap->ridges[index]->vertices) == 0) {
+      return hashmap->ridges[index];
     }
+    index = (index + 1) & (hashmap->cap - 1);
   }
 
   return NULL;
