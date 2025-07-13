@@ -11,8 +11,8 @@ typedef struct _Point Point;
 typedef struct _HashMap {
   int cap; /* current capacity */
   int len; /* number of elements */
-  unsigned* hashes;
   Ridge** ridges; /* entries */
+  unsigned* hashes;
 } HashMap;
 
 struct _Polytoop {

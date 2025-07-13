@@ -1,20 +1,20 @@
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 /*#include <qhull/libqhull.h>
 #include <qhull/io.h>*/
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-#include "../src/util.h"
 #include "../src/math.h"
+#include "../src/util.h"
 
 #include <polytoop.h>
 
 
 
-void benchmark(int ntests, int npoints, int ndims, int cospherical)
+double benchmark(int ntests, int npoints, int ndims, int cospherical)
 {
   int nfacets;
   int nridges;
@@ -72,6 +72,8 @@ void benchmark(int ntests, int npoints, int ndims, int cospherical)
   printf("time        = %g\n\n", dt);
 
   free(points);
+
+  return dt;
 }
 
 
@@ -135,35 +137,37 @@ void benchqhull(int ntests, int npoints, int ndims, int cospherical)
 
 int main()
 {
-//#ifndef NDEBUG
-//  benchmark(1, 64, 8, 0);
-//  benchqhull(1, 64, 8, 0);
-//  return 0;
-//#endif
-
+  // #ifndef NDEBUG
+  //   benchmark(1, 64, 8, 0);
+  //   benchqhull(1, 64, 8, 0);
+  //   return 0;
+  // #endif
+  double t = 0.0;
   /* 4D non-cospherical: */
-  benchmark(200, 32, 4, 0);
-  benchmark(200, 64, 4, 0);
+  t += benchmark(200, 32, 4, 0);
+  t += benchmark(200, 64, 4, 0);
 
   /* 3D non-cospherical: */
-  benchmark(200, 64, 3, 0);
-  benchmark(200, 128, 3, 0);
- 
+  t += benchmark(200, 64, 3, 0);
+  t += benchmark(200, 128, 3, 0);
+
   /* 3D cospherical: */
-  benchmark(200, 64, 3, 1);
-  benchmark(200, 128, 3, 1);
+  t += benchmark(200, 64, 3, 1);
+  t += benchmark(200, 128, 3, 1);
 
   /* Many small hulls: */
-  benchmark(2000, 16, 3, 1);
+  t += benchmark(2000, 16, 3, 1);
 
   /* One large polytoop: */
-  benchmark(1, 20000, 3, 1);
+  t += benchmark(1, 20000, 3, 1);
 
   /* Large 4D polytoop: */
-  benchmark(1, 200000, 4, 0);
+  t += benchmark(1, 200000, 4, 0);
 
   /* Large 5D polytoop: */
-  benchmark(1, 50000, 5, 0);
+  t += benchmark(1, 50000, 5, 0);
+
+  printf("t_qhull = %g\n", t);
 
   return 0;
 }

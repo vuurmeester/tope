@@ -4,10 +4,10 @@
 #include <string.h>
 
 #include "allocator.h"
+#include "array.h"
 #include "hashmap.h"
 #include "math.h"
 #include "util.h"
-#include "array.h"
 
 #include <polytoop.h>
 
@@ -143,8 +143,8 @@ static polytoop_Facet* facet_new(Polytoop* polytoop)
       allocator_alloc(polytoop->allocator, polytoop->dim * sizeof(double));
   vec_reset(polytoop->dim, facet->normal);
   facet->dist = 0.0;
-  facet->ridges = array_new();
-  facet->vertices = array_new();
+  facet->ridges = array_new(polytoop->dim - 1, polytoop->allocator);
+  facet->vertices = array_new(polytoop->dim, polytoop->allocator);
   facet->outsidehead = NULL;
   facet->outsidetail = NULL;
   facet->visible = 0;
@@ -541,18 +541,11 @@ static void initialsimplex(Polytoop* polytoop, int npoints, Point* points)
 /* Add point to polytoop: */
 static void addpoint(Polytoop* polytoop, polytoop_Facet* facet, Point* apex)
 {
-  int ifacet;
-  int iridge;
-  int iridge2;
-  int ivertex;
-  double ip;
-  Ridge* newridge;
-
   int d = polytoop->dim;
 
   /* Allocations: */
-  Array newfacets = array_new();
-  Array horizonridges = array_new();
+  Array newfacets = array_new(8, polytoop->allocator);
+  Array horizonridges = array_new(8, polytoop->allocator);
   double* vec = alloca(d * sizeof(double));
 
   /* Remove facet from polytoop list: */
@@ -583,7 +576,7 @@ static void addpoint(Polytoop* polytoop, polytoop_Facet* facet, Point* apex)
     visiblelist = facet->next;
 
     /* Loop over ridges to visit neighbours: */
-    for (iridge = 0; iridge < facet->ridges.len; ++iridge) {
+    for (int iridge = 0; iridge < facet->ridges.len; ++iridge) {
       /* Ridge i: */
       Ridge* ridge = facet->ridges.values[iridge];
 
@@ -603,7 +596,7 @@ static void addpoint(Polytoop* polytoop, polytoop_Facet* facet, Point* apex)
         /* This neighbour was already removed, remove ridge. */
 
         /* Remove reference to this ridge from adjacent vertices: */
-        for (ivertex = 0; ivertex < polytoop->dim - 1; ++ivertex) {
+        for (int ivertex = 0; ivertex < polytoop->dim - 1; ++ivertex) {
           polytoop_Vertex* vertex = ridge->vertices[ivertex];
           --vertex->nridges;
           if (vertex->nridges == 0) {
@@ -618,10 +611,10 @@ static void addpoint(Polytoop* polytoop, polytoop_Facet* facet, Point* apex)
         /* Neighbour is untested. */
 
         /* Height of apex above neighbour: */
-        ip = vec_dot(d, apex->pos, neighbour->normal) - neighbour->dist;
+        double h = vec_dot(d, apex->pos, neighbour->normal) - neighbour->dist;
 
         /* Decide if neighbour is visible: */
-        if (ip > EPS) {
+        if (h > EPS) {
           /* Remove neighbour from polytoop list: */
           if (neighbour->prev) {
             neighbour->prev->next = neighbour->next;
@@ -675,15 +668,16 @@ static void addpoint(Polytoop* polytoop, polytoop_Facet* facet, Point* apex)
     facet = facet_new(polytoop);
 
     /* Facet vertices are horizon vertices + apex: */
-    for (ivertex = 0; ivertex < d - 1; ++ivertex) {
-      array_append(&facet->vertices, horizonridge->vertices[ivertex],
-                   polytoop->allocator);
+    facet->vertices.len = d;
+    assert(facet->vertices.len <= facet->vertices.cap);
+    for (int ivertex = 0; ivertex < d - 1; ++ivertex) {
+      facet->vertices.values[ivertex] = horizonridge->vertices[ivertex];
     }
-    array_append(&facet->vertices, vertex, polytoop->allocator);
+    facet->vertices.values[d - 1] = vertex;
 
     /* 1 existing (horizon) ridge and dim - 1 new ridges: */
     facetridges[0] = horizonridge;
-    for (ivertex = 0; ivertex < polytoop->dim - 1; ++ivertex) {
+    for (int ivertex = 0; ivertex < polytoop->dim - 1; ++ivertex) {
       /* Add all but one of the horizon ridge vertices: */
       for (int jvertex = 0; jvertex < ivertex; ++jvertex) {
         ridgeverts[jvertex] = horizonridge->vertices[jvertex];
@@ -752,7 +746,7 @@ static void addpoint(Polytoop* polytoop, polytoop_Facet* facet, Point* apex)
                      array_find(neighbour->ridges, horizonridge));
 
         /* Disassociate vertices from the dividing ridge: */
-        for (ivertex = 0; ivertex < polytoop->dim - 1; ++ivertex) {
+        for (int ivertex = 0; ivertex < polytoop->dim - 1; ++ivertex) {
           --horizonridge->vertices[ivertex]->nridges;
           assert(horizonridge->vertices[ivertex]->nridges > 0);
         }
@@ -776,10 +770,10 @@ static void addpoint(Polytoop* polytoop, polytoop_Facet* facet, Point* apex)
     Point* next = outsidepoints->next;
 
     /* Find visible facet: */
-    for (ifacet = 0; ifacet < newfacets.len; ++ifacet) {
+    for (int ifacet = 0; ifacet < newfacets.len; ++ifacet) {
       facet = newfacets.values[ifacet];
-      ip = vec_dot(polytoop->dim, outsidepoints->pos, facet->normal) -
-           facet->dist;
+      double ip = vec_dot(polytoop->dim, outsidepoints->pos, facet->normal) -
+                  facet->dist;
       if (ip > EPS) {
         /* Outside. */
         outsidepoints->height = ip;
