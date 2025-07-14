@@ -12,6 +12,7 @@ typedef struct _Array {
 
 
 
+int find(int n, void** values, void* value);
 Array array_new(int cap, Allocator* alc);
 void array_delete(Array* arr, Allocator* alc);
 void array_append(Array* arr, void* value, Allocator* alc);

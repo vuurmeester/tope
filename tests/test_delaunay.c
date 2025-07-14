@@ -59,8 +59,8 @@ int main()
   }
 
   /* Interpolation: */
-  xi[0] = 0.0;
-  xi[1] = 4.0 / 3.0;
+  xi[0] = 1;
+  xi[1] = 4;
   polytoop_interpolate(polytoop, xi, indices, weights);
 
   /* Sum of weights should be 1: */
