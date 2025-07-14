@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "allocator.h"
 #include "array.h"
@@ -736,21 +737,45 @@ static void addpoint(Polytoop* polytoop, polytoop_Facet* facet, Point* apex)
   }
 
   /* Assign outside verts: */
+  facet = newfacets.values[0];
   while (outsidepoints) {
     /* Remember next in list: */
     Point* next = outsidepoints->next;
 
+    double h =
+        vec_dot(polytoop->dim, outsidepoints->pos, facet->normal) - facet->dist;
+
     /* Find visible facet: */
-    for (int ifacet = 0; ifacet < newfacets.len; ++ifacet) {
-      facet = newfacets.values[ifacet];
-      double ip = vec_dot(polytoop->dim, outsidepoints->pos, facet->normal) -
-                  facet->dist;
-      if (ip > EPS) {
+    while (true) {
+      loop_start:
+      if (h > EPS) {
         /* Outside. */
-        outsidepoints->height = ip;
+        outsidepoints->height = h;
         facet_addoutside(polytoop, facet, outsidepoints);
         break;
       }
+
+      for (int iridge = 0; iridge < facet->ridges.len; ++iridge) {
+        Ridge* ridge = facet->ridges.values[iridge];
+        polytoop_Facet* neighbour = NULL;
+        if (ridge->facets[0] == facet) {
+          neighbour = ridge->facets[1];
+        } else {
+          assert(ridge->facets[1] == facet);
+          neighbour = ridge->facets[0];
+        }
+
+        /* Neighbour height: */
+        double nh =
+            vec_dot(polytoop->dim, outsidepoints->pos, neighbour->normal) -
+            neighbour->dist;
+        if (nh > h) {
+          facet = neighbour;
+          h = nh;
+          goto loop_start;
+        }
+      }
+      break;
     }
 
     /* Next in list: */
@@ -1393,14 +1418,14 @@ void polytoop_interpolate(Polytoop* polytoop, double const* xi, int* indices,
       indices[iridge] = vertex->index;
       assert(find(dim, ridge->vertices, vertex) == -1);
 
-      /* Keep track of maximum height (if not boundary ridge): */
+      /* Keep track of minimum height (if not boundary ridge): */
       if (h < hmin && ridge->facets[0] != NULL && ridge->facets[1] != NULL) {
         hmin = h;
         minindex = iridge;
       }
     }
 
-    /* If hmax insignificant, stop: */
+    /* If hmin insignificant, stop: */
     if (hmin > -EPS) {
       break;
     }
