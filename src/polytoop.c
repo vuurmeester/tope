@@ -83,7 +83,6 @@ static Ridge* create_ridge(Polytoop* polytoop, polytoop_Vertex** vertices)
   ridge->next = NULL;
   ridge->prev = NULL;
   ridge->volume = 0.0;
-  ridge->dist = 0.0;
   ridge->centroid = NULL;
   ridge->normal = NULL;
   ridge->facets[0] = NULL;
@@ -1370,20 +1369,20 @@ void polytoop_interpolate(Polytoop* polytoop, double const* xi, int* indices,
           vec_adds(dim, ridge->normal, &verts[i * dim], -fac);
         }
         vec_normalize(dim, ridge->normal);
-
-        /* Ridge plane distance: */
-        ridge->dist = vec_dot(dim, ridge->normal, ridge->centroid);
       }
+
+      /* Ridge plane distance: */
+      double dist = vec_dot(dim, ridge->normal, ridge->centroid);
 
       /* Sign of normal: */
       double sign = 1.0;
-      if (vec_dot(dim, currentfacet->centroid, ridge->normal) < ridge->dist) {
+      if (vec_dot(dim, currentfacet->centroid, ridge->normal) < dist) {
         /* outward pointing normal */
         sign = -1.0;
       }
 
       /* Height of interpolation point above ridge: */
-      double h = sign * (vec_dot(dim, xiprime, ridge->normal) - ridge->dist);
+      double h = sign * (vec_dot(dim, xiprime, ridge->normal) - dist);
 
       /* Weight for this ridge: */
       weights[iridge] = h * ridge->volume;
