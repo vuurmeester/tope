@@ -6,6 +6,18 @@
 
 
 
+int find(int n, void** values, void* value)
+{
+  for (int i = 0; i < n; ++i) {
+    if (values[i] == value) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+
+
 Array array_new(int cap, Allocator* alc)
 {
   int newcap = MINCAP;
@@ -53,12 +65,7 @@ void array_remove(Array* arr, int i)
 
 int array_find(Array arr, void* value)
 {
-  for (int i = 0; i < arr.len; ++i) {
-    if (arr.values[i] == value) {
-      return i;
-    }
-  }
-  return -1;
+  return find(arr.len, arr.values, value);
 }
 
 
