@@ -1,8 +1,8 @@
 #include <assert.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdbool.h>
 
 #include "allocator.h"
 #include "array.h"
@@ -745,37 +745,38 @@ static void addpoint(Polytoop* polytoop, polytoop_Facet* facet, Point* apex)
     double h =
         vec_dot(polytoop->dim, outsidepoints->pos, facet->normal) - facet->dist;
 
-    /* Find visible facet: */
-    while (true) {
-      loop_start:
-      if (h > EPS) {
-        /* Outside. */
-        outsidepoints->height = h;
-        facet_addoutside(polytoop, facet, outsidepoints);
-        break;
+    /* Visit neighbours, skipping horizon ridge: */
+    polytoop_Facet* prev = NULL;
+    for (int iridge = 1; iridge < facet->ridges.len; ++iridge) {
+      Ridge* ridge = facet->ridges.values[iridge];
+      assert(iridge > 0 && array_find(horizonridges, ridge) == -1);
+      polytoop_Facet* neighbour = NULL;
+      if (ridge->facets[0] == facet) {
+        neighbour = ridge->facets[1];
+      } else {
+        assert(ridge->facets[1] == facet);
+        neighbour = ridge->facets[0];
+      }
+      if (neighbour == prev) {
+        continue;
       }
 
-      for (int iridge = 0; iridge < facet->ridges.len; ++iridge) {
-        Ridge* ridge = facet->ridges.values[iridge];
-        polytoop_Facet* neighbour = NULL;
-        if (ridge->facets[0] == facet) {
-          neighbour = ridge->facets[1];
-        } else {
-          assert(ridge->facets[1] == facet);
-          neighbour = ridge->facets[0];
-        }
-
-        /* Neighbour height: */
-        double nh =
-            vec_dot(polytoop->dim, outsidepoints->pos, neighbour->normal) -
-            neighbour->dist;
-        if (nh > h) {
-          facet = neighbour;
-          h = nh;
-          goto loop_start;
-        }
+      /* Neighbour height: */
+      double nh =
+          vec_dot(polytoop->dim, outsidepoints->pos, neighbour->normal) -
+          neighbour->dist;
+      if (nh > h) {
+        iridge = 0; /* reset iteration (new base facet) */
+        prev = facet;
+        facet = neighbour;
+        h = nh;
       }
-      break;
+    }
+
+    if (h > EPS) {
+      /* Outside. */
+      outsidepoints->height = h;
+      facet_addoutside(polytoop, facet, outsidepoints);
     }
 
     /* Next in list: */
