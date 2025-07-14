@@ -55,7 +55,6 @@ struct _Ridge {
   Ridge* prev;
 
   double volume;
-  double dist;
   double* centroid;
   double* normal;
   polytoop_Facet* facets[2];  /* 2 adjacent facets */
