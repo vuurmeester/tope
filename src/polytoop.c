@@ -373,7 +373,6 @@ static void initialsimplex(Polytoop* polytoop, int npoints, Point* points)
 
   /* Allocations: */
   double* span = malloc((npoints - 1) * d * sizeof(double));
-  double* vec = alloca(d * sizeof(double));
 
   /* Point furthest from unit box center: */
   int maxindex = -1;
@@ -1417,7 +1416,7 @@ void polytoop_interpolate(Polytoop* polytoop, double const* xi, int* indices,
       /* Index for this ridge: */
       polytoop_Vertex* vertex = currentfacet->vertices.values[iridge];
       indices[iridge] = vertex->index;
-      assert(find(dim, ridge->vertices, vertex) == -1);
+      assert(find(dim, (void**)ridge->vertices, vertex) == -1);
 
       /* Keep track of minimum height (if not boundary ridge): */
       if (h < hmin && ridge->facets[0] != NULL && ridge->facets[1] != NULL) {
