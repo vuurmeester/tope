@@ -70,8 +70,8 @@ void* allocator_alloc(Allocator* allocator, int size)
     return ret;
   }
 
-  if ((char*)allocator->freeptr > (char*)(allocator->firstblock + 1) +
-                                      allocator->blocksize - outsize) {
+  if ((char*)allocator->freeptr >
+      (char*)(allocator->firstblock + 1) + allocator->blocksize - outsize) {
     Block* block;
 
     /* Allocate new block: */
@@ -113,6 +113,7 @@ void allocator_free(Allocator* allocator, void* mem, int size)
 
   /* Where to find the freeptr: */
   OUTSIZE(size, outsize, index);
+  (void)outsize;
 
   /* Prepend to freelist: */
   *(void**)mem = allocator->freeptrs[index];
