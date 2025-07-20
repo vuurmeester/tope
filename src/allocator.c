@@ -1,108 +1,96 @@
 #include <assert.h>
 #include <stdlib.h> /* memcpy */
 #include <string.h> /* malloc, realloc, free */
+#include <stdint.h>
 
 #include "allocator.h"
 
-#define MAXSIZE 256
-#define FIRST_BLOCKSIZE (8 * MAXSIZE)
-#define NPOOLS 8 /* 32, 64, 96, 128, 160, 192, 224, 256 */
-#define OUTSIZE(insize, outsize, i)                                            \
-  {                                                                            \
-    i = (insize - 1) >> 5;                                                     \
-    outsize = (i + 1) << 5;                                                    \
-  }
+#define MAXSIZE 512
+#define FIRST_BLOCKSIZE 4096
 
-typedef struct _Block Block;
 struct _Block {
   Block* next;
 };
 
-struct _Allocator {
-  int blocksize;
-  void* freeptrs[NPOOLS];
-  Block* firstblock;
-  void* freeptr;
+static uint16_t sizes[NPOOLS] = {
+  8, 16, 24, 32, 48, 64, 96, 128, 192, 256, 384, 512,
+};
+
+static uint8_t indices[] = {
+  0, // 8
+  1, // 16
+  2, // 24
+  3, // 32
+  4, 4, // 40, 48
+  5, 5, // 56, 64
+  6, 6, 6, 6, // 72, 80, 88, 96
+  7, 7, 7, 7, // 104, 112, 120, 128
+  8, 8, 8, 8, 8, 8, 8, 8, // 136, ..., 192
+  9, 9, 9, 9, 9, 9, 9, 9, // 200, ..., 256
+  10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
+  11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11,
 };
 
 
 
-Allocator* allocator_new(void)
+void allocator_init(Allocator* alc)
 {
-  int i;
-  Allocator* allocator;
-
-  allocator = malloc(sizeof(Allocator));
-  allocator->blocksize = FIRST_BLOCKSIZE;
-
-  for (i = 0; i < NPOOLS; ++i) {
-    allocator->freeptrs[i] = NULL;
-  }
-  allocator->firstblock = malloc(sizeof(Block) + allocator->blocksize);
-  allocator->firstblock->next = NULL;
-  allocator->freeptr = (char*)allocator->firstblock + sizeof(Block);
-
-  return allocator;
+  memset(alc, 0, sizeof(Allocator));
+  alc->freeptr = (void*) -1;
 }
 
 
 
-void* allocator_alloc(Allocator* allocator, int size)
+void* allocator_alloc(Allocator* alc, int size)
 {
-  int outsize;
-  int index;
-  void* ret;
-
   if (size <= 0) {
     return NULL;
   }
 
-  OUTSIZE(size, outsize, index);
-
-  if (outsize > MAXSIZE) {
-    return malloc(outsize);
+  if (size > MAXSIZE) {
+    /* out of band: */
+    return malloc(size);
   }
 
-  if (allocator->freeptrs[index]) {
+  int index = indices[(size - 1) >> 3];
+  int outsize = sizes[index];
+
+  void* ret = NULL;
+  if (alc->freeptrs[index]) {
     /* Recycle previously freed memory. */
-    ret = allocator->freeptrs[index];
-    allocator->freeptrs[index] = *(void**)ret;
+    ret = alc->freeptrs[index];
+    alc->freeptrs[index] = *(void**)ret;
     return ret;
   }
 
-  if ((char*)allocator->freeptr >
-      (char*)(allocator->firstblock + 1) + allocator->blocksize - outsize) {
-    Block* block;
-
+  if ((char*)alc->freeptr >
+      (char*)alc->firstblock + alc->blocksize - outsize) {
     /* Allocate new block: */
-    allocator->blocksize <<= 1;
-    block = malloc(sizeof(Block) + allocator->blocksize);
+    alc->blocksize = alc->blocksize ? alc->blocksize << 1 : FIRST_BLOCKSIZE;
+    Block* block = malloc(alc->blocksize);
 
-    /* Remember new block: */
-    block->next = allocator->firstblock;
-    allocator->firstblock = block;
+    /* Prepend new block: */
+    block->next = alc->firstblock;
+    alc->firstblock = block;
 
     /* Set freeptr: */
-    allocator->freeptr = (char*)block + sizeof(Block);
+    alc->freeptr = block + 1;
   }
 
   /* The memory to return: */
-  ret = allocator->freeptr;
+  ret = alc->freeptr;
 
   /* Next free memory: */
-  allocator->freeptr = (char*)ret + outsize;
+  alc->freeptr = (char*)ret + outsize;
 
   return ret;
 }
 
 
 
-void allocator_free(Allocator* allocator, void* mem, int size)
+void allocator_free(Allocator* alc, void* mem, int size)
 {
-  int index;
-  int outsize;
-
-  if (!mem) {
+  if (!mem || size <= 0) {
     return;
   }
 
@@ -112,12 +100,11 @@ void allocator_free(Allocator* allocator, void* mem, int size)
   }
 
   /* Where to find the freeptr: */
-  OUTSIZE(size, outsize, index);
-  (void)outsize;
+  int index = indices[(size - 1) >> 3];
 
   /* Prepend to freelist: */
-  *(void**)mem = allocator->freeptrs[index];
-  allocator->freeptrs[index] = mem;
+  *(void**)mem = alc->freeptrs[index];
+  alc->freeptrs[index] = mem;
 }
 
 
@@ -125,40 +112,35 @@ void allocator_free(Allocator* allocator, void* mem, int size)
 void* allocator_realloc(Allocator* allocator, void* oldmem, int oldsize,
                         int newsize)
 {
-  int oldindex;
-  int newindex;
-  int oldoutsize;
-  int newoutsize;
-  void* newmem;
-
   if (!oldmem) {
     /* New allocation */
     assert(oldsize == 0);
     return allocator_alloc(allocator, newsize);
   }
 
-  /* Actual sizes and where to find the freeptrs: */
-  OUTSIZE(oldsize, oldoutsize, oldindex);
-  OUTSIZE(newsize, newoutsize, newindex);
+  int newoutsize = newsize;
+  if (newsize <= MAXSIZE) {
+    int newindex = indices[(newsize - 1) >> 3];
+    newoutsize = sizes[newindex];
+  }
+
+  int oldoutsize = oldsize;
+  if (oldsize <= MAXSIZE) {
+    int oldindex = indices[(oldsize - 1) >> 3];
+    oldoutsize = sizes[oldindex];
+  }
 
   if (newoutsize == oldoutsize) {
-    /* Ideal case, no resizing necessary: */
+    /* No resizing necessary: */
     return oldmem;
   }
 
-  if (newoutsize > MAXSIZE && oldoutsize > MAXSIZE) {
-    /* Both old and new buffers outside of allocator. */
-    return realloc(oldmem, newoutsize);
-  }
-
   /* Allocate new memory: */
-  newmem = NULL;
+  void* newmem = NULL;
   if (newsize > 0) {
     newmem = allocator_alloc(allocator, newoutsize);
+    memcpy(newmem, oldmem, newsize < oldsize ? newsize : oldsize);
   }
-
-  /* Copy contents: */
-  memcpy(newmem, oldmem, newsize < oldsize ? newsize : oldsize);
 
   /* Release old memory: */
   allocator_free(allocator, oldmem, oldsize);
@@ -168,40 +150,14 @@ void* allocator_realloc(Allocator* allocator, void* oldmem, int oldsize,
 
 
 
-void allocator_clear(Allocator* allocator)
+void allocator_clear(Allocator* alc)
 {
-  int i;
-
-  /* Clear pools: */
-  for (i = 0; i < NPOOLS; ++i) {
-    allocator->freeptrs[i] = NULL;
+  assert(alc);
+  while (alc->firstblock) {
+    Block* next = alc->firstblock->next;
+    free(alc->firstblock);
+    alc->firstblock = next;
   }
-
-  /* Delete allocated blocks: */
-  while (allocator->firstblock->next) {
-    Block* next;
-    next = allocator->firstblock->next;
-    free(allocator->firstblock);
-    allocator->firstblock = next;
-  }
-  allocator->blocksize = FIRST_BLOCKSIZE;
-  allocator->freeptr = (char*)allocator->firstblock + sizeof(Block);
-}
-
-
-
-void allocator_delete(Allocator* allocator)
-{
-  if (!allocator) {
-    return;
-  }
-
-  /* Clear the allocator: */
-  allocator_clear(allocator);
-
-  /* Free first block: */
-  free(allocator->firstblock);
-
-  /* Delete the allocator object itself: */
-  free(allocator);
+  memset(alc, 0, sizeof(Allocator));
+  alc->freeptr = (void*) -1;
 }

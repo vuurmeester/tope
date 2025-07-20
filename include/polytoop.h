@@ -4,29 +4,20 @@ typedef struct _Polytoop Polytoop;
 typedef struct _polytoop_Facet polytoop_Facet;
 typedef struct _polytoop_Vertex polytoop_Vertex;
 
-/** Create polytoop object. */
-Polytoop* polytoop_new(void);
-
 /** Delete polytoop object. */
 void polytoop_delete(Polytoop* polytoop);
 
-/** Set facet merging. */
-void polytoop_setmerge(Polytoop* polytoop, int merge);
-
-/** Clear polytoop: */
-void polytoop_clear(Polytoop* polytoop);
-
 /** Create polytoop from planes. */
-void polytoop_fromplanes(Polytoop* polytoop, int nplanes, int dim,
-                         double* normals, double* distances);
+Polytoop* polytoop_fromplanes(int nplanes, int dim,
+                              double* normals, double* distances);
 
 /** Create polytoop from point cloud. */
-void polytoop_frompoints(Polytoop* polytoop, int npoints, int dim,
-                         double* points);
+Polytoop* polytoop_frompoints(int npoints, int dim,
+                              double* points, int merge);
 
 /** Delaunay triangulation. */
-void polytoop_delaunay(Polytoop* polytoop, int npoints, int dim,
-                       double* points);
+Polytoop* polytoop_delaunay(int npoints, int dim,
+                            double* points);
 
 /** Add vertex to existing polytoop (increment). */
 void polytoop_addvertex(Polytoop* polytoop, double* point);

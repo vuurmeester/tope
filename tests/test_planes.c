@@ -40,11 +40,8 @@ int main()
   distances[m] = 2.0;
   ++m;
 
-  /* Create polytoop object: */
-  polytoop = polytoop_new();
-
   /* Compute polytoop from pyramid planes: */
-  polytoop_fromplanes(polytoop, m, DIM, normals, distances);
+  polytoop = polytoop_fromplanes(m, DIM, normals, distances);
 
   /* Print the polytoop: */
   polytoop_print(polytoop);
