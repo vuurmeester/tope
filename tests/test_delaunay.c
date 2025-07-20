@@ -49,10 +49,7 @@ int main()
   ++m;
 
   /* Create polytoop object: */
-  polytoop = polytoop_new();
-
-  /* Add points to polytoop: */
-  polytoop_delaunay(polytoop, m, 2, points);
+  polytoop = polytoop_delaunay(m, 2, points);
 
   if (polytoop_getnumfacets(polytoop) != 4) {
     return -1;

@@ -90,12 +90,8 @@ int main()
   points[m * DIM + 2] = 2.0;
   ++m;
 
-  /* Create polytoop object: */
-  polytoop = polytoop_new();
-  polytoop_setmerge(polytoop, 1);
-
   /* Initialize polytoop with all but the last: */
-  polytoop_frompoints(polytoop, m - 1, 3, points);
+  polytoop = polytoop_frompoints(m - 1, 3, points, 1);
   if (polytoop_getnumfacets(polytoop) != 6) {
     return -1;
   }

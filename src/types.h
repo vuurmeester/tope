@@ -16,7 +16,7 @@ typedef struct _HashMap {
 } HashMap;
 
 struct _Polytoop {
-  Allocator* allocator;
+  Allocator alc;
   int dim;
   int isdelaunay;
   double* shift;
