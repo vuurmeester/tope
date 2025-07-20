@@ -20,7 +20,7 @@ void benchmark(int ntests, int nplanes, int ndims)
   double* center;
   Polytoop* polytoop;
 
-  clock_gettimediff();
+  double start = clock_gettime();
   nfacets = 0;
   for (itest = 0; itest < ntests; ++itest) {
     /* Random center: */
@@ -55,7 +55,7 @@ void benchmark(int ntests, int nplanes, int ndims)
     free(normals);
     free(center);
   }
-  dt = clock_gettimediff();
+  dt = clock_gettime() - start;
   printf("ntests      = %d\n", ntests);
   printf("nplanes     = %d\n", nplanes);
   printf("ndims       = %d\n", ndims);

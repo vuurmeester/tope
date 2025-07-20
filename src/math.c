@@ -48,7 +48,10 @@ void vec_set(int n, double* x, double scalar)
 
 
 
-void vec_reset(int n, double* x) { vec_set(n, x, 0.0); }
+void vec_reset(int n, double* x)
+{
+  vec_set(n, x, 0.0);
+}
 
 
 
@@ -92,7 +95,10 @@ double vec_nrmsq(int n, double const* x)
 
 
 
-double vec_norm(int n, double const* x) { return sqrt(vec_nrmsq(n, x)); }
+double vec_norm(int n, double const* x)
+{
+  return sqrt(vec_nrmsq(n, x));
+}
 
 
 
@@ -179,7 +185,10 @@ void vector_fprint(int n, double const* x, FILE* outstream)
 
 
 
-void vec_print(int n, double const* x) { vector_fprint(n, x, stdout); }
+void vec_print(int n, double const* x)
+{
+  vector_fprint(n, x, stdout);
+}
 
 
 
@@ -260,7 +269,10 @@ void mat_fprint(int m, int n, double const* mat, FILE* outstream)
 
 
 
-void matrix_reset(int m, int n, double* mat) { vec_reset(m * n, mat); }
+void matrix_reset(int m, int n, double* mat)
+{
+  vec_reset(m * n, mat);
+}
 
 
 

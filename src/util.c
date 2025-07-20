@@ -1,9 +1,9 @@
 #ifdef _WIN32
-#include <windows.h>
+  #include <windows.h>
 #else
-#define _POSIX_C_SOURCE 199309L
-#include <sys/time.h>
-#include <time.h>
+  #define _POSIX_C_SOURCE 199309L
+  #include <sys/time.h>
+  #include <time.h>
 #endif
 
 #include <limits.h>
@@ -27,14 +27,9 @@ void memswp(void* ptr1, void* ptr2, int numbytes)
 
 
 
-void random_reset() { s_seed = 0; }
-
-
-
-static unsigned random_getuint()
+void random_reset()
 {
-  s_seed = 1664525U * s_seed + 1013904223U;
-  return s_seed;
+  s_seed = 0;
 }
 
 
@@ -42,7 +37,8 @@ static unsigned random_getuint()
 double random_getdouble()
 {
   /* Returns double x, where 0.0 <= x < 1.0: */
-  return s_nrmfac * (double)random_getuint();
+  s_seed = 1664525U * s_seed + 1013904223U;
+  return s_nrmfac * (double)s_seed;
 }
 
 
@@ -76,7 +72,7 @@ static void getcounts(unsigned* hi, unsigned* lo)
 
 
 
-double polytoop_clock_getperiod()
+static double getperiod()
 {
 #ifdef _WIN32
   LARGE_INTEGER temp;
@@ -91,58 +87,11 @@ double polytoop_clock_getperiod()
 
 
 
-double polytoop_clock_gettime()
+double clock_gettime()
 {
   unsigned hi;
   unsigned lo;
-  double period = polytoop_clock_getperiod();
   getcounts(&hi, &lo);
+  double period = getperiod();
   return (maxdouble * (double)hi + (double)lo) * period;
-}
-
-
-
-double polytoop_clock_sleep(double sleeptime)
-{
-  /* Initialize sleep parameters: */
-  double starttime = polytoop_clock_gettime();
-  double endtime = starttime + sleeptime;
-  double timenow = starttime;
-
-  /* Short sleeps: */
-  while (timenow < endtime) {
-#ifdef _WIN32
-    Sleep(0);
-#else
-    struct timespec ts;
-    ts.tv_sec = 0;
-    ts.tv_nsec = 0;
-    nanosleep(&ts, NULL);
-#endif
-    timenow = polytoop_clock_gettime();
-  }
-
-  /* Return actual time slept: */
-  return timenow - starttime;
-}
-
-
-
-unsigned clock_getticks()
-{
-  unsigned hi;
-  unsigned lo;
-
-  getcounts(&hi, &lo);
-  return lo;
-}
-
-
-
-double clock_gettimediff()
-{
-  double newTime = polytoop_clock_gettime();
-  double diff = newTime - s_time;
-  s_time = newTime;
-  return diff;
 }

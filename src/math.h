@@ -7,19 +7,19 @@
 #include <stdio.h>
 
 #ifndef M_PI
-#define M_PI 3.1415926535898
+  #define M_PI 3.1415926535898
 #endif
 
 #ifndef M_2PI
-#define M_2PI (2.0 * M_PI)
+  #define M_2PI (2.0 * M_PI)
 #endif
 
 #ifndef M_SQRT2
-#define M_SQRT2 1.4142135623731
+  #define M_SQRT2 1.4142135623731
 #endif
 
 #ifndef M_SQRT1_2
-#define M_SQRT1_2 (0.5 * M_SQRT2)
+  #define M_SQRT1_2 (0.5 * M_SQRT2)
 #endif
 
 /** Add a vector to another. */
