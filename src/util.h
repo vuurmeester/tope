@@ -2,9 +2,9 @@
 
 /* alloca: */
 #ifdef _WIN32
-#include <malloc.h>
+  #include <malloc.h>
 #else
-#include <alloca.h>
+  #include <alloca.h>
 #endif
 
 /** Swap memory content. */
@@ -17,4 +17,4 @@ void random_reset(void);
 double random_getdouble(void);
 
 /** Time difference [s] since last call. */
-double clock_gettimediff(void);
+double clock_gettime();

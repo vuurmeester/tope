@@ -36,7 +36,7 @@ double benchmark(int ntests, int npoints, int ndims, int cospherical)
   printf("ndims       = %d\n", ndims);
   printf("cospherical = %s\n", cospherical ? "true" : "false");
 
-  clock_gettimediff();
+  double start = clock_gettime();
   nfacets = 0;
   nridges = 0;
   nverts = 0;
@@ -65,7 +65,7 @@ double benchmark(int ntests, int npoints, int ndims, int cospherical)
     /* Clean up: */
     polytoop_delete(polytoop);
   }
-  dt = clock_gettimediff();
+  dt = clock_gettime() - start;
   printf("facets      = %d\n", nfacets);
   printf("ridges      = %d\n", nridges);
   printf("verts       = %d\n", nverts);
@@ -96,7 +96,7 @@ void benchqhull(int ntests, int npoints, int ndims, int cospherical)
   printf("ndims       = %d\n", ndims);
   printf("cospherical = %s\n", cospherical ? "true" : "false");
 
-  clock_gettimediff();
+  double start = clock_gettime();
   nfacets = 0;
   nverts = 0;
   for (itest = 0; itest < ntests; ++itest) {
@@ -125,7 +125,7 @@ void benchqhull(int ntests, int npoints, int ndims, int cospherical)
       qh_memfreeshort(&curlong, &totlong);
     }*/
   }
-  dt = clock_gettimediff();
+  dt = clock_gettime() - start;
   printf("facets      = %d\n", nfacets);
   printf("verts       = %d\n", nverts);
   printf("time        = %g\n\n", dt);

@@ -24,9 +24,11 @@ Array array_new(int cap, Allocator* alc)
   while (newcap < cap) {
     newcap <<= 1;
   }
-  return (Array){.values = allocator_alloc(alc, newcap * sizeof(void*)),
-                 .cap = newcap,
-                 .len = 0};
+  return (Array) {
+    .values = allocator_alloc(alc, newcap * sizeof(void*)),
+    .cap = newcap,
+    .len = 0
+  };
 }
 
 
