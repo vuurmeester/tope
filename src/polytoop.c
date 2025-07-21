@@ -5,8 +5,8 @@
 #include <string.h>
 
 #include "allocator.h"
-#include "list.h"
 #include "hashmap.h"
+#include "list.h"
 #include "math.h"
 #include "util.h"
 
@@ -512,8 +512,6 @@ static void addpoint(Polytoop* polytoop, Facet* facet, Point* apex)
   int d = polytoop->dim;
 
   /* Allocations: */
-  List newfacets = list_new();
-  List horizonridges = list_new();
   double* vec = alloca(d * sizeof(double));
 
   /* Remove facet from polytoop list: */
@@ -604,7 +602,14 @@ static void addpoint(Polytoop* polytoop, Facet* facet, Point* apex)
           neighbour->visible = 1;
         } else {
           /* Neighbour not visible. Ridge belongs to horizon: */
-          list_append(&horizonridges, ridge, &polytoop->alc);
+          if (polytoop->horizonridges_len == polytoop->horizonridges_cap) {
+            polytoop->horizonridges_cap =
+              3 * polytoop->horizonridges_cap / 2 + 1;
+            polytoop->horizonridges =
+              realloc(polytoop->horizonridges,
+                      polytoop->horizonridges_cap * sizeof(Ridge*));
+          }
+          polytoop->horizonridges[polytoop->horizonridges_len++] = ridge;
         }
       }
     }
@@ -628,9 +633,10 @@ static void addpoint(Polytoop* polytoop, Facet* facet, Point* apex)
   hashmap_clear(&polytoop->newridges);
 
   /* Form new facets: */
-  while (horizonridges.len > 0) {
-    /* The horizon ridge: */
-    Ridge* horizonridge = list_pop(&horizonridges, &polytoop->alc);
+  while (polytoop->horizonridges_len > 0) {
+    /* Pop a horizon ridge: */
+    Ridge* horizonridge =
+      polytoop->horizonridges[--polytoop->horizonridges_len];
 
     /* New facet: */
     facet = facet_new(polytoop);
@@ -726,11 +732,16 @@ static void addpoint(Polytoop* polytoop, Facet* facet, Point* apex)
     }
 
     /* Add new facet to newfacets array: */
-    list_append(&newfacets, facet, &polytoop->alc);
+    if (polytoop->newfacets_len == polytoop->newfacets_cap) {
+      polytoop->newfacets_cap = 3 * polytoop->newfacets_cap / 2 + 1;
+      polytoop->newfacets = realloc(polytoop->newfacets,
+                                    polytoop->newfacets_cap * sizeof(Facet*));
+    }
+    polytoop->newfacets[polytoop->newfacets_len++] = facet;
   }
 
   /* Assign outside verts: */
-  facet = newfacets.first->value;
+  facet = polytoop->newfacets[0];
   while (outsidepoints) {
     /* Remember next in list: */
     Point* next = outsidepoints->next;
@@ -775,8 +786,8 @@ static void addpoint(Polytoop* polytoop, Facet* facet, Point* apex)
     outsidepoints = next;
   }
 
-  list_delete(&horizonridges, &polytoop->alc);
-  list_delete(&newfacets, &polytoop->alc);
+  assert(polytoop->horizonridges_len == 0);
+  polytoop->newfacets_len = 0;
 }
 
 
@@ -804,33 +815,9 @@ static void build(Polytoop* polytoop, int npoints, Point* points)
 
 static Polytoop* polytoop_new()
 {
-  Polytoop* polytoop = malloc(sizeof(Polytoop));
+  Polytoop* polytoop = calloc(1, sizeof(Polytoop));
 
   allocator_init(&polytoop->alc);
-
-  /* Member variables: */
-  polytoop->dim = 0;
-  polytoop->isdelaunay = 0;
-  polytoop->shift = NULL;
-  polytoop->scales = NULL;
-  polytoop->center = NULL;
-
-  /* Facet linked list: */
-  polytoop->nfacets = 0;
-  polytoop->firstfacet = NULL;
-  polytoop->lastfacet = NULL;
-
-  /* Ridges linked list: */
-  polytoop->nridges = 0;
-  polytoop->firstridge = NULL;
-  polytoop->lastridge = NULL;
-
-  /* Vertex linked list: */
-  polytoop->nverts = 0;
-  polytoop->firstvertex = NULL;
-
-  polytoop->merge = 0;
-
   hashmap_init(&polytoop->newridges);
 
   return polytoop;
@@ -840,6 +827,8 @@ static Polytoop* polytoop_new()
 
 void polytoop_delete(Polytoop* polytoop)
 {
+  free(polytoop->newfacets);
+  free(polytoop->horizonridges);
   hashmap_destroy(&polytoop->newridges);
   allocator_clear(&polytoop->alc);
   free(polytoop);
