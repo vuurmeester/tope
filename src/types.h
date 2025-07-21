@@ -3,7 +3,7 @@
 #include <polytoop.h>
 
 #include "allocator.h"
-#include "array.h"
+#include "list.h"
 
 typedef struct _Ridge Ridge;
 typedef struct _Point Point;
@@ -43,8 +43,8 @@ struct _polytoop_Facet {
   double* centroid;
   double* normal;     /* outward pointing plane normal */
   double dist;        /* distance from origin */
-  Array ridges;       /* d+ adjacent ridges */
-  Array vertices;     /* d+ adjacent vertices */
+  List ridges;       /* d+ adjacent ridges */
+  List vertices;     /* d+ adjacent vertices */
   Point* outsidehead; /* visible points list */
   Point* outsidetail; /* last entry in visible points list */
   int visible;
