@@ -91,14 +91,14 @@ int main()
   ++m;
 
   /* Initialize polytoop with all but the last: */
-  polytoop = polytoop_frompoints(m - 1, 3, points, 1);
-  if (polytoop_getnumfacets(polytoop) != 6) {
+  polytoop = polytoop_frompoints(m - 1, 3, points);
+  if (polytoop_getnumfacets(polytoop) != 12) {
     return -1;
   }
 
   /* Add the last point: */
   polytoop_addvertex(polytoop, &points[(m - 1) * DIM]);
-  if (polytoop_getnumfacets(polytoop) != 9) {
+  if (polytoop_getnumfacets(polytoop) != 14) {
     return -1;
   }
 

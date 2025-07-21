@@ -12,8 +12,7 @@ Polytoop* polytoop_fromplanes(int nplanes, int dim,
                               double* normals, double* distances);
 
 /** Create polytoop from point cloud. */
-Polytoop* polytoop_frompoints(int npoints, int dim,
-                              double* points, int merge);
+Polytoop* polytoop_frompoints(int npoints, int dim, double* points);
 
 /** Delaunay triangulation. */
 Polytoop* polytoop_delaunay(int npoints, int dim,
@@ -46,9 +45,6 @@ polytoop_Vertex* polytoop_firstvertex(Polytoop* polytoop);
 
 /** Next facet. */
 polytoop_Facet* polytoop_facet_nextfacet(polytoop_Facet* facet);
-
-/** Number of neighbouring facets. */
-int polytoop_facet_getnumneighbours(polytoop_Facet* facet);
 
 /** Facet normal. */
 void polytoop_facet_getnormal(polytoop_Facet* facet, double* normal);
