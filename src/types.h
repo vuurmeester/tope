@@ -62,7 +62,7 @@ struct _Ridge {
   double* centroid;
   double* normal;
   polytoop_Facet* facets[2];  /* 2 adjacent facets */
-  polytoop_Vertex** vertices; /* d - 1 adjacent vertices */
+  polytoop_Vertex* vertices[1]; /* d - 1 adjacent vertices */
 };
 
 struct _polytoop_Vertex {
@@ -71,8 +71,8 @@ struct _polytoop_Vertex {
 
   Polytoop* polytoop;
   int index;
-  double* position;
   int nridges; /* the number of ridges attached to this vertex */
+  double position[1];
 };
 
 struct _Point {

@@ -20,6 +20,8 @@ void benchmark(int ntests, int nplanes, int ndims)
   double* center;
   Polytoop* polytoop;
 
+  random_reset();
+
   double start = clock_gettime();
   nfacets = 0;
   for (itest = 0; itest < ntests; ++itest) {
@@ -44,10 +46,11 @@ void benchmark(int ntests, int nplanes, int ndims)
     polytoop = polytoop_fromplanes(nplanes, ndims, normals, dists);
 
     /* Accumulate total number of vertices created: */
-    nfacets += polytoop_getnumfacets(polytoop);
+    if (polytoop) {
+      nfacets += polytoop_getnumfacets(polytoop);
+      polytoop_delete(polytoop);
+    }
 
-    /* Clean up: */
-    polytoop_delete(polytoop);
     free(dists);
     free(normals);
     free(center);
