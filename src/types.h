@@ -3,14 +3,13 @@
 #include <polytoop.h>
 
 #include "allocator.h"
-#include "list.h"
 
 typedef struct _Ridge Ridge;
 typedef struct _Point Point;
 
 typedef struct _HashMap {
-  int cap; /* current capacity */
-  int len; /* number of elements */
+  int cap;        /* current capacity */
+  int len;        /* number of elements */
   Ridge** ridges; /* entries */
   unsigned* hashes;
 } HashMap;
@@ -30,7 +29,6 @@ struct _Polytoop {
   Ridge* lastridge;
   int nverts;
   polytoop_Vertex* firstvertex;
-  int merge;
   HashMap newridges;
   Ridge** horizonridges;
   int horizonridges_len;
@@ -47,12 +45,12 @@ struct _polytoop_Facet {
   Polytoop* polytoop;
   double volume;
   double* centroid;
-  double* normal;     /* outward pointing plane normal */
-  double dist;        /* distance from origin */
-  List ridges;       /* d+ adjacent ridges */
-  List vertices;     /* d+ adjacent vertices */
-  Point* outsidehead; /* visible points list */
-  Point* outsidetail; /* last entry in visible points list */
+  double* normal;             /* outward pointing plane normal */
+  double dist;                /* distance from origin */
+  Ridge** ridges;             /* d adjacent ridges */
+  polytoop_Vertex** vertices; /* d adjacent vertices */
+  Point* outsidehead;         /* visible points list */
+  Point* outsidetail;         /* last entry in visible points list */
   int visible;
 };
 

@@ -52,7 +52,7 @@ double benchmark(int ntests, int npoints, int ndims, int cospherical)
     }
 
     /* Add points to polytoop: */
-    polytoop = polytoop_frompoints(npoints, ndims, points, 0);
+    polytoop = polytoop_frompoints(npoints, ndims, points);
 
     /* Accumulate total number of facets and vertices created: */
     nfacets += polytoop_getnumfacets(polytoop);
