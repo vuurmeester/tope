@@ -66,15 +66,7 @@ int main()
   }
 
   /* Print the polytoop: */
-  for (facet = polytoop_firstfacet(polytoop), ifacet = 0; facet != NULL; facet = polytoop_facet_nextfacet(facet), ++ifacet) {
-    printf("Facet %d:\n", ifacet + 1);
-    positions = malloc(DIM * polytoop_facet_getnumvertices(facet) * sizeof(double));
-    for (ivertex = 0; ivertex < polytoop_facet_getnumvertices(facet); ++ivertex) {
-      polytoop_vertex_getposition(polytoop_facet_getvertex(facet, ivertex), &positions[ivertex * DIM]);
-    }
-    mat_print(polytoop_facet_getnumvertices(facet), DIM, positions);
-    free(positions);
-  }
+  polytoop_print(polytoop);
 
   /* Delete polytoop object: */
   polytoop_delete(polytoop);

@@ -34,10 +34,6 @@ int polytoop_getnumridges(Polytoop* polytoop);
 /** Total number of vertices. */
 int polytoop_getnumvertices(Polytoop* polytoop);
 
-/** Get vertex index. */
-int polytoop_getvertexindex(Polytoop* polytoop, polytoop_Facet* facet,
-                            int ivertex);
-
 /** Interpolate if polytoop is Delaunay grid. */
 void polytoop_interpolate(Polytoop* polytoop, double const* xi, int* indices,
                           double* weights);
@@ -54,9 +50,6 @@ polytoop_Facet* polytoop_facet_nextfacet(polytoop_Facet* facet);
 /** Number of neighbouring facets. */
 int polytoop_facet_getnumneighbours(polytoop_Facet* facet);
 
-/** Get facet neighbour. */
-polytoop_Facet* polytoop_facet_getneighbour(polytoop_Facet* facet, int i);
-
 /** Facet normal. */
 void polytoop_facet_getnormal(polytoop_Facet* facet, double* normal);
 
@@ -71,9 +64,6 @@ double polytoop_facet_getvolume(polytoop_Facet* facet);
 
 /** Number of facet vertices. */
 int polytoop_facet_getnumvertices(polytoop_Facet* facet);
-
-/** Get facet vertex. */
-polytoop_Vertex* polytoop_facet_getvertex(polytoop_Facet* facet, int ivertex);
 
 /** Next vertex. */
 polytoop_Vertex* polytoop_vertex_nextvertex(polytoop_Vertex* vertex);
