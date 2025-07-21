@@ -32,6 +32,12 @@ struct _Polytoop {
   polytoop_Vertex* firstvertex;
   int merge;
   HashMap newridges;
+  Ridge** horizonridges;
+  int horizonridges_len;
+  int horizonridges_cap;
+  polytoop_Facet** newfacets;
+  int newfacets_len;
+  int newfacets_cap;
 };
 
 struct _polytoop_Facet {
