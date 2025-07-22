@@ -212,53 +212,36 @@ int linprog_rn(int m, int n, double const* mata, double const* b,
 
 
 
-int linprog_cn(int meq, int mineq, int n, double const* mata, double const* b,
+int linprog_cn(int m, int n, double const* mata, double const* b,
                double const* c, double* x)
 {
-  int i;          /* generic counter */
-  int j;          /* generic counter */
-  int ret;        /* return value */
-  int nrows;      /* total number of equations */
-  int ncols;      /* total number of variables */
-  double* aprime; /* augmented matrix with slack variables */
-  double* bprime; /* augmented rhs (negative for equality constraints) */
-  double* cprime; /* augmented objective function (zero for slack variables) */
-  double* xprime; /* augmented solution (with slack variables) */
-
   /* Total size: */
-  nrows = meq + mineq;
-  ncols = n + n + mineq;
+  int ncols = n + n + m;
 
   /* Allocate augmented system (add mineq slack variables): */
-  aprime = alloca(nrows * ncols * sizeof(double));
-  bprime = alloca(nrows * sizeof(double));
-  cprime = alloca(ncols * sizeof(double));
-  xprime = alloca(ncols * sizeof(double));
+  double* aprime = alloca(m * ncols * sizeof(double));
+  double* bprime = alloca(m * sizeof(double));
+  double* cprime = alloca(ncols * sizeof(double));
+  double* xprime = alloca(ncols * sizeof(double));
 
-  /*         n    n  mineq
-   *  A' =  A1  -A1      0  meq
-   *        A2  -A2      I  mineq
+  /*         n    n  m
+   *  A' =   A   -A  I  m
    */
-  for (i = 0; i < nrows; ++i) { /* [A (m x n), -A (m x n)]*/
-    for (j = 0; j < n; ++j) {
+  for (int i = 0; i < m; ++i) { /* [A (m x n), -A (m x n)]*/
+    for (int j = 0; j < n; ++j) {
       aprime[i * ncols + j] = mata[i * n + j];
       aprime[i * ncols + n + j] = -mata[i * n + j];
     }
   }
-  for (i = 0; i < meq; ++i) { /* 0 (meq x mineq) */
-    for (j = 0; j < mineq; ++j) {
+  for (int i = 0; i < m; ++i) { /* I (m x m)*/
+    for (int j = 0; j < m; ++j) {
       aprime[i * ncols + n + n + j] = 0.0;
     }
-  }
-  for (i = 0; i < mineq; ++i) { /* I (mineq x mineq)*/
-    for (j = 0; j < mineq; ++j) {
-      aprime[(meq + i) * ncols + n + n + j] = 0.0;
-    }
-    aprime[(meq + i) * ncols + n + n + i] = 1.0;
+    aprime[i * ncols + n + n + i] = 1.0;
   }
 
   /* Make sure all b_i >= 0: */
-  for (i = 0; i < nrows; ++i) {
+  for (int i = 0; i < m; ++i) {
     if (b[i] < 0.0) {
       bprime[i] = -b[i];
       vec_neg(ncols, &aprime[i * ncols]);
@@ -271,13 +254,13 @@ int linprog_cn(int meq, int mineq, int n, double const* mata, double const* b,
   memcpy(cprime, c, n * sizeof(double));
   memcpy(cprime + n, c, n * sizeof(double));
   vec_neg(n, cprime + n);
-  memset(cprime + n + n, 0, mineq * sizeof(double));
+  memset(cprime + n + n, 0, m * sizeof(double));
 
   /* x' = 0_{ncols x 1}: */
   memset(xprime, 0, ncols * sizeof(double));
 
   /* Solve: */
-  ret = linprog_rn(nrows, ncols, aprime, bprime, cprime, xprime);
+  int ret = linprog_rn(m, ncols, aprime, bprime, cprime, xprime);
 
   /* Copy answer: */
   memcpy(x, xprime, n * sizeof(double)); /* x+ */

@@ -101,12 +101,11 @@ int linprog_rn(int m, int n, double const* mata, double const* b,
     Canonical form.
     Maximimize c^T x
       subject to
-    A1 x == b1 (meq x n), A2 x <= b2 (mineq x n).
-    With A = [A1; A2], b = [b1; b2].
+    A x <= b (m x n).
 
     return value ==  0: optimum found
     return value == -1: unbounded
     return value == -2: infeasible
   */
-int linprog_cn(int meq, int mineq, int n, double const* mata, double const* b,
+int linprog_cn(int m, int n, double const* mata, double const* b,
                double const* c, double* x);
