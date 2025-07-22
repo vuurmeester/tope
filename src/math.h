@@ -40,7 +40,7 @@ void vec_neg(int n, double* x);
 /** Set all components of a vector. */
 void vec_set(int n, double* x, double scalar);
 
-/** Reset all components of a vector. */
+/** Reset vector. */
 void vec_reset(int n, double* x);
 
 /** Inner product of two vectors. */

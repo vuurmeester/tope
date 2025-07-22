@@ -9,14 +9,11 @@
 
 int main()
 {
-  int m;
   double normals[(NPLANES + 1) * DIM];
   double distances[NPLANES + 1];
-  double angle;
-  Polytoop* polytoop;
 
   /* Define a pyramid. */
-  m = 0;
+  int m = 0;
 
   /* Bottom: */
   normals[m * DIM + 0] = 0.0;
@@ -26,7 +23,7 @@ int main()
   ++m;
 
   for (; m < NPLANES; ++m) {
-    angle = (double)(m - 1) / (double)(NPLANES - 1) * M_2PI;
+    double angle = (double)(m - 1) / (double)(NPLANES - 1) * M_2PI;
     normals[m * DIM + 0] = M_SQRT1_2 * cos(angle);
     normals[m * DIM + 1] = M_SQRT1_2 * sin(angle);
     normals[m * DIM + 2] = M_SQRT1_2;
@@ -41,13 +38,15 @@ int main()
   ++m;
 
   /* Compute polytoop from pyramid planes: */
-  polytoop = polytoop_fromplanes(m, DIM, normals, distances);
+  Polytoop* polytoop = polytoop_fromplanes(m, DIM, normals, distances);
 
-  /* Print the polytoop: */
-  polytoop_print(polytoop);
+  if (polytoop) {
+    /* Print the polytoop: */
+    polytoop_print(polytoop);
 
-  /* Delete polytoop object: */
-  polytoop_delete(polytoop);
+    /* Delete polytoop object: */
+    polytoop_delete(polytoop);
+  }
 
   return 0;
 }
