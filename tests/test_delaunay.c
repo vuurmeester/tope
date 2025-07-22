@@ -1,8 +1,8 @@
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-#include "../src/util.h"
 #include "../src/math.h"
+#include "../src/util.h"
 
 #include <polytoop.h>
 
@@ -11,18 +11,14 @@
 
 
 
-int main()
+int main(void)
 {
   int m;
-  int ifacet;
-  int ivertex;
   int indices[DIM + 1];
   double points[NPOINTS * DIM];
   double weights[DIM + 1];
   double xi[DIM];
-  double* positions;
   Polytoop* polytoop;
-  polytoop_Facet* facet;
 
   /* Define a square. */
   m = 0;

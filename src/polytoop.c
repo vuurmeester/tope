@@ -502,9 +502,6 @@ static void addpoint(Polytoop* polytoop, Facet* facet, Point* apex)
 {
   int d = polytoop->dim;
 
-  /* Allocations: */
-  double* vec = alloca(d * sizeof(double));
-
   /* Remove facet from polytoop list: */
   if (facet->prev) {
     facet->prev->next = facet->next;
@@ -898,21 +895,10 @@ Polytoop* polytoop_frompoints(int npoints, int dim, double* orgpoints)
 
 Polytoop* polytoop_delaunay(int npoints, int dim, double* orgpoints)
 {
-  int i;
-  int j;
-  int k;
-  int ipoint;
-  int* minindices;
-  int* maxindices;
-  double recd;
-  Ridge* ridge;
-  Ridge** ridges;
-  Facet* facet;
-
   Polytoop* polytoop = polytoop_new();
 
   /* Reciprocal of dimension: */
-  recd = 1.0 / (double)dim;
+  double recd = 1.0 / (double)dim;
 
   /* Initialize member variables: */
   polytoop->dim = dim + 1;
@@ -925,8 +911,8 @@ Polytoop* polytoop_delaunay(int npoints, int dim, double* orgpoints)
     allocator_alloc(&polytoop->alc, polytoop->dim * sizeof(double));
 
   /* Bounding box: */
-  minindices = alloca(dim * sizeof(int));
-  maxindices = alloca(dim * sizeof(int));
+  int* minindices = alloca(dim * sizeof(int));
+  int* maxindices = alloca(dim * sizeof(int));
   boundingbox(npoints, dim, orgpoints, minindices, maxindices, polytoop->shift,
               polytoop->scales);
   polytoop->shift[dim] = 0.0;
@@ -938,7 +924,7 @@ Polytoop* polytoop_delaunay(int npoints, int dim, double* orgpoints)
   /* Points array: */
   Point* points = malloc((npoints + 1) * sizeof(Point));
   double* positions = malloc((npoints + 1) * (dim + 1) * sizeof(double));
-  for (ipoint = 0; ipoint < npoints + 1; ++ipoint) {
+  for (int ipoint = 0; ipoint < npoints + 1; ++ipoint) {
     points[ipoint].next = NULL;
     points[ipoint].index = ipoint;
     points[ipoint].height = 0.0;
@@ -946,7 +932,7 @@ Polytoop* polytoop_delaunay(int npoints, int dim, double* orgpoints)
 
     if (ipoint < npoints) {
       /* Transformed point: */
-      for (i = 0; i < dim; ++i) {
+      for (int i = 0; i < dim; ++i) {
         points[ipoint].pos[i] =
           (orgpoints[ipoint * dim + i] - polytoop->shift[i]) /
           polytoop->scales[i];
@@ -959,7 +945,7 @@ Polytoop* polytoop_delaunay(int npoints, int dim, double* orgpoints)
 
   /* Add point above paraboloid to guarantee full dimensionality: */
   vec_reset(dim, points[npoints].pos);
-  for (ipoint = 0; ipoint < npoints; ++ipoint) {
+  for (int ipoint = 0; ipoint < npoints; ++ipoint) {
     vec_add(dim, points[npoints].pos, points[ipoint].pos);
   }
   vec_scale(dim, points[npoints].pos, 1.0 / (double)npoints);
@@ -973,17 +959,16 @@ Polytoop* polytoop_delaunay(int npoints, int dim, double* orgpoints)
   free(points);
 
   /* Remove upper delaunay surfaces: */
-  ridges = malloc(polytoop->nridges * sizeof(Ridge*));
-  ridge = polytoop->firstridge;
-  for (i = 0, ridge = polytoop->firstridge; i < polytoop->nridges;
-       ++i, ridge = ridge->next) {
+  Ridge** ridges = malloc(polytoop->nridges * sizeof(Ridge*));
+  Ridge* ridge = polytoop->firstridge;
+  for (int i = 0; i < polytoop->nridges; ++i, ridge = ridge->next) {
     ridges[i] = ridge;
   }
 
-  for (i = 0; i < polytoop->nridges; ++i) {
+  for (int i = 0; i < polytoop->nridges; ++i) {
     ridge = ridges[i];
-    for (j = 0; j < 2; ++j) {
-      facet = ridge->facets[j];
+    for (int j = 0; j < 2; ++j) {
+      Facet* facet = ridge->facets[j];
 
       if (facet != NULL && facet->normal[polytoop->dim - 1] > 0.0) {
         /* Upper delaunay. */
@@ -1009,7 +994,7 @@ Polytoop* polytoop_delaunay(int npoints, int dim, double* orgpoints)
       /* Both adjacent facets are gone. */
 
       /* Disassociate from adjacent vertices: */
-      for (j = 0; j < polytoop->dim - 1; ++j) {
+      for (int j = 0; j < polytoop->dim - 1; ++j) {
         --ridge->vertices[j]->nridges;
         if (ridge->vertices[j]->nridges == 0) {
           /* Remove vertex as well: */
