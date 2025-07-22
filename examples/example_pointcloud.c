@@ -26,7 +26,7 @@ double benchmark(int ntests, int npoints, int ndims, int cospherical)
   printf("ndims       = %d\n", ndims);
   printf("cospherical = %s\n", cospherical ? "true" : "false");
 
-  double start = clock_gettime();
+  double start = polytoop_gettime();
   int nfacets = 0;
   int nridges = 0;
   int nverts = 0;
@@ -52,7 +52,7 @@ double benchmark(int ntests, int npoints, int ndims, int cospherical)
     /* Clean up: */
     polytoop_delete(polytoop);
   }
-  double dt = clock_gettime() - start;
+  double dt = polytoop_gettime() - start;
   printf("facets      = %d\n", nfacets);
   printf("ridges      = %d\n", nridges);
   printf("verts       = %d\n", nverts);
@@ -83,7 +83,7 @@ void benchqhull(int ntests, int npoints, int ndims, int cospherical)
   printf("ndims       = %d\n", ndims);
   printf("cospherical = %s\n", cospherical ? "true" : "false");
 
-  double start = clock_gettime();
+  double start = polytoop_gettime();
   nfacets = 0;
   nverts = 0;
   for (itest = 0; itest < ntests; ++itest) {
@@ -112,7 +112,7 @@ void benchqhull(int ntests, int npoints, int ndims, int cospherical)
       qh_memfreeshort(&curlong, &totlong);
     }*/
   }
-  dt = clock_gettime() - start;
+  dt = polytoop_gettime() - start;
   printf("facets      = %d\n", nfacets);
   printf("verts       = %d\n", nverts);
   printf("time        = %g\n\n", dt);
@@ -122,7 +122,7 @@ void benchqhull(int ntests, int npoints, int ndims, int cospherical)
 
 
 
-int main()
+int main(void)
 {
   // #ifndef NDEBUG
   //   benchmark(1, 64, 8, 0);

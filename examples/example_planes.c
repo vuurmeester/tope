@@ -1,8 +1,8 @@
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-#include "../src/util.h"
 #include "../src/math.h"
+#include "../src/util.h"
 
 #include <polytoop.h>
 
@@ -12,7 +12,7 @@ void benchmark(int ntests, int nplanes, int ndims)
 {
   random_reset();
 
-  double start = clock_gettime();
+  double start = polytoop_gettime();
   int nfacets = 0;
   int nverts = 0;
   int nridges = 0;
@@ -31,7 +31,8 @@ void benchmark(int ntests, int nplanes, int ndims)
         normals[iplane * ndims + idim] = random_getdouble() - 0.5;
       }
       vec_normalize(ndims, &normals[iplane * ndims]);
-      dists[iplane] = 0.1 + random_getdouble() + vec_dot(ndims, center, &normals[iplane * ndims]);
+      dists[iplane] = 0.1 + random_getdouble() +
+                      vec_dot(ndims, center, &normals[iplane * ndims]);
     }
 
     /* Create polytoop object: */
@@ -49,7 +50,7 @@ void benchmark(int ntests, int nplanes, int ndims)
     free(normals);
     free(center);
   }
-  double dt = clock_gettime() - start;
+  double dt = polytoop_gettime() - start;
   printf("ntests      = %d\n", ntests);
   printf("nplanes     = %d\n", nplanes);
   printf("ndims       = %d\n", ndims);

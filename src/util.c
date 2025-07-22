@@ -14,13 +14,13 @@
 
 static unsigned s_seed = 0;
 static double const s_nrmfac = 1.0 / ((double)UINT_MAX + 1.0);
-static double s_time = 0.0;
 
 
 
 void memswp(void* ptr1, void* ptr2, int numbytes)
 {
-  assert((char*)ptr1 + numbytes <= ptr2 || (char*)ptr2 + numbytes <= ptr1);
+  assert((char*)ptr1 + numbytes <= (char*)ptr2 ||
+         (char*)ptr2 + numbytes <= (char*)ptr1);
   void* tmp = alloca(numbytes);
   memcpy(tmp, ptr1, numbytes);
   memcpy(ptr1, ptr2, numbytes);
@@ -74,7 +74,7 @@ static void getcounts(unsigned* hi, unsigned* lo)
 
 
 
-static double getperiod()
+static double getperiod(void)
 {
 #ifdef _WIN32
   LARGE_INTEGER temp;
@@ -88,7 +88,7 @@ static double getperiod()
 
 
 
-double clock_gettime()
+double polytoop_gettime(void)
 {
   unsigned hi;
   unsigned lo;
