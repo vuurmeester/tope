@@ -15,36 +15,19 @@
 int linprog_rn(int m, int n, double const* mata, double const* b,
                double const* c, double* x)
 {
-  int i;
-  int j;
-  int rpiv;
-  int cpiv;
-  int nrows;
-  int ncols;
-  int jpos;
-  int ret;
-  int niter;
-  int iart;
-  int nart;
-  int isphase1;
-  int* basis;
-  double rat;
-  double minrat;
-  double* tableau;
-
-  basis = (int*)alloca(m * sizeof(int));
-  for (i = 0; i < m; ++i) {
+  int* basis = (int*)alloca(m * sizeof(int));
+  for (int i = 0; i < m; ++i) {
     basis[i] = -1;
   }
 
   /* Everything non-basic: */
-  nart = m;
+  int nart = m;
 
   /* Extract basis: */
-  for (j = 0; j < n; ++j) {
+  for (int j = 0; j < n; ++j) {
     /* Search for column with exactly one positive number and otherwise zero: */
-    jpos = -1;
-    for (i = 0; i < m; ++i) {
+    int jpos = -1;
+    for (int i = 0; i < m; ++i) {
       if (mata[i * n + j] > 0.0) {
         if (jpos >= 0) {
           /* Second positive number, ergo not basic: */
@@ -74,23 +57,23 @@ int linprog_rn(int m, int n, double const* mata, double const* b,
   }
 
   /* Tableau size: */
-  nrows = m + 2;
-  ncols = n + nart + 1;
-  tableau = malloc(nrows * ncols * sizeof(double));
+  int nrows = m + 2;
+  int ncols = n + nart + 1;
+  double* tableau = malloc(nrows * ncols * sizeof(double));
 
   /* Initial tableau:  n  nart  1
    *             m     A    I | b
    *             1    -c^T  0 | 0  minus phase 2 objective
    *             1     0    1 | 0  minus phase 1 objective
    */
-  for (i = 0; i < m; ++i) { /* A (m x n)*/
-    for (j = 0; j < n; ++j) {
+  for (int i = 0; i < m; ++i) { /* A (m x n)*/
+    for (int j = 0; j < n; ++j) {
       tableau[i * ncols + j] = mata[i * n + j];
     }
   }
-  iart = 0;
-  for (i = 0; i < m; ++i) { /* I (m x nart) */
-    for (j = 0; j < nart; ++j) {
+  int iart = 0;
+  for (int i = 0; i < m; ++i) { /* I (m x nart) */
+    for (int j = 0; j < nart; ++j) {
       tableau[i * ncols + n + j] = 0.0;
     }
     if (basis[i] < 0) {
@@ -99,42 +82,42 @@ int linprog_rn(int m, int n, double const* mata, double const* b,
       ++iart;
     }
   }
-  for (i = 0; i < m; ++i) { /* b (m x 1)*/
+  for (int i = 0; i < m; ++i) { /* b (m x 1)*/
     tableau[i * ncols + n + nart + 0] = b[i];
   }
 
-  for (j = 0; j < n; ++j) { /* -c^T (1 x n)*/
+  for (int j = 0; j < n; ++j) { /* -c^T (1 x n)*/
     tableau[m * ncols + j] = -c[j];
   }
-  for (j = 0; j < nart; ++j) { /* 0 (1 x nart) */
+  for (int j = 0; j < nart; ++j) { /* 0 (1 x nart) */
     tableau[m * ncols + n + j] = 0.0;
   }
   tableau[m * ncols + n + nart + 0] = 0.0; /* 0 (1 x 1) */
 
-  for (j = 0; j < n; ++j) { /* 0 (1 x n)*/
+  for (int j = 0; j < n; ++j) { /* 0 (1 x n)*/
     tableau[(m + 1) * ncols + j] = 0.0;
   }
-  for (j = 0; j < nart; ++j) { /* 1 (1 x nart) */
+  for (int j = 0; j < nart; ++j) { /* 1 (1 x nart) */
     tableau[(m + 1) * ncols + n + j] = 1.0;
   }
   tableau[(m + 1) * ncols + n + nart + 0] = 0.0; /* 0 (1 x 1) */
 
   /* Make sure the basis coefficients are 1: */
-  for (i = 0; i < m; ++i) {
+  for (int i = 0; i < m; ++i) {
     vec_scale(ncols, &tableau[i * ncols], 1.0 / tableau[i * ncols + basis[i]]);
   }
 
   /* Make the tableau proper by subtracting each of the artificial rows from the
    * phase 1 objective: */
-  for (i = 0; i < m; ++i) {
+  for (int i = 0; i < m; ++i) {
     if (basis[i] >= n) {
       vec_sub(ncols, &tableau[(m + 1) * ncols], &tableau[i * ncols]);
     }
   }
 
-  ret = 0;
-  niter = 0;
-  isphase1 = nart > 0 ? 1 : 0; /* go directly to phase II if nart == 0 */
+  int ret = 0;
+  int niter = 0;
+  int isphase1 = nart > 0 ? 1 : 0; /* go directly to phase II if nart == 0 */
   while (1) {
     ++niter;
 
@@ -150,7 +133,7 @@ int linprog_rn(int m, int n, double const* mata, double const* b,
 
     /* Entering variable (pivot column) is most negative entry in objective
      * function: */
-    cpiv = vec_minindex(n, &tableau[(m + isphase1) * ncols]);
+    int cpiv = vec_minindex(n, &tableau[(m + isphase1) * ncols]);
     if (tableau[(m + isphase1) * ncols + cpiv] > -EPS) {
       if (isphase1) {
         /* No negative entry found in phase I objective. */
@@ -171,16 +154,16 @@ int linprog_rn(int m, int n, double const* mata, double const* b,
 
     /* Leaving / blocking variable (pivot row) is given by the minimum ratio of
      * rhs/pivotcolumn: */
-    minrat = DBL_MAX;
-    rpiv = -1;
-    for (i = 0; i < m; ++i) {
+    double minrat = HUGE_VAL;
+    int rpiv = -1;
+    for (int i = 0; i < m; ++i) {
       /* Denominator should be > 0: */
       if (tableau[i * ncols + cpiv] < EPS) {
         continue;
       }
 
       /* Ratio: */
-      rat = tableau[i * ncols + n + nart] / tableau[i * ncols + cpiv];
+      double rat = tableau[i * ncols + n + nart] / tableau[i * ncols + cpiv];
       if (rat < minrat) {
         minrat = rat;
         rpiv = i;
@@ -203,7 +186,7 @@ int linprog_rn(int m, int n, double const* mata, double const* b,
               1.0 / tableau[rpiv * ncols + cpiv]);
 
     /* Subtract row rpiv from others: */
-    for (i = 0; i < nrows; ++i) {
+    for (int i = 0; i < nrows; ++i) {
       if (i == rpiv) {
         continue;
       }
@@ -216,8 +199,8 @@ int linprog_rn(int m, int n, double const* mata, double const* b,
   }
 
   /* Extract solution from tableau: */
-  vec_reset(n, x);
-  for (i = 0; i < m; ++i) {
+  memset(x, 0, n * sizeof(double));
+  for (int i = 0; i < m; ++i) {
     x[basis[i]] = tableau[i * ncols + n + nart];
   }
 
@@ -286,12 +269,12 @@ int linprog_cn(int meq, int mineq, int n, double const* mata, double const* b,
 
   /* c' = [c; -c; 0]: */
   memcpy(cprime, c, n * sizeof(double));
-  memcpy(&cprime[n], c, n * sizeof(double));
-  vec_neg(n, &cprime[n]);
-  vec_reset(mineq, &cprime[n + n]);
+  memcpy(cprime + n, c, n * sizeof(double));
+  vec_neg(n, cprime + n);
+  memset(cprime + n + n, 0, mineq * sizeof(double));
 
   /* x' = 0_{ncols x 1}: */
-  vec_reset(ncols, xprime);
+  memset(xprime, 0, ncols * sizeof(double));
 
   /* Solve: */
   ret = linprog_rn(nrows, ncols, aprime, bprime, cprime, xprime);

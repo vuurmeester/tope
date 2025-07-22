@@ -6,6 +6,7 @@
   #include <time.h>
 #endif
 
+#include <assert.h>
 #include <limits.h>
 #include <string.h>
 
@@ -19,6 +20,7 @@ static double s_time = 0.0;
 
 void memswp(void* ptr1, void* ptr2, int numbytes)
 {
+  assert((char*)ptr1 + numbytes <= ptr2 || (char*)ptr2 + numbytes <= ptr1);
   void* tmp = alloca(numbytes);
   memcpy(tmp, ptr1, numbytes);
   memcpy(ptr1, ptr2, numbytes);
@@ -76,9 +78,8 @@ static double getperiod()
 {
 #ifdef _WIN32
   LARGE_INTEGER temp;
-  double period;
   QueryPerformanceFrequency(&temp);
-  period = 1.0 / large2double(&temp);
+  double period = 1.0 / large2double(&temp);
   return period;
 #else
   return 1.0e-6;

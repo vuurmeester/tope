@@ -16,19 +16,9 @@
 
 double benchmark(int ntests, int npoints, int ndims, int cospherical)
 {
-  int nfacets;
-  int nridges;
-  int nverts;
-  int itest;
-  int idim;
-  int ipoint;
-  double dt;
-  double* points;
-  Polytoop* polytoop;
-
   random_reset();
 
-  points = malloc(npoints * ndims * sizeof(double));
+  double* points = malloc(npoints * ndims * sizeof(double));
 
   printf("***** polytoop test *****\n");
   printf("ntests      = %d\n", ntests);
@@ -37,13 +27,13 @@ double benchmark(int ntests, int npoints, int ndims, int cospherical)
   printf("cospherical = %s\n", cospherical ? "true" : "false");
 
   double start = clock_gettime();
-  nfacets = 0;
-  nridges = 0;
-  nverts = 0;
-  for (itest = 0; itest < ntests; ++itest) {
+  int nfacets = 0;
+  int nridges = 0;
+  int nverts = 0;
+  for (int itest = 0; itest < ntests; ++itest) {
     /* Random points: */
-    for (ipoint = 0; ipoint < npoints; ++ipoint) {
-      for (idim = 0; idim < ndims; ++idim) {
+    for (int ipoint = 0; ipoint < npoints; ++ipoint) {
+      for (int idim = 0; idim < ndims; ++idim) {
         points[ipoint * ndims + idim] = random_getdouble() - 0.5;
       }
       if (cospherical) {
@@ -52,7 +42,7 @@ double benchmark(int ntests, int npoints, int ndims, int cospherical)
     }
 
     /* Add points to polytoop: */
-    polytoop = polytoop_frompoints(npoints, ndims, points);
+    Polytoop* polytoop = polytoop_frompoints(npoints, ndims, points);
 
     /* Accumulate total number of facets and vertices created: */
     nfacets += polytoop_getnumfacets(polytoop);
@@ -62,7 +52,7 @@ double benchmark(int ntests, int npoints, int ndims, int cospherical)
     /* Clean up: */
     polytoop_delete(polytoop);
   }
-  dt = clock_gettime() - start;
+  double dt = clock_gettime() - start;
   printf("facets      = %d\n", nfacets);
   printf("ridges      = %d\n", nridges);
   printf("verts       = %d\n", nverts);

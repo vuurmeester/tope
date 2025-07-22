@@ -17,4 +17,4 @@ void random_reset(void);
 double random_getdouble(void);
 
 /** Time difference [s] since last call. */
-double clock_gettime();
+double clock_gettime(void);

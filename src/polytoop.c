@@ -358,7 +358,7 @@ static void initialsimplex(Polytoop* polytoop, int npoints, Point* points)
   /* For readability: */
   int d = polytoop->dim;
 
-  /* Allocations: */
+  /* Allocation: */
   double* span = malloc((npoints - 1) * d * sizeof(double));
 
   /* Point furthest from unit box center: */
@@ -376,8 +376,10 @@ static void initialsimplex(Polytoop* polytoop, int npoints, Point* points)
     }
   }
 
-  /* Place extreme points up front: */
-  memswp(&points[0], &points[maxindex], sizeof(Point*));
+  /* Place extreme point up front: */
+  if (maxindex > 0) {
+    memswp(&points[0], &points[maxindex], sizeof(Point*));
+  }
 
   /* Initialize span (positions w.r.t. first point): */
   for (int i = 1; i < npoints; ++i) {
@@ -386,7 +388,7 @@ static void initialsimplex(Polytoop* polytoop, int npoints, Point* points)
   }
 
   /* Permutation vector: */
-  int* p = malloc(npoints * sizeof(int));
+  int* p = alloca(npoints * sizeof(int));
   for (int i = 0; i < npoints; ++i) {
     p[i] = i;
   }
@@ -490,7 +492,6 @@ static void initialsimplex(Polytoop* polytoop, int npoints, Point* points)
   }
 
   /* Clean up: */
-  free(p);
   free(span);
 }
 

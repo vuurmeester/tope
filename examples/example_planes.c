@@ -10,32 +10,24 @@
 
 void benchmark(int ntests, int nplanes, int ndims)
 {
-  int nfacets;
-  int itest;
-  int idim;
-  int iplane;
-  double dt;
-  double* normals;
-  double* dists;
-  double* center;
-  Polytoop* polytoop;
-
   random_reset();
 
   double start = clock_gettime();
-  nfacets = 0;
-  for (itest = 0; itest < ntests; ++itest) {
+  int nfacets = 0;
+  int nverts = 0;
+  int nridges = 0;
+  for (int itest = 0; itest < ntests; ++itest) {
     /* Random center: */
-    center = malloc(ndims * sizeof(double));
-    for (idim = 0; idim < ndims; ++idim) {
+    double* center = malloc(ndims * sizeof(double));
+    for (int idim = 0; idim < ndims; ++idim) {
       center[idim] = 10.0 * (random_getdouble() - 0.5);
     }
 
     /* Random planes: */
-    normals = malloc(nplanes * ndims * sizeof(double));
-    dists = malloc(nplanes * sizeof(double));
-    for (iplane = 0; iplane < nplanes; ++iplane) {
-      for (idim = 0; idim < ndims; ++idim) {
+    double* normals = malloc(nplanes * ndims * sizeof(double));
+    double* dists = malloc(nplanes * sizeof(double));
+    for (int iplane = 0; iplane < nplanes; ++iplane) {
+      for (int idim = 0; idim < ndims; ++idim) {
         normals[iplane * ndims + idim] = random_getdouble() - 0.5;
       }
       vec_normalize(ndims, &normals[iplane * ndims]);
@@ -43,11 +35,13 @@ void benchmark(int ntests, int nplanes, int ndims)
     }
 
     /* Create polytoop object: */
-    polytoop = polytoop_fromplanes(nplanes, ndims, normals, dists);
+    Polytoop* polytoop = polytoop_fromplanes(nplanes, ndims, normals, dists);
 
     /* Accumulate total number of vertices created: */
     if (polytoop) {
       nfacets += polytoop_getnumfacets(polytoop);
+      nverts += polytoop_getnumvertices(polytoop);
+      nridges += polytoop_getnumridges(polytoop);
       polytoop_delete(polytoop);
     }
 
@@ -55,11 +49,13 @@ void benchmark(int ntests, int nplanes, int ndims)
     free(normals);
     free(center);
   }
-  dt = clock_gettime() - start;
+  double dt = clock_gettime() - start;
   printf("ntests      = %d\n", ntests);
   printf("nplanes     = %d\n", nplanes);
   printf("ndims       = %d\n", ndims);
   printf("facets      = %d\n", nfacets);
+  printf("ridges      = %d\n", nridges);
+  printf("verts       = %d\n", nverts);
   printf("time        = %g\n\n", dt);
 }
 
