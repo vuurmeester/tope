@@ -67,6 +67,9 @@ int vec_minindex(int n, double const* x);
 /** Print a vector to stdout. */
 void vec_print(int n, double const* x);
 
+/** Matrix-vector multiplication. */
+void mat_vecmul(int m, int n, double const* mat, double const* x, double* y);
+
 /** Print a matrix to a buffer. */
 void mat_sprint(int m, int n, double const* mat, char* str);
 
@@ -84,21 +87,7 @@ void boundingbox(int npoints, int ndims, double const* points, int* minindices,
 void analysesimplex(int npoints, int ndims, double* points, double* volume,
                     double* centroid);
 
-/** Solve linear program with Dantzig's simplex method.
-    Restricted normal form.
-    Maximimize c^T x
-    subject to
-    A x == b (m x n), b >= 0, x >= 0.
-
-    return value ==  0: optimum found
-    return value == -1: unbounded
-    return value == -2: infeasible
-*/
-int linprog_rn(int m, int n, double const* mata, double const* b,
-               double const* c, double* x);
-
-/** Solve linear program with Dantzig's simplex method.
-    Canonical form.
+/** Solve linear program.
     Maximimize c^T x
       subject to
     A x <= b (m x n).
@@ -107,5 +96,4 @@ int linprog_rn(int m, int n, double const* mata, double const* b,
     return value == -1: unbounded
     return value == -2: infeasible
   */
-int linprog_cn(int m, int n, double const* mata, double const* b,
-               double const* c, double* x);
+int linprog(int m, int n, double const* A, double const* b, double const* c, double* x);

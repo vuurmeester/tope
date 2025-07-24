@@ -168,6 +168,15 @@ void vec_print(int n, double const* x)
 
 
 
+void mat_vecmul(int m, int n, double const* mat, double const* x, double* y)
+{
+  for (int i = 0; i < m; ++i) {
+    y[i] = vec_dot(n, mat + i * n, x);
+  }
+}
+
+
+
 void mat_sprint(int m, int n, double const* mat, char* str)
 {
   char format[256];
