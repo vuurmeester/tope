@@ -177,6 +177,20 @@ void mat_vecmul(int m, int n, double const* mat, double const* x, double* y)
 
 
 
+void mat_matmul(int m, int n, int o, double const* mat1, double const* mat2, double* result)
+{
+  memset(result, 0, m * o * sizeof(double));
+  for (int i = 0; i < m; ++i) {
+    for (int k = 0; k < n; ++k) {
+      for (int j = 0; j < o; ++j) {
+        result[i * n + j] += mat1[i * n + k] * mat2[k * o + j];
+      }
+    }
+  }
+}
+
+
+
 void mat_sprint(int m, int n, double const* mat, char* str)
 {
   char format[256];
@@ -347,4 +361,49 @@ void analysesimplex(int npoints, int ndims, double* points, double* volume,
       vec_adds(ndims, &points[j * ndims], &points[i * ndims], -fac);
     }
   }
+}
+
+
+
+double gauss(int n, double* A, double* b)
+{
+  double det = 1.0;
+  for (int i = 0; i < n; ++i) {
+    // Find pivot element (largest magnitude in column i):
+    int pivot = i;
+    for (int j = i + 1; j < n; ++j) {
+      if (fabs(A[j * n + i]) > fabs(A[pivot * n + i])) {
+        pivot = j;
+      }
+    }
+
+    // Perform pivot:
+    if (pivot > i) {
+      memswp(A + i * n, A + pivot * n, n * sizeof(double));
+      memswp(b + i, b + pivot, sizeof(double));
+      det *= -1.0;
+    }
+
+    // Guard singular:
+    if (A[i * n + i] == 0.0) {
+      return 0.0;
+    }
+
+    // Update determinant:
+    det *= A[i * n + i];
+
+    // Update U:
+    for (int j = i + 1; j < n; ++j) {
+      double mult = A[j * n + i] / A[i * n + i];
+      vec_adds(n - i - 1, A + j * n + i + 1, A + i * n + i + 1, -mult);
+      b[j] -= mult * b[i];
+    }
+  }
+
+  // Backsubstitution:
+  for (int i = n - 1; i >= 0; --i) {
+    b[i] = (b[i] - vec_dot(n - i - 1, b + i + 1, A + i * n + i + 1)) / A[i * n + i];
+  }
+
+  return det;
 }
