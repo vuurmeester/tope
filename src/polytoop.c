@@ -762,42 +762,14 @@ void polytoop_delete(Polytoop* polytoop)
 
 
 
-Polytoop* polytoop_fromplanes(int n, int d, double* normals, double* dists)
+Polytoop* polytoop_fromplanes(int n, int d, double const* normals,
+                              double const* dists, double const* xc)
 {
-  /* Allocations: */
-  double* mata = malloc(n * (d + 1) * sizeof(double));
-  double* b = alloca(n * sizeof(double));
-  double* c = alloca((d + 1) * sizeof(double));
-  double* x = alloca((d + 1) * sizeof(double));
-
-  /* Copy data to augmented matrix: */
-  for (int i = 0; i < n; ++i) {
-    memcpy(&mata[i * (d + 1)], &normals[i * d], d * sizeof(double));
-    mata[i * (d + 1) + d] = 1.0;
-    b[i] = dists[i];
-  }
-
-  /* Gradient: */
-  vec_reset(d, c);
-  c[d] = 1.0;
-
-  /* Feasible start point: */
-  vec_reset(d, x);
-  x[d] = b[vec_minindex(n, b)] - 1.0;
-
-  /* Find interior point. */
-  linprog(n, d + 1, mata, b, c, x);
-  free(mata);
-  if (x[d] <= 0.0) {
-    /* Infeasible. */
-    return NULL;
-  }
-
   /* Construct reciprocal points: */
   double* points = malloc(n * d * sizeof(double));
   for (int i = 0; i < n; ++i) {
     memcpy(&points[i * d], &normals[i * d], d * sizeof(double));
-    double dist = dists[i] - vec_dot(d, x, &normals[i * d]);
+    double dist = dists[i] - vec_dot(d, xc, &normals[i * d]);
     assert(dist > 0.0);
     vec_scale(d, &points[i * d], 1.0 / dist);
   }
@@ -823,7 +795,7 @@ Polytoop* polytoop_fromplanes(int n, int d, double* normals, double* dists)
 
     /* Straight space point: */
     vec_scale(d, points + ifacet * d, 1.0 / dist);
-    vec_add(d, points + ifacet * d, x);
+    vec_add(d, points + ifacet * d, xc);
   }
 
   Polytoop* polytoop = polytoop_frompoints(nfacets, d, points);
