@@ -38,7 +38,10 @@ int main()
   ++m;
 
   /* Compute polytoop from pyramid planes: */
-  Polytoop* polytoop = polytoop_fromplanes(m, DIM, normals, distances);
+  Polytoop* polytoop = polytoop_fromplanes(m, DIM, normals, distances,
+  (double const[DIM]) {
+    0, 0, 0.5
+  });
 
   if (polytoop) {
     /* Print the polytoop: */

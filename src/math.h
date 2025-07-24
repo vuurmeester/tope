@@ -71,7 +71,8 @@ void vec_print(int n, double const* x);
 void mat_vecmul(int m, int n, double const* mat, double const* x, double* y);
 
 /** (m x n) times (n x o) matrix-matrix multiplication. */
-void mat_matmul(int m, int n, int o, double const* mat1, double const* mat2, double* result);
+void mat_matmul(int m, int n, int o, double const* mat1, double const* mat2,
+                double* result);
 
 /** Print a matrix to a buffer. */
 void mat_sprint(int m, int n, double const* mat, char* str);
@@ -99,7 +100,8 @@ void analysesimplex(int npoints, int ndims, double* points, double* volume,
     return value == -1: unbounded
     return value == -2: infeasible
   */
-int linprog(int m, int n, double const* A, double const* b, double const* c, double* x);
+int linprog(int m, int n, double const* A, double const* b, double const* c,
+            double* x);
 
 
 

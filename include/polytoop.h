@@ -7,9 +7,10 @@ typedef struct _polytoop_Vertex polytoop_Vertex;
 /** Delete polytoop object. */
 void polytoop_delete(Polytoop* polytoop);
 
-/** Create polytoop from planes. */
+/** Create polytoop from planes and interior point. */
 Polytoop* polytoop_fromplanes(int nplanes, int dim,
-                              double* normals, double* distances);
+                              double const* normals, double const* distances,
+                              double const* xc);
 
 /** Create polytoop from point cloud. */
 Polytoop* polytoop_frompoints(int npoints, int dim, double* points);

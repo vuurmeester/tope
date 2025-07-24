@@ -177,7 +177,8 @@ void mat_vecmul(int m, int n, double const* mat, double const* x, double* y)
 
 
 
-void mat_matmul(int m, int n, int o, double const* mat1, double const* mat2, double* result)
+void mat_matmul(int m, int n, int o, double const* mat1, double const* mat2,
+                double* result)
 {
   memset(result, 0, m * o * sizeof(double));
   for (int i = 0; i < m; ++i) {
@@ -402,7 +403,8 @@ double gauss(int n, double* A, double* b)
 
   // Backsubstitution:
   for (int i = n - 1; i >= 0; --i) {
-    b[i] = (b[i] - vec_dot(n - i - 1, b + i + 1, A + i * n + i + 1)) / A[i * n + i];
+    b[i] = (b[i] - vec_dot(n - i - 1, b + i + 1, A + i * n + i + 1)) /
+           A[i * n + i];
   }
 
   return det;

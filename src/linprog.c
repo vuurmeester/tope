@@ -9,7 +9,7 @@
 #include "math.h"
 #include "util.h"
 
-#define EPS 1.0e-9
+#define EPS 1.0e-6
 
 
 
@@ -18,14 +18,17 @@ int linprog(int m, int n, double const* A, double const* b, double const* c,
 {
   int stride = 2 * m + n;
   double* mat = alloca(stride * stride * sizeof(double));
-  double* y = alloca(m * sizeof(double));  // dual
-  double* s = alloca(m * sizeof(double));  // slack
-  double* dz = alloca(stride * sizeof(double));  // step
+  double* y = alloca(m * sizeof(double));       // dual
+  double* s = alloca(m * sizeof(double));       // slack
+  double* dz = alloca(stride * sizeof(double)); // step
 
   vec_set(m, y, 1.0);
   vec_set(m, s, 1.0);
 
+  int niter = 0;
   while (true) {
+    ++niter;
+
     // A x - b + s:
     mat_vecmul(m, n, A, x, dz);
     vec_sub(m, dz, b);
@@ -36,7 +39,7 @@ int linprog(int m, int n, double const* A, double const* b, double const* c,
     vec_sub(n, dz + m, c);
 
     // Desired duality gap:
-    double nu = 0.1 * vec_dot(m, s, y) / (double)m;
+    double nu = 0.01 * vec_dot(m, s, y) / (double)m;
     if (nu < EPS) {
       break;
     }
@@ -65,11 +68,11 @@ int linprog(int m, int n, double const* A, double const* b, double const* c,
     // Adjust stepsize to remain feasible:
     double step = 1.0;
     for (int i = 0; i < m; ++i) {
-      if (y[i] + step * dz[n + i] < 0.1 * y[i]) {
-        step = -0.9 * y[i] / dz[n + i];
+      if (y[i] + step * dz[n + i] < 0.01 * y[i]) {
+        step = -0.99 * y[i] / dz[n + i];
       }
-      if (s[i] + step * dz[n + m + i] < 0.1 * s[i]) {
-        step = -0.9 * s[i] / dz[n + m + i];
+      if (s[i] + step * dz[n + m + i] < 0.01 * s[i]) {
+        step = -0.99 * s[i] / dz[n + m + i];
       }
     }
 
@@ -78,6 +81,8 @@ int linprog(int m, int n, double const* A, double const* b, double const* c,
     vec_adds(m, y, dz + n, step);
     vec_adds(m, s, dz + n + m, step);
   }
+
+  printf("%d\n", niter);
 
   return 0;
 }

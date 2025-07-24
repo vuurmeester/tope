@@ -36,7 +36,7 @@ void benchmark(int ntests, int nplanes, int ndims)
     }
 
     /* Create polytoop object: */
-    Polytoop* polytoop = polytoop_fromplanes(nplanes, ndims, normals, dists);
+    Polytoop* polytoop = polytoop_fromplanes(nplanes, ndims, normals, dists, center);
 
     /* Accumulate total number of vertices created: */
     if (polytoop) {
