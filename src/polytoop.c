@@ -786,7 +786,7 @@ Polytoop* polytoop_fromplanes(int n, int d, double* normals, double* dists)
   x[d] = b[vec_minindex(n, b)] - 1.0;
 
   /* Find interior point. */
-  linprog_cn(n, d + 1, mata, b, c, x);
+  linprog(n, d + 1, mata, b, c, x);
   free(mata);
   if (x[d] <= 0.0) {
     /* Infeasible. */
