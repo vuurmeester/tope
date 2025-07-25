@@ -53,12 +53,12 @@ int linprog(int m, int n, double const* A, double const* b, double const* c,
     memset(mat, 0, stride * stride * sizeof(double));
     for (int i = 0; i < m; ++i) {
       for (int j = 0; j < n; ++j) {
-        mat[i * stride + j] = A[i * n + j];
-        mat[(m + j) * stride + i + n] = A[i * n + j];
+        mat[i * stride + m + j] = A[i * n + j];
+        mat[(m + j) * stride + i] = A[i * n + j];
       }
-      mat[i * stride + n + m + i] = 1.0;
-      mat[(m + n + i) * stride + n + i] = s[i];
-      mat[(m + n + i) * stride + n + m + i] = y[i];
+      mat[i * stride + m + n + i] = 1.0;
+      mat[(m + n + i) * stride + i] = s[i];
+      mat[(m + n + i) * stride + m + n + i] = y[i];
     }
 
     // Solve mat dz = -err (Newton-Raphson):
@@ -68,18 +68,18 @@ int linprog(int m, int n, double const* A, double const* b, double const* c,
     // Adjust stepsize to remain feasible:
     double step = 1.0;
     for (int i = 0; i < m; ++i) {
-      if (y[i] + step * dz[n + i] < 0.1 * y[i]) {
-        step = -0.9 * y[i] / dz[n + i];
+      if (y[i] + step * dz[i] < 0.1 * y[i]) {
+        step = -0.9 * y[i] / dz[i];
       }
-      if (s[i] + step * dz[n + m + i] < 0.1 * s[i]) {
-        step = -0.9 * s[i] / dz[n + m + i];
+      if (s[i] + step * dz[m + n + i] < 0.1 * s[i]) {
+        step = -0.9 * s[i] / dz[m + n + i];
       }
     }
 
     // Perform step:
-    vec_adds(n, x, dz, step);
-    vec_adds(m, y, dz + n, step);
-    vec_adds(m, s, dz + n + m, step);
+    vec_adds(m, y, dz, step);
+    vec_adds(n, x, dz + m, step);
+    vec_adds(m, s, dz + m + n, step);
   }
 
   printf("%d\n", niter);
