@@ -45,6 +45,17 @@ double random_getdouble()
 
 
 
+int random_getint(int lo, int hi)
+{
+  assert(lo < hi);
+  /* Returns int n, where lo <= n < hi: */
+  s_seed = 1664525U * s_seed + 1013904223U;
+  int n = s_seed % (hi - lo) + lo;
+  return n;
+}
+
+
+
 #ifdef _WIN32
 static double const maxdouble = (double)UINT_MAX + 1.0;
 static double large2double(LARGE_INTEGER const* i)

@@ -16,5 +16,8 @@ void random_reset(void);
 /** Random number between 0 and 1. */
 double random_getdouble(void);
 
+/** Random number in range [lo, hi>. */
+int random_getint(int lo, int hi);
+
 /** Time difference [s] since last call. */
 double polytoop_gettime(void);
