@@ -472,9 +472,6 @@ void cr(int n,
 
     /* alfa = (r' A r) / (p' A' A p): */
     double alfa = rar / paap;
-    //if (alfa * alfa * vec_nrmsq(n, p) < tol * tol) {
-    //  break;
-    //}
 
     /* Take step (update solution and residual): */
     vec_adds(n, x, p, alfa);  /* x <-- x + alfa * p */

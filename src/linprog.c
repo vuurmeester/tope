@@ -102,7 +102,7 @@ int linprog(int m, int n, double const* A, double const* b, double const* c,
     // Solve mat dz = -err (Newton-Raphson):
     Data data = {.m = m, .n = n, .A = A, .d = d};
     memset(dz, 0, stride * sizeof(double));
-    cr(stride, apply_matrix, err, dz, 1e-24, &data);
+    cr(stride, apply_matrix, err, dz, 1e-12, &data);
 
     // Apply preconditioner:
     for (int i = 0; i < m; ++i) {
