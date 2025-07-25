@@ -369,7 +369,8 @@ void analysesimplex(int npoints, int ndims, double* points, double* volume,
 double gauss(int n, double* A, double* b)
 {
   double det = 1.0;
-  for (int i = 0; i < n; ++i) {
+  int i = 0;
+  for (; i < n; ++i) {
     // Find pivot element (largest magnitude in column i):
     int pivot = i;
     for (int j = i + 1; j < n; ++j) {
@@ -385,13 +386,14 @@ double gauss(int n, double* A, double* b)
       det *= -1.0;
     }
 
-    // Guard singular:
-    if (A[i * n + i] == 0.0) {
-      return 0.0;
-    }
-
     // Update determinant:
     det *= A[i * n + i];
+
+    // Guard singular:
+    if (A[i * n + i] == 0.0) {
+      memset(b + i, 0, (n - i) * sizeof(double));
+      break;
+    }
 
     // Update U:
     for (int j = i + 1; j < n; ++j) {
@@ -402,7 +404,7 @@ double gauss(int n, double* A, double* b)
   }
 
   // Backsubstitution:
-  for (int i = n - 1; i >= 0; --i) {
+  for (--i; i >= 0; --i) {
     b[i] = (b[i] - vec_dot(n - i - 1, b + i + 1, A + i * n + i + 1)) /
            A[i * n + i];
   }
