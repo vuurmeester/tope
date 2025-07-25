@@ -15,8 +15,7 @@ typedef struct {
   int m;
   int n;
   double const* A;
-  double const* y;
-  double const* s;
+  double const* d;
 } Data;
 
 
@@ -27,8 +26,7 @@ void apply_matrix(int stride, double const* z, double* w, void const* pdata)
   int m = data->m;
   int n = data->n;
   double const* A = data->A;
-  double const* y = data->y;
-  double const* s = data->s;
+  double const* d = data->d;
 
   //   0    A    I
   //  A^T   0    0
@@ -37,16 +35,18 @@ void apply_matrix(int stride, double const* z, double* w, void const* pdata)
   // z = [y; x; s]
   // w = [A x + s; A^T y; I y + S^-1 Y s]
 
-  // A x + s:
+  // A x + D s:
   mat_vecmul(m, n, A, z + m, w);
-  vec_add(m, w, z + m + n);
+  for (int i = 0; i < m; ++i) {
+    w[i] += z[m + n + i] * d[i];
+  }
 
   // A^T y:
   mat_matmul(1, m, n, z, A, w + m);
 
-  // y + S^-1 Y s:
+  // D y + s:
   for (int i = 0; i < m; ++i) {
-    w[m + n + i] = z[i] + y[i] / s[i] * z[m + n + i];
+    w[m + n + i] = z[i] * d[i] + z[m + n + i];
   }
 }
 
@@ -60,6 +60,7 @@ int linprog(int m, int n, double const* A, double const* b, double const* c,
   double* s = alloca(m * sizeof(double));        // slack
   double* err = alloca(stride * sizeof(double)); // error
   double* dz = alloca(stride * sizeof(double));  // step
+  double* d = alloca(m * sizeof(double));        // precon diagonal
 
   vec_set(m, y, 1.0);
   vec_set(m, s, 1.0);
@@ -88,16 +89,26 @@ int linprog(int m, int n, double const* A, double const* b, double const* c,
       err[m + n + i] = y[i] - nu / s[i];
     }
 
+    // Preconditioner (creates unit matrix on lower right m x m submatrix):
+    for (int i = 0; i < m; ++i) {
+      d[i] = sqrt(s[i] / y[i]);
+    }
+
+    // Apply preconditioner to RHS:
+    for (int i = 0; i < m; ++i) {
+      err[m + n + i] *= d[i];
+    }
+
     // Solve mat dz = -err (Newton-Raphson):
-    Data data = {.m = m, .n = n, .A = A, .y = y, .s = s};
+    Data data = {.m = m, .n = n, .A = A, .d = d};
     memset(dz, 0, stride * sizeof(double));
     cr(stride, apply_matrix, err, dz, 1e-24, &data);
-    {
-      double* test = malloc(stride * sizeof(double));
-      apply_matrix(stride, dz, test, &data);
-      vec_sub(stride, test, err);
-      free(test);
+
+    // Apply preconditioner:
+    for (int i = 0; i < m; ++i) {
+      dz[m + n + i] *= d[i];
     }
+
     vec_neg(stride, dz);
 
     // Adjust stepsize to remain feasible:
