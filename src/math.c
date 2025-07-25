@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
+#include <stdbool.h>
 
 #include "math.h"
 #include "util.h"
@@ -410,4 +412,76 @@ double gauss(int n, double* A, double* b)
   }
 
   return det;
+}
+
+
+
+void cr(int n,
+        void (*applymatrix)(int n, double const* x, double* y, void const* data),
+        double const* b,
+        double* x,
+        double tol,
+        void const* data)
+{
+  /* Allocations: */
+  double* r = alloca(n * sizeof(double));
+  double* p = alloca(n * sizeof(double));
+  double* ap = alloca(n * sizeof(double));
+  double* ar = alloca(n * sizeof(double));
+
+  /* Initialization: */
+  double oldrar = HUGE_VAL;
+  int niter = 0;
+  vec_reset(n, p);
+  vec_reset(n, ap);
+
+  /* Initial residual: r = b - A x: */
+  applymatrix(n, x, r, data);
+  vec_neg(n, r);
+  vec_add(n, r, b);
+
+  while (true) {  /* while residue relatively large */
+    ++niter;
+
+    /* A r: */
+    applymatrix(n, r, ar, data);
+
+    /* r' A r: */
+    double rar = vec_dot(n, r, ar);
+    if (fabs(rar) < tol * tol) {
+      break;
+    }
+
+    /* p = r + beta p: */
+    double beta = rar / oldrar;
+    vec_scale(n, p, beta);
+    vec_add(n, p, r);
+
+    /* Save rar: */
+    oldrar = rar;
+
+    /* A p: */
+    vec_scale(n, ap, beta);
+    vec_add(n, ap, ar);
+
+    /* p' A' A p: */
+    double paap = vec_nrmsq(n, ap);
+    if (paap == 0) {
+      break;
+    }
+
+    /* alfa = (r' A r) / (p' A' A p): */
+    double alfa = rar / paap;
+    //if (alfa * alfa * vec_nrmsq(n, p) < tol * tol) {
+    //  break;
+    //}
+
+    /* Take step (update solution and residual): */
+    vec_adds(n, x, p, alfa);  /* x <-- x + alfa * p */
+    vec_adds(n, r, ap, -alfa);  /* r <-- r - alfa * A * p */
+  }
+
+#ifndef NDEBUG
+  printf("cr: niter = %d\n", niter);
+#endif
 }

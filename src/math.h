@@ -108,3 +108,11 @@ int linprog(int m, int n, double const* A, double const* b, double const* c,
 /** Solve A x = b  nonsingular square system (A clobbered, b <- x).
     Return determinant. Gaussian LU eliminiation, partial pivoting. */
 double gauss(int n, double* A, double* b);
+
+/** Conjugate residual method for symmetric matrices. */
+void cr(int n,
+        void (*applymatrix)(int n, double const* x, double* y, void const* data),
+        double const* b,
+        double* x,
+        double tol,
+        void const* data);
