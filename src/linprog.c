@@ -11,16 +11,55 @@
 
 #define EPS 1.0e-9
 
+typedef struct {
+  int m;
+  int n;
+  double const* A;
+  double const* y;
+  double const* s;
+} Data;
+
+
+
+void apply_matrix(int stride, double const* z, double* w, void const* pdata)
+{
+  Data const* data = pdata;
+  int m = data->m;
+  int n = data->n;
+  double const* A = data->A;
+  double const* y = data->y;
+  double const* s = data->s;
+
+  //   0    A    I
+  //  A^T   0    0
+  //   I    0  S^-1 Y
+  //
+  // z = [y; x; s]
+  // w = [A x + s; A^T y; I y + S^-1 Y s]
+
+  // A x + s:
+  mat_vecmul(m, n, A, z + m, w);
+  vec_add(m, w, z + m + n);
+
+  // A^T y:
+  mat_matmul(1, m, n, z, A, w + m);
+
+  // y + S^-1 Y s:
+  for (int i = 0; i < m; ++i) {
+    w[m + n + i] = z[i] + y[i] / s[i] * z[m + n + i];
+  }
+}
+
 
 
 int linprog(int m, int n, double const* A, double const* b, double const* c,
             double* x)
 {
   int stride = 2 * m + n;
-  double* mat = alloca(stride * stride * sizeof(double));
-  double* y = alloca(m * sizeof(double));       // dual
-  double* s = alloca(m * sizeof(double));       // slack
-  double* dz = alloca(stride * sizeof(double)); // step
+  double* y = alloca(m * sizeof(double));        // dual
+  double* s = alloca(m * sizeof(double));        // slack
+  double* err = alloca(stride * sizeof(double)); // error
+  double* dz = alloca(stride * sizeof(double));  // step
 
   vec_set(m, y, 1.0);
   vec_set(m, s, 1.0);
@@ -30,39 +69,35 @@ int linprog(int m, int n, double const* A, double const* b, double const* c,
     ++niter;
 
     // A x - b + s:
-    mat_vecmul(m, n, A, x, dz);
-    vec_sub(m, dz, b);
-    vec_add(m, dz, s);
+    mat_vecmul(m, n, A, x, err);
+    vec_sub(m, err, b);
+    vec_add(m, err, s);
 
     // A^T y - c:
-    mat_matmul(1, m, n, y, A, dz + m);
-    vec_sub(n, dz + m, c);
+    mat_matmul(1, m, n, y, A, err + m);
+    vec_sub(n, err + m, c);
 
-    // Desired duality gap:
+    // Desired duality gap (one-tenth of current average duality gap):
     double nu = 0.1 * vec_dot(m, s, y) / (double)m;
     if (nu < EPS) {
       break;
     }
 
-    // s o y - nu:
+    // S^-1 (s o y) - nu S^-1 e:
     for (int i = 0; i < m; ++i) {
-      dz[m + n + i] = s[i] * y[i] - nu;
-    }
-
-    // Derivative:
-    memset(mat, 0, stride * stride * sizeof(double));
-    for (int i = 0; i < m; ++i) {
-      for (int j = 0; j < n; ++j) {
-        mat[i * stride + m + j] = A[i * n + j];
-        mat[(m + j) * stride + i] = A[i * n + j];
-      }
-      mat[i * stride + m + n + i] = 1.0;
-      mat[(m + n + i) * stride + i] = s[i];
-      mat[(m + n + i) * stride + m + n + i] = y[i];
+      err[m + n + i] = y[i] - nu / s[i];
     }
 
     // Solve mat dz = -err (Newton-Raphson):
-    gauss(stride, mat, dz);
+    Data data = {.m = m, .n = n, .A = A, .y = y, .s = s};
+    memset(dz, 0, stride * sizeof(double));
+    cr(stride, apply_matrix, err, dz, 1e-24, &data);
+    {
+      double* test = malloc(stride * sizeof(double));
+      apply_matrix(stride, dz, test, &data);
+      vec_sub(stride, test, err);
+      free(test);
+    }
     vec_neg(stride, dz);
 
     // Adjust stepsize to remain feasible:
@@ -82,7 +117,9 @@ int linprog(int m, int n, double const* A, double const* b, double const* c,
     vec_adds(m, s, dz + m + n, step);
   }
 
+#ifndef NDEBUG
   printf("%d\n", niter);
+#endif
 
   return 0;
 }
