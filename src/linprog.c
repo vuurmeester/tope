@@ -28,12 +28,12 @@ void apply_matrix(int stride, double const* z, double* w, void const* pdata)
   double const* A = data->A;
   double const* d = data->d;
 
-  //   0    A    I
-  //  A^T   0    0
-  //   I    0  S^-1 Y
+  //    0   A     1
+  //   A^T  0     0
+  //    1   0   S^-1 Y
   //
   // z = [y; x; s]
-  // w = [A x + s; A^T y; I y + S^-1 Y s]
+  // w = [A x + s; A^T y; y + S^-1 Y s]
 
   // A x + s:
   mat_vecmul(m, n, A, z + m, w);
@@ -42,7 +42,7 @@ void apply_matrix(int stride, double const* z, double* w, void const* pdata)
   // A^T y:
   mat_matmul(1, m, n, z, A, w + m);
 
-  // y + D s:
+  // y + S^-1 Y s:
   for (int i = 0; i < m; ++i) {
     w[m + n + i] = z[i] + d[i] * z[m + n + i];
   }
@@ -67,6 +67,12 @@ int linprog(int m, int n, double const* A, double const* b, double const* c,
   while (true) {
     ++niter;
 
+    // Desired duality gap (one-tenth of current average duality gap):
+    double nu = 0.1 * vec_dot(m, s, y) / (double)m;
+    if (nu < EPS) {
+      break;
+    }
+
     // A x - b + s:
     mat_vecmul(m, n, A, x, err);
     vec_sub(m, err, b);
@@ -76,44 +82,33 @@ int linprog(int m, int n, double const* A, double const* b, double const* c,
     mat_matmul(1, m, n, y, A, err + m);
     vec_sub(n, err + m, c);
 
-    // Desired duality gap (one-tenth of current average duality gap):
-    double nu = 0.1 * vec_dot(m, s, y) / (double)m;
-    if (nu < EPS) {
-      break;
-    }
-
     // S^-1 (s o y) - nu S^-1 e:
     for (int i = 0; i < m; ++i) {
       err[m + n + i] = y[i] - nu / s[i];
     }
 
-    // Preconditioner (creates unit matrix on lower right m x m submatrix):
+    // S^-1 Y (diagonal):
     for (int i = 0; i < m; ++i) {
       d[i] = y[i] / s[i];
     }
 
-    // Solve mat dz = -err (Newton-Raphson):
+    // Solve M dz = -err (Newton-Raphson):
     Data data = {.m = m, .n = n, .A = A, .d = d};
     memset(dz, 0, stride * sizeof(double));
     cr(stride, apply_matrix, err, dz, 1e-9, &data);
     vec_neg(stride, dz);
-    {
-      double* test = malloc(stride * sizeof(double));
-      apply_matrix(stride, dz, test, &data);
-      vec_add(stride, test, err);
-      free(test);
-    }
 
     // Adjust stepsize to remain feasible:
     double step = 1.0;
     for (int i = 0; i < m; ++i) {
-      if (y[i] + step * dz[i] < 0.1 * y[i]) {
-        step = -0.9 * y[i] / dz[i];
+      if (y[i] + step * dz[i] < 0.0) {
+        step = -y[i] / dz[i];
       }
-      if (s[i] + step * dz[m + n + i] < 0.1 * s[i]) {
-        step = -0.9 * s[i] / dz[m + n + i];
+      if (s[i] + step * dz[m + n + i] < 0.0) {
+        step = -s[i] / dz[m + n + i];
       }
     }
+    step *= 0.98;
 
     if (step * vec_norm(stride, dz) <= EPS) {
       break;
