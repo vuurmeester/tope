@@ -12,7 +12,7 @@ int main()
   double start = polytoop_gettime();
   int nunb = 0;
   int nopt = 0;
-  int ntests = 100;
+  int ntests = 1000;
   for (int itest = 0; itest < ntests; ++itest) {
     int n = random_getint(2, 5);  // dimension
     int m = random_getint(n, 8 * n);

@@ -35,18 +35,16 @@ void apply_matrix(int stride, double const* z, double* w, void const* pdata)
   // z = [y; x; s]
   // w = [A x + s; A^T y; I y + S^-1 Y s]
 
-  // A x + D s:
+  // A x + s:
   mat_vecmul(m, n, A, z + m, w);
-  for (int i = 0; i < m; ++i) {
-    w[i] += z[m + n + i] * d[i];
-  }
+  vec_add(m, w, z + m + n);
 
   // A^T y:
   mat_matmul(1, m, n, z, A, w + m);
 
-  // D y + s:
+  // y + D s:
   for (int i = 0; i < m; ++i) {
-    w[m + n + i] = z[i] * d[i] + z[m + n + i];
+    w[m + n + i] = z[i] + d[i] * z[m + n + i];
   }
 }
 
@@ -91,25 +89,20 @@ int linprog(int m, int n, double const* A, double const* b, double const* c,
 
     // Preconditioner (creates unit matrix on lower right m x m submatrix):
     for (int i = 0; i < m; ++i) {
-      d[i] = sqrt(s[i] / y[i]);
-    }
-
-    // Apply preconditioner to RHS:
-    for (int i = 0; i < m; ++i) {
-      err[m + n + i] *= d[i];
+      d[i] = y[i] / s[i];
     }
 
     // Solve mat dz = -err (Newton-Raphson):
     Data data = {.m = m, .n = n, .A = A, .d = d};
     memset(dz, 0, stride * sizeof(double));
-    cr(stride, apply_matrix, err, dz, 1e-12, &data);
-
-    // Apply preconditioner:
-    for (int i = 0; i < m; ++i) {
-      dz[m + n + i] *= d[i];
-    }
-
+    cr(stride, apply_matrix, err, dz, 1e-9, &data);
     vec_neg(stride, dz);
+    {
+      double* test = malloc(stride * sizeof(double));
+      apply_matrix(stride, dz, test, &data);
+      vec_add(stride, test, err);
+      free(test);
+    }
 
     // Adjust stepsize to remain feasible:
     double step = 1.0;
@@ -120,6 +113,10 @@ int linprog(int m, int n, double const* A, double const* b, double const* c,
       if (s[i] + step * dz[m + n + i] < 0.1 * s[i]) {
         step = -0.9 * s[i] / dz[m + n + i];
       }
+    }
+
+    if (step * vec_norm(stride, dz) <= EPS) {
+      break;
     }
 
     // Perform step:

@@ -21,6 +21,9 @@ if (MSVC)
   # Suppress some warnings:
   set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4996 /wd6255 /wd6011")
 
+  # Missing function declaration is error:
+  set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /we4013")
+
   # No manifest:
   set(CMAKE_EXE_LINKER_FLAGS "/MANIFEST:NO" CACHE STRING "" FORCE)  # no EXE manifest
   set(CMAKE_SHARED_LINKER_FLAGS "/MANIFEST:NO" CACHE STRING "" FORCE)  # no DLL manifest
