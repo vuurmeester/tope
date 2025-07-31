@@ -53,12 +53,12 @@ void apply_matrix(int stride, double const* z, double* w, void const* pdata)
 int linprog(int m, int n, double const* A, double const* b, double const* c,
             double* x)
 {
-  int stride = 2 * m + n;
+  int stride = m + n + m;
   double* y = alloca(m * sizeof(double));        // dual
   double* s = alloca(m * sizeof(double));        // slack
   double* err = alloca(stride * sizeof(double)); // error
   double* dz = alloca(stride * sizeof(double));  // step
-  double* d = alloca(m * sizeof(double));        // precon diagonal
+  double* d = alloca(m * sizeof(double));        // diagonal
 
   vec_set(m, y, 1.0);
   vec_set(m, s, 1.0);

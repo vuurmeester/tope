@@ -15,7 +15,7 @@ int main()
   int ntests = 1000;
   for (int itest = 0; itest < ntests; ++itest) {
     int n = random_getint(2, 5);  // dimension
-    int m = random_getint(n, 8 * n);
+    int m = random_getint(n, 8 * n);  // number of planes
 
     // Normals plus extra plane, plus extra dimension:
     double* A = malloc((m + 1) * (n + 1) * sizeof(double));
@@ -54,7 +54,7 @@ int main()
     A[m * (n + 1) + n] = 1.0;
     b[m] = 2.0;  // ceiling at 'height' 2
 
-    // Optimization direction: (0, ..., 0, 1):
+    // Optimization direction: (0, ..., 0, 1)^T:
     memset(c, 0, n * sizeof(double));
     c[n] = 1;
 
