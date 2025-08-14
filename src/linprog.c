@@ -27,6 +27,7 @@ void apply_matrix(int stride, double const* z, double* w, void const* pdata)
   int n = data->n;
   double const* A = data->A;
   double const* d = data->d;
+  (void)stride;
 
   //    0   A     1
   //   A^T  0     0
