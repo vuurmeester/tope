@@ -6,7 +6,7 @@ project(polytoop LANGUAGES C)
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "" FORCE)
 
 if(UNIX)
-  set(CMAKE_C_FLAGS "-fvisibility=hidden -fPIC -no-pie -Wall -Wextra -std=c99 -pedantic" CACHE STRING "" FORCE)
+  set(CMAKE_C_FLAGS "-fvisibility=hidden -fPIC -no-pie -Wall -Wextra -std=c89 -pedantic" CACHE STRING "" FORCE)
   set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG -s ${CMAKE_C_FLAGS}" CACHE STRING "" FORCE)
 endif()
 

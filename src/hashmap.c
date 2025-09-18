@@ -13,8 +13,10 @@
 
 static unsigned hashvertset(int d, polytoop_Vertex** verts)
 {
+  unsigned hash;
+
   d -= 2; /* d - 1 vertices, so d - 2 is the last index */
-  unsigned hash = verts[d]->index;
+  hash = verts[d]->index;
   while (d--) {
     hash = 31 * hash ^ verts[d]->index;
   }
@@ -39,14 +41,21 @@ static int compvertsets(int d, polytoop_Vertex** vertset1,
 
 static void resize(HashMap* hashmap, int newcap)
 {
-  Ridge** newridges = calloc(newcap, sizeof(Ridge*) + sizeof(unsigned));
-  unsigned* newhashes = (unsigned*)(newridges + newcap);
-  unsigned newmask = newcap - 1;
-  for (int i = 0; i < hashmap->cap; ++i) {
+  int i;
+  Ridge** newridges;
+  unsigned* newhashes;
+  unsigned newmask;
+  unsigned newindex;
+
+  newridges = calloc(newcap, sizeof(Ridge*) + sizeof(unsigned));
+  newhashes = (unsigned*)(newridges + newcap);
+  newmask = newcap - 1;
+
+  for (i = 0; i < hashmap->cap; ++i) {
     if (!hashmap->ridges[i]) {
       continue;
     }
-    unsigned newindex = hashmap->hashes[i] & newmask;
+    newindex = hashmap->hashes[i] & newmask;
     while (newridges[newindex]) {
       newindex = (newindex + 1) & newmask;
     }
@@ -82,9 +91,13 @@ void hashmap_destroy(HashMap* hashmap)
 
 void hashmap_insert(HashMap* hashmap, int d, Ridge* ridge)
 {
-  unsigned hash = hashvertset(d, ridge->vertices);
-  int index = hash & (hashmap->cap - 1);
-  while (hashmap->ridges[index]) {
+  unsigned hash;
+  int index;
+
+  hash = hashvertset(d, ridge->vertices);
+  index = hash & (hashmap->cap - 1);
+
+  while (hashmap->ridges[index] != NULL) {
     /* Don't insert stuff that is already in here: */
     assert(compvertsets(d, hashmap->ridges[index]->vertices, ridge->vertices));
     index = (index + 1) & (hashmap->cap - 1); /* next in cluster */
@@ -113,8 +126,11 @@ void hashmap_clear(HashMap* hashmap)
 
 Ridge* hashmap_retrieve(HashMap hashmap, int d, polytoop_Vertex** verts)
 {
-  unsigned hash = hashvertset(d, verts);
-  int index = hash & (hashmap.cap - 1);
+  unsigned hash;
+  int index;
+
+  hash = hashvertset(d, verts);
+  index = hash & (hashmap.cap - 1);
 
   while (hashmap.ridges[index]) {
     if (hashmap.hashes[index] == hash &&

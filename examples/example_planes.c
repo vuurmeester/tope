@@ -10,24 +10,33 @@
 
 void benchmark(int ntests, int nplanes, int ndims)
 {
-  random_reset();
-
-  double start = polytoop_gettime();
+  int itest;
+  int idim;
+  int iplane;
   int nfacets = 0;
   int nverts = 0;
   int nridges = 0;
-  for (int itest = 0; itest < ntests; ++itest) {
+  double start;
+  double dt;
+  double* center;
+  double* normals;
+  double* dists;
+  Polytoop* polytoop;
+
+  start = polytoop_gettime();
+  random_reset();
+  for (itest = 0; itest < ntests; ++itest) {
     /* Random center: */
-    double* center = malloc(ndims * sizeof(double));
-    for (int idim = 0; idim < ndims; ++idim) {
+    center = malloc(ndims * sizeof(double));
+    for (idim = 0; idim < ndims; ++idim) {
       center[idim] = 10.0 * (random_getdouble() - 0.5);
     }
 
     /* Random planes: */
-    double* normals = malloc(nplanes * ndims * sizeof(double));
-    double* dists = malloc(nplanes * sizeof(double));
-    for (int iplane = 0; iplane < nplanes; ++iplane) {
-      for (int idim = 0; idim < ndims; ++idim) {
+    normals = malloc(nplanes * ndims * sizeof(double));
+    dists = malloc(nplanes * sizeof(double));
+    for (iplane = 0; iplane < nplanes; ++iplane) {
+      for (idim = 0; idim < ndims; ++idim) {
         normals[iplane * ndims + idim] = random_getdouble() - 0.5;
       }
       vec_normalize(ndims, &normals[iplane * ndims]);
@@ -36,7 +45,7 @@ void benchmark(int ntests, int nplanes, int ndims)
     }
 
     /* Create polytoop object: */
-    Polytoop* polytoop = polytoop_fromplanes(nplanes, ndims, normals, dists, center);
+    polytoop = polytoop_fromplanes(nplanes, ndims, normals, dists, center);
 
     /* Accumulate total number of vertices created: */
     if (polytoop) {
@@ -50,7 +59,7 @@ void benchmark(int ntests, int nplanes, int ndims)
     free(normals);
     free(center);
   }
-  double dt = polytoop_gettime() - start;
+  dt = polytoop_gettime() - start;
   printf("ntests      = %d\n", ntests);
   printf("nplanes     = %d\n", nplanes);
   printf("ndims       = %d\n", ndims);
