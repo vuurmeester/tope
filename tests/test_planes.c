@@ -7,13 +7,15 @@
 
 
 
-int main()
+int main(void)
 {
+  Polytoop* polytoop;
   double normals[(NPLANES + 1) * DIM];
   double distances[NPLANES + 1];
 
   /* Define a pyramid. */
   int m = 0;
+  double xi[DIM];
 
   /* Bottom: */
   normals[m * DIM + 0] = 0.0;
@@ -38,10 +40,10 @@ int main()
   ++m;
 
   /* Compute polytoop from pyramid planes: */
-  Polytoop* polytoop = polytoop_fromplanes(m, DIM, normals, distances,
-  (double const[DIM]) {
-    0, 0, 0.5
-  });
+  xi[0] = 0.0;
+  xi[1] = 0.0;
+  xi[2] = 0.5;
+  polytoop = polytoop_fromplanes(m, DIM, normals, distances, xi);
 
   if (polytoop) {
     /* Print the polytoop: */

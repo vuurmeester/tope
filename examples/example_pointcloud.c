@@ -16,9 +16,20 @@
 
 double benchmark(int ntests, int npoints, int ndims, int cospherical)
 {
-  random_reset();
+  int itest;
+  int ipoint;
+  int idim;
+  int nfacets;
+  int nridges;
+  int nverts;
+  double start;
+  double dt;
+  double* points;
+  Polytoop* polytoop;
 
-  double* points = malloc(npoints * ndims * sizeof(double));
+  points = malloc(npoints * ndims * sizeof(double));
+
+  random_reset();
 
   printf("***** polytoop test *****\n");
   printf("ntests      = %d\n", ntests);
@@ -26,14 +37,14 @@ double benchmark(int ntests, int npoints, int ndims, int cospherical)
   printf("ndims       = %d\n", ndims);
   printf("cospherical = %s\n", cospherical ? "true" : "false");
 
-  double start = polytoop_gettime();
-  int nfacets = 0;
-  int nridges = 0;
-  int nverts = 0;
-  for (int itest = 0; itest < ntests; ++itest) {
+  start = polytoop_gettime();
+  nfacets = 0;
+  nridges = 0;
+  nverts = 0;
+  for (itest = 0; itest < ntests; ++itest) {
     /* Random points: */
-    for (int ipoint = 0; ipoint < npoints; ++ipoint) {
-      for (int idim = 0; idim < ndims; ++idim) {
+    for (ipoint = 0; ipoint < npoints; ++ipoint) {
+      for (idim = 0; idim < ndims; ++idim) {
         points[ipoint * ndims + idim] = random_getdouble() - 0.5;
       }
       if (cospherical) {
@@ -42,7 +53,7 @@ double benchmark(int ntests, int npoints, int ndims, int cospherical)
     }
 
     /* Add points to polytoop: */
-    Polytoop* polytoop = polytoop_frompoints(npoints, ndims, points);
+    polytoop = polytoop_frompoints(npoints, ndims, points);
 
     /* Accumulate total number of facets and vertices created: */
     nfacets += polytoop_getnumfacets(polytoop);
@@ -52,7 +63,7 @@ double benchmark(int ntests, int npoints, int ndims, int cospherical)
     /* Clean up: */
     polytoop_delete(polytoop);
   }
-  double dt = polytoop_gettime() - start;
+  dt = polytoop_gettime() - start;
   printf("facets      = %d\n", nfacets);
   printf("ridges      = %d\n", nridges);
   printf("verts       = %d\n", nverts);
@@ -72,6 +83,7 @@ void benchqhull(int ntests, int npoints, int ndims, int cospherical)
   int itest;
   int idim;
   int ipoint;
+  double start;
   double dt;
   double* points;
 
@@ -83,7 +95,7 @@ void benchqhull(int ntests, int npoints, int ndims, int cospherical)
   printf("ndims       = %d\n", ndims);
   printf("cospherical = %s\n", cospherical ? "true" : "false");
 
-  double start = polytoop_gettime();
+  start = polytoop_gettime();
   nfacets = 0;
   nverts = 0;
   for (itest = 0; itest < ntests; ++itest) {
@@ -124,11 +136,11 @@ void benchqhull(int ntests, int npoints, int ndims, int cospherical)
 
 int main(void)
 {
-  // #ifndef NDEBUG
-  //   benchmark(1, 64, 8, 0);
-  //   benchqhull(1, 64, 8, 0);
-  //   return 0;
-  // #endif
+  /* #ifndef NDEBUG */
+  /*   benchmark(1, 64, 8, 0); */
+  /*   benchqhull(1, 64, 8, 0); */
+  /*   return 0; */
+  /* #endif */
   double t = 0.0;
   /* 4D non-cospherical: */
   t += benchmark(200, 32, 4, 0);

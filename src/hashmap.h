@@ -5,7 +5,7 @@
 /** Initialize hashmap. */
 void hashmap_init(HashMap* hashmap);
 
-/** Release hashmap. */
+/** Release hashmap resources. */
 void hashmap_destroy(HashMap* hashmap);
 
 /** Insert ridge. */

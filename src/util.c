@@ -1,9 +1,9 @@
 #ifdef _WIN32
-  #include <windows.h>
+#include <windows.h>
 #else
-  #define _POSIX_C_SOURCE 199309L
-  #include <sys/time.h>
-  #include <time.h>
+#define _POSIX_C_SOURCE 199309L
+#include <sys/time.h>
+#include <time.h>
 #endif
 
 #include <assert.h>
@@ -19,9 +19,11 @@ static double const s_nrmfac = 1.0 / ((double)UINT_MAX + 1.0);
 
 void memswp(void* ptr1, void* ptr2, int numbytes)
 {
+  void* tmp;
+
   assert((char*)ptr1 + numbytes <= (char*)ptr2 ||
          (char*)ptr2 + numbytes <= (char*)ptr1);
-  void* tmp = alloca(numbytes);
+  tmp = alloca(numbytes);
   memcpy(tmp, ptr1, numbytes);
   memcpy(ptr1, ptr2, numbytes);
   memcpy(ptr2, tmp, numbytes);
@@ -29,14 +31,11 @@ void memswp(void* ptr1, void* ptr2, int numbytes)
 
 
 
-void random_reset()
-{
-  s_seed = 0;
-}
+void random_reset(void) { s_seed = 0; }
 
 
 
-double random_getdouble()
+double random_getdouble(void)
 {
   /* Returns double x, where 0.0 <= x < 1.0: */
   s_seed = 1664525U * s_seed + 1013904223U;
@@ -47,10 +46,12 @@ double random_getdouble()
 
 int random_getint(int lo, int hi)
 {
+  int n;
+
   assert(lo < hi);
   /* Returns int n, where lo <= n < hi: */
   s_seed = 1664525U * s_seed + 1013904223U;
-  int n = s_seed % (hi - lo) + lo;
+  n = s_seed % (hi - lo) + lo;
   return n;
 }
 
@@ -89,8 +90,9 @@ static double getperiod(void)
 {
 #ifdef _WIN32
   LARGE_INTEGER temp;
+  double period;
   QueryPerformanceFrequency(&temp);
-  double period = 1.0 / large2double(&temp);
+  period = 1.0 / large2double(&temp);
   return period;
 #else
   return 1.0e-6;
@@ -103,7 +105,7 @@ double polytoop_gettime(void)
 {
   unsigned hi;
   unsigned lo;
-  getcounts(&hi, &lo);
   double period = getperiod();
+  getcounts(&hi, &lo);
   return (maxdouble * (double)hi + (double)lo) * period;
 }
