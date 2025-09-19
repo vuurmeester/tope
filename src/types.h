@@ -61,7 +61,7 @@ struct _Ridge {
   double volume;
   double* centroid;
   double* normal;
-  polytoop_Facet* facets[2];  /* 2 adjacent facets */
+  polytoop_Facet* facets[2];    /* 2 adjacent facets */
   polytoop_Vertex* vertices[1]; /* d - 1 adjacent vertices */
 };
 

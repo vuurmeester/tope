@@ -40,7 +40,8 @@ void* allocator_alloc(Allocator* alc, u16 numbytes)
     alc->freeps[pool_index] = NULL;
     alc->indices[numwords] = pool_index;
     ++alc->npools;
-  } else if (alc->freeps[pool_index] != NULL) {
+  }
+  else if (alc->freeps[pool_index] != NULL) {
     /* Prefer recycled memory: */
     ret = alc->freeps[pool_index];
     alc->freeps[pool_index] = ret->next;

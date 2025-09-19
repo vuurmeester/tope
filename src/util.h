@@ -2,9 +2,9 @@
 
 /* alloca: */
 #ifdef _WIN32
-  #include <malloc.h>
+#include <malloc.h>
 #else
-  #include <alloca.h>
+#include <alloca.h>
 #endif
 
 /** Swap memory content. */

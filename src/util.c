@@ -21,8 +21,10 @@ void memswp(void* ptr1, void* ptr2, int numbytes)
 {
   void* tmp;
 
-  assert((char*)ptr1 + numbytes <= (char*)ptr2 ||
-         (char*)ptr2 + numbytes <= (char*)ptr1);
+  assert(
+      (char*)ptr1 + numbytes <= (char*)ptr2 ||
+      (char*)ptr2 + numbytes <= (char*)ptr1
+  );
   tmp = alloca(numbytes);
   memcpy(tmp, ptr1, numbytes);
   memcpy(ptr1, ptr2, numbytes);
@@ -31,7 +33,10 @@ void memswp(void* ptr1, void* ptr2, int numbytes)
 
 
 
-void random_reset(void) { s_seed = 0; }
+void random_reset(void)
+{
+  s_seed = 0;
+}
 
 
 
