@@ -7,17 +7,17 @@ typedef unsigned short u16;
 typedef unsigned int u32;
 
 #define ALLOCATOR_MAXSIZE 512
-#define ALLOCATOR_MINSIZE 8
 #define ALLOCATOR_NPOOLS 8
 
 typedef struct _Block Block;
 
 typedef struct _Allocator {
   u32 blocksize;
-  Block* pool_freeptrs[ALLOCATOR_NPOOLS];
+  u32 npools;
+  Block* pool_freeps[ALLOCATOR_NPOOLS];
   u8 pool_sizes[ALLOCATOR_NPOOLS];
   Block* curblock;
-  Block* curblock_freeptr;
+  Block* curblock_freep;
 } Allocator;
 
 /** New allocator object. */
