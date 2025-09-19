@@ -166,7 +166,7 @@ int main(void)
   /* Large 5D polytoop: */
   t += benchmark(1, 50000, 5, 0);
 
-  printf("t_qhull = %g\n", t);
+  printf("t_total = %g\n", t);
 
   return 0;
 }
