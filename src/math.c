@@ -46,7 +46,10 @@ void vec_set(int n, double* x, double scalar)
 
 
 
-void vec_reset(int n, double* x) { memset(x, 0, n * sizeof(double)); }
+void vec_reset(int n, double* x)
+{
+  memset(x, 0, n * sizeof(double));
+}
 
 
 
@@ -82,7 +85,10 @@ double vec_nrmsq(int n, double const* x)
 
 
 
-double vec_norm(int n, double const* x) { return sqrt(vec_nrmsq(n, x)); }
+double vec_norm(int n, double const* x)
+{
+  return sqrt(vec_nrmsq(n, x));
+}
 
 
 
@@ -159,7 +165,10 @@ void vector_fprint(int n, double const* x, FILE* outstream)
 
 
 
-void vec_print(int n, double const* x) { vector_fprint(n, x, stdout); }
+void vec_print(int n, double const* x)
+{
+  vector_fprint(n, x, stdout);
+}
 
 
 
@@ -173,8 +182,14 @@ void mat_vecmul(int m, int n, double const* mat, double const* x, double* y)
 
 
 
-void mat_matmul(int m, int n, int o, double const* mat1, double const* mat2,
-                double* result)
+void mat_matmul(
+    int m,
+    int n,
+    int o,
+    double const* mat1,
+    double const* mat2,
+    double* result
+)
 {
   int i;
   int j;
@@ -265,7 +280,10 @@ void mat_fprint(int m, int n, double const* mat, FILE* outstream)
 
 
 
-void matrix_reset(int m, int n, double* mat) { vec_reset(m * n, mat); }
+void matrix_reset(int m, int n, double* mat)
+{
+  vec_reset(m * n, mat);
+}
 
 
 
@@ -284,9 +302,15 @@ void mat_unit(int m, double* mat)
 
 
 
-void boundingbox(int npoints, int ndims, double const* vertices,
-                 int* minindices, int* maxindices, double* minima,
-                 double* maxima)
+void boundingbox(
+    int npoints,
+    int ndims,
+    double const* vertices,
+    int* minindices,
+    int* maxindices,
+    double* minima,
+    double* maxima
+)
 {
   int i;
   int j;
@@ -318,8 +342,13 @@ void boundingbox(int npoints, int ndims, double const* vertices,
 
 
 
-void analysesimplex(int npoints, int ndims, double* points, double* volume,
-                    double* centroid)
+void analysesimplex(
+    int npoints,
+    int ndims,
+    double* points,
+    double* volume,
+    double* centroid
+)
 {
   int i;
   int j;
@@ -364,8 +393,9 @@ void analysesimplex(int npoints, int ndims, double* points, double* volume,
 
     /* Perform pivot: */
     if (pivot > i) {
-      memswp(&points[i * ndims], &points[pivot * ndims],
-             ndims * sizeof(double));
+      memswp(
+          &points[i * ndims], &points[pivot * ndims], ndims * sizeof(double)
+      );
     }
 
     /* Normalize: */
@@ -431,10 +461,14 @@ double gauss(int n, double* A, double* b)
 
 
 
-void cr(int n,
-        void (*applymatrix)(int n, double const* x, double* y,
-                            void const* data),
-        double const* b, double* x, double tol, void const* data)
+void cr(
+    int n,
+    void (*applymatrix)(int n, double const* x, double* y, void const* data),
+    double const* b,
+    double* x,
+    double tol,
+    void const* data
+)
 {
   double rar;
   double beta;

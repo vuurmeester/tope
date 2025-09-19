@@ -7,19 +7,19 @@
 #include <stdio.h>
 
 #ifndef M_PI
-  #define M_PI 3.1415926535898
+#define M_PI 3.1415926535898
 #endif
 
 #ifndef M_2PI
-  #define M_2PI (2.0 * M_PI)
+#define M_2PI (2.0 * M_PI)
 #endif
 
 #ifndef M_SQRT2
-  #define M_SQRT2 1.4142135623731
+#define M_SQRT2 1.4142135623731
 #endif
 
 #ifndef M_SQRT1_2
-  #define M_SQRT1_2 (0.5 * M_SQRT2)
+#define M_SQRT1_2 (0.5 * M_SQRT2)
 #endif
 
 /** Add a vector to another. */
@@ -71,8 +71,14 @@ void vec_print(int n, double const* x);
 void mat_vecmul(int m, int n, double const* mat, double const* x, double* y);
 
 /** (m x n) times (n x o) matrix-matrix multiplication. */
-void mat_matmul(int m, int n, int o, double const* mat1, double const* mat2,
-                double* result);
+void mat_matmul(
+    int m,
+    int n,
+    int o,
+    double const* mat1,
+    double const* mat2,
+    double* result
+);
 
 /** Print a matrix to a buffer. */
 void mat_sprint(int m, int n, double const* mat, char* str);
@@ -84,12 +90,24 @@ void mat_print(int m, int n, double const* mat);
 void mat_fprint(int m, int n, double const* mat, FILE* outstream);
 
 /** Axis-aligned bounding box of a point set. */
-void boundingbox(int npoints, int ndims, double const* points, int* minindices,
-                 int* maxindices, double* minima, double* maxima);
+void boundingbox(
+    int npoints,
+    int ndims,
+    double const* points,
+    int* minindices,
+    int* maxindices,
+    double* minima,
+    double* maxima
+);
 
 /** Compute volume, centroid and span of multidimensional simplex. */
-void analysesimplex(int npoints, int ndims, double* points, double* volume,
-                    double* centroid);
+void analysesimplex(
+    int npoints,
+    int ndims,
+    double* points,
+    double* volume,
+    double* centroid
+);
 
 /** Solve linear program.
     Maximimize c^T x
@@ -100,8 +118,14 @@ void analysesimplex(int npoints, int ndims, double* points, double* volume,
     return value == -1: unbounded
     return value == -2: infeasible
   */
-int linprog(int m, int n, double const* A, double const* b, double const* c,
-            double* x);
+int linprog(
+    int m,
+    int n,
+    double const* A,
+    double const* b,
+    double const* c,
+    double* x
+);
 
 
 
@@ -110,9 +134,11 @@ int linprog(int m, int n, double const* A, double const* b, double const* c,
 double gauss(int n, double* A, double* b);
 
 /** Conjugate residual method for symmetric matrices. */
-void cr(int n,
-        void (*applymatrix)(int n, double const* x, double* y, void const* data),
-        double const* b,
-        double* x,
-        double tol,
-        void const* data);
+void cr(
+    int n,
+    void (*applymatrix)(int n, double const* x, double* y, void const* data),
+    double const* b,
+    double* x,
+    double tol,
+    void const* data
+);
