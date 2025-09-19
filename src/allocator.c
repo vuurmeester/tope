@@ -6,22 +6,18 @@
 
 #define FIRST_BLOCKSIZE 4096
 
-struct _Block {
-  Block* next;
-};
-
 
 
 void allocator_init(Allocator* alc)
 {
   memset(alc, 0, sizeof *alc);
+  memset(alc->indices, 0xff, sizeof alc->indices);
 }
 
 
 
 Block* allocator_alloc(Allocator* alc, u16 numbytes)
 {
-  u8* loc;
   u32 numwords;
   u32 pool_index;
   Block* ret;
@@ -29,25 +25,21 @@ Block* allocator_alloc(Allocator* alc, u16 numbytes)
   assert(0 < numbytes && numbytes <= ALLOCATOR_MAXSIZE);
 
   /* Round size to wordcount and find associated pool: */
-  numwords = ((numbytes - 1) / sizeof(Block)) + 1;
-  loc = memchr(alc->pool_sizes, numwords, alc->npools);
+  numwords = (numbytes - 1) / sizeof(Block) + 1;
+  pool_index = alc->indices[numwords - 1];
 
-  if (loc == NULL) {
+  if (pool_index == 0xff) {
     /* Append new pool: */
     assert(alc->npools < ALLOCATOR_MAXPOOLS);
     pool_index = alc->npools;
-    alc->pool_sizes[pool_index] = numwords;
     alc->pool_freeps[pool_index] = NULL;
+    alc->indices[numwords - 1] = pool_index;
     ++alc->npools;
-  } else {
-    pool_index = loc - alc->pool_sizes;  
-    assert(pool_index < alc->npools);
-    if (alc->pool_freeps[pool_index] != NULL) {
-      /* Prefer recycled memory: */
-      ret = alc->pool_freeps[pool_index];
-      alc->pool_freeps[pool_index] = ret->next;
-      return ret;
-    }
+  } else if (alc->pool_freeps[pool_index] != NULL) {
+    /* Prefer recycled memory: */
+    ret = alc->pool_freeps[pool_index];
+    alc->pool_freeps[pool_index] = ret->next;
+    return ret;
   }
 
   /* Check if requested memory exceeds current block: */
@@ -80,7 +72,6 @@ Block* allocator_alloc(Allocator* alc, u16 numbytes)
 
 void allocator_free(Allocator* alc, Block* mem, u16 numbytes)
 {
-  u8* loc;
   u32 numwords;
   u32 pool_index;
 
@@ -89,10 +80,8 @@ void allocator_free(Allocator* alc, Block* mem, u16 numbytes)
   assert(mem != NULL);
 
   /* Find pool: */
-  numwords = ((numbytes - 1) / sizeof(Block)) + 1;
-  loc = memchr(alc->pool_sizes, numwords, alc->npools);
-  assert(loc != NULL);
-  pool_index = loc - alc->pool_sizes;
+  numwords = (numbytes - 1) / sizeof(Block) + 1;
+  pool_index = alc->indices[numwords - 1];
   assert(pool_index < alc->npools);
 
   /* Prepend to freelist: */

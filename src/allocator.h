@@ -9,13 +9,15 @@ typedef unsigned int u32;
 #define ALLOCATOR_MAXSIZE 512
 #define ALLOCATOR_MAXPOOLS 8
 
-typedef struct _Block Block;
+typedef struct _Block {
+  struct _Block* next;
+} Block;
 
 typedef struct _Allocator {
   u32 blocksize;
   u32 npools;
   Block* pool_freeps[ALLOCATOR_MAXPOOLS];
-  u8 pool_sizes[ALLOCATOR_MAXPOOLS];
+  u8 indices[ALLOCATOR_MAXSIZE / sizeof(Block)];
   Block* curblock;
   Block* curblock_freep;
 } Allocator;
