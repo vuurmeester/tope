@@ -780,7 +780,7 @@ void polytoop_delete(Polytoop* polytoop)
   free(polytoop->newfacets);
   free(polytoop->horizonridges);
   hashmap_destroy(&polytoop->newridges);
-  allocator_clear(&polytoop->alc);
+  allocator_destroy(&polytoop->alc);
   free(polytoop);
 }
 
