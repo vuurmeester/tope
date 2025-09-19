@@ -13,55 +13,44 @@ struct _Block {
 
 
 
-void allocator_init(Allocator* alc)
+void allocator_init(Allocator* alc) { memset(alc, 0, sizeof *alc); }
+
+
+
+Block* allocator_alloc(Allocator* alc, u16 numbytes)
 {
-  memset(alc, 0, sizeof *alc);
-  memset(alc->indices, 0xff, sizeof(alc->indices));
-}
-
-
-
-void* allocator_alloc(Allocator* alc, u32 size)
-{
-  u32 size_8;
+  u32 numwords;
   u32 pool_index;
-  void* ret;
+  Block* ret;
 
-  assert(0 < size && size <= ALLOCATOR_MAXSIZE);
+  assert(0 < numbytes && numbytes <= ALLOCATOR_MAXSIZE);
 
-  size_8 = (size - 1) >> 3;
-  pool_index = alc->indices[size_8];
-  if (pool_index == 0xff) {
+  numwords = ((numbytes - 1) / sizeof(Block)) + 1;
+  for (pool_index = 0; alc->pool_sizes[pool_index] > 0 &&
+                       alc->pool_sizes[pool_index] != numwords;
+       ++pool_index)
+    ;
+  assert(pool_index < ALLOCATOR_NPOOLS);
+  if (alc->pool_sizes[pool_index] == 0) {
     /* This size has not been encountered before. */
-
-    /* Find available pool slot: */
-    assert(alc->sizes[ALLOCATOR_NPOOLS - 1] == 0);
-    for (pool_index = 0; alc->sizes[pool_index] > 0; ++pool_index)
-      ;
-
-    /* Assign pool to this size: */
-    alc->indices[size_8] = pool_index;
-    alc->sizes[pool_index] = (size_8 + 1) << 3;
+    alc->pool_sizes[pool_index] = numwords;
   }
-
-  /* Recalibrate size: */
-  size = alc->sizes[pool_index];
 
   /* Prefer recycled memory: */
   if (alc->pool_freeptrs[pool_index] != NULL) {
     ret = alc->pool_freeptrs[pool_index];
-    alc->pool_freeptrs[pool_index] = *(void**)ret;
+    alc->pool_freeptrs[pool_index] = ret->next;
     return ret;
   }
 
   /* Check if requested memory exceeds current block: */
-  if ((char*)alc->curblock_freeptr + size >
-      (char*)alc->curblock + alc->blocksize) {
+  if (alc->curblock_freeptr + numwords > alc->curblock + alc->blocksize) {
     Block* block;
 
     /* New block, double size: */
-    alc->blocksize = alc->blocksize > 0 ? alc->blocksize << 1 : FIRST_BLOCKSIZE;
-    block = malloc(alc->blocksize);
+    alc->blocksize = alc->blocksize > 0 ? alc->blocksize << 1
+                                        : (FIRST_BLOCKSIZE / sizeof(Block));
+    block = malloc(alc->blocksize * sizeof(Block));
 
     /* Prepend new block: */
     block->next = alc->curblock;
@@ -75,28 +64,30 @@ void* allocator_alloc(Allocator* alc, u32 size)
   ret = alc->curblock_freeptr;
 
   /* Next free memory in block: */
-  alc->curblock_freeptr = (char*)ret + size;
+  alc->curblock_freeptr = ret + numwords;
 
   return ret;
 }
 
 
 
-void allocator_free(Allocator* alc, void* mem, u32 size)
+void allocator_free(Allocator* alc, Block* mem, u16 numbytes)
 {
-  u32 index;
+  u32 numwords;
+  u32 pool_index;
 
   /* Check input: */
-  assert(0 < size && size <= ALLOCATOR_MAXSIZE);
+  assert(0 < numbytes && numbytes <= ALLOCATOR_MAXSIZE);
   assert(mem != NULL);
 
-  /* Where to find the pool freeptr: */
-  index = alc->indices[(size - 1) >> 3];
-  assert(index < ALLOCATOR_NPOOLS);
+  numwords = ((numbytes - 1) / sizeof(Block)) + 1;
+  for (pool_index = 0; alc->pool_sizes[pool_index] != numwords; ++pool_index)
+    ;
+  assert(pool_index < ALLOCATOR_NPOOLS);
 
   /* Prepend to freelist: */
-  *(void**)mem = alc->pool_freeptrs[index];
-  alc->pool_freeptrs[index] = mem;
+  mem->next = alc->pool_freeptrs[pool_index];
+  alc->pool_freeptrs[pool_index] = mem;
 }
 
 
