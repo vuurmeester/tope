@@ -6,19 +6,19 @@ typedef unsigned char u8;
 typedef unsigned short u16;
 typedef unsigned int u32;
 
-#define MAXSIZE 512
-#define MINSIZE 8
-#define NPOOLS 8
+#define ALLOCATOR_MAXSIZE 512
+#define ALLOCATOR_MINSIZE 8
+#define ALLOCATOR_NPOOLS 8
 
 typedef struct _Block Block;
 
 typedef struct _Allocator {
   u32 blocksize;
-  void* freeptrs[NPOOLS];
-  u16 sizes[NPOOLS];
-  u8 indices[MAXSIZE / MINSIZE]; /* 8, 16, ..., 512 */
-  Block* firstblock;
-  void* freeptr;
+  void* pool_freeptrs[ALLOCATOR_NPOOLS];
+  u16 sizes[ALLOCATOR_NPOOLS];
+  u8 indices[ALLOCATOR_MAXSIZE / ALLOCATOR_MINSIZE]; /* 8, 16, ..., 512 */
+  Block* curblock;
+  void* curblock_freeptr;
 } Allocator;
 
 /** New allocator object. */
