@@ -11,9 +11,9 @@
 
 
 
-static unsigned hashvertset(int d, polytoop_Vertex** verts)
+static uint32_t hashvertset(int d, polytoop_Vertex** verts)
 {
-  unsigned hash;
+  uint32_t hash;
 
   d -= 2; /* d - 1 vertices, so d - 2 is the last index */
   hash = verts[d]->index;
@@ -25,8 +25,11 @@ static unsigned hashvertset(int d, polytoop_Vertex** verts)
 
 
 
-static int compvertsets(int d, polytoop_Vertex** vertset1,
-                        polytoop_Vertex** vertset2)
+static int compvertsets(
+    int d,
+    polytoop_Vertex** vertset1,
+    polytoop_Vertex** vertset2
+)
 {
   --d; /* d - 1 vertices per ridge */
   while (d--) {
@@ -39,24 +42,26 @@ static int compvertsets(int d, polytoop_Vertex** vertset1,
 
 
 
-static void resize(HashMap* hashmap, int newcap)
+static void expand(HashMap* hashmap)
 {
-  int i;
+  uint32_t newcap;
+  uint32_t i;
+  uint32_t newmask;
+  uint32_t newindex;
+  uint32_t* newhashes;
   Ridge** newridges;
-  unsigned* newhashes;
-  unsigned newmask;
-  unsigned newindex;
 
-  newridges = calloc(newcap, sizeof(Ridge*) + sizeof(unsigned));
-  newhashes = (unsigned*)(newridges + newcap);
+  newcap = hashmap->cap * 2;
+  newridges = calloc(newcap, sizeof(Ridge*) + sizeof(uint32_t));
+  newhashes = (uint32_t*)(newridges + newcap);
   newmask = newcap - 1;
 
   for (i = 0; i < hashmap->cap; ++i) {
-    if (!hashmap->ridges[i]) {
+    if (hashmap->ridges[i] == NULL) {
       continue;
     }
     newindex = hashmap->hashes[i] & newmask;
-    while (newridges[newindex]) {
+    while (newridges[newindex] != NULL) {
       newindex = (newindex + 1) & newmask;
     }
     newridges[newindex] = hashmap->ridges[i];
@@ -75,8 +80,8 @@ void hashmap_init(HashMap* hashmap)
 {
   hashmap->cap = MIN_CAP;
   hashmap->len = 0;
-  hashmap->ridges = calloc(MIN_CAP, sizeof(Ridge*) + sizeof(unsigned));
-  hashmap->hashes = (unsigned*)(hashmap->ridges + MIN_CAP);
+  hashmap->ridges = calloc(MIN_CAP, sizeof(Ridge*) + sizeof(uint32_t));
+  hashmap->hashes = (uint32_t*)(hashmap->ridges + MIN_CAP);
 }
 
 
@@ -91,15 +96,22 @@ void hashmap_destroy(HashMap* hashmap)
 
 void hashmap_insert(HashMap* hashmap, int d, Ridge* ridge)
 {
-  unsigned hash;
-  int index;
+  uint32_t hash;
+  uint32_t index;
+
+  if (5 * hashmap->len > 4 * hashmap->cap) {
+    /* More than 4/5 filled. */
+    expand(hashmap);
+  }
 
   hash = hashvertset(d, ridge->vertices);
   index = hash & (hashmap->cap - 1);
 
   while (hashmap->ridges[index] != NULL) {
     /* Don't insert stuff that is already in here: */
-    assert(compvertsets(d, hashmap->ridges[index]->vertices, ridge->vertices));
+    assert(
+        compvertsets(d, hashmap->ridges[index]->vertices, ridge->vertices) != 0
+    );
     index = (index + 1) & (hashmap->cap - 1); /* next in cluster */
   }
 
@@ -107,10 +119,6 @@ void hashmap_insert(HashMap* hashmap, int d, Ridge* ridge)
   hashmap->hashes[index] = hash;
 
   ++hashmap->len;
-
-  if (3 * hashmap->len > 2 * hashmap->cap) {
-    resize(hashmap, hashmap->cap << 1);
-  }
 }
 
 
@@ -118,7 +126,7 @@ void hashmap_insert(HashMap* hashmap, int d, Ridge* ridge)
 void hashmap_clear(HashMap* hashmap)
 {
   memset(hashmap->ridges, 0, hashmap->cap * sizeof(Ridge*));
-  memset(hashmap->hashes, 0, hashmap->cap * sizeof(unsigned));
+  memset(hashmap->hashes, 0, hashmap->cap * sizeof(uint32_t));
   hashmap->len = 0;
 }
 
@@ -126,13 +134,13 @@ void hashmap_clear(HashMap* hashmap)
 
 Ridge* hashmap_retrieve(HashMap hashmap, int d, polytoop_Vertex** verts)
 {
-  unsigned hash;
-  int index;
+  uint32_t hash;
+  uint32_t index;
 
   hash = hashvertset(d, verts);
   index = hash & (hashmap.cap - 1);
 
-  while (hashmap.ridges[index]) {
+  while (hashmap.ridges[index] != NULL) {
     if (hashmap.hashes[index] == hash &&
         compvertsets(d, verts, hashmap.ridges[index]->vertices) == 0) {
       return hashmap.ridges[index];

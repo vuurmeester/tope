@@ -8,10 +8,10 @@ typedef struct _Ridge Ridge;
 typedef struct _Point Point;
 
 typedef struct _HashMap {
-  int cap;        /* current capacity */
-  int len;        /* number of elements */
+  uint32_t cap;   /* current capacity */
+  uint32_t len;   /* number of elements */
   Ridge** ridges; /* entries */
-  unsigned* hashes;
+  uint32_t* hashes;
 } HashMap;
 
 struct _Polytoop {
