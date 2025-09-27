@@ -17,13 +17,13 @@ Polytoop* polytoop_fromplanes(
 );
 
 /** Create polytoop from point cloud. */
-Polytoop* polytoop_frompoints(int npoints, int dim, double* points);
+Polytoop* polytoop_frompoints(int npoints, int dim, double const* points);
 
 /** Delaunay triangulation. */
-Polytoop* polytoop_delaunay(int npoints, int dim, double* points);
+Polytoop* polytoop_delaunay(int npoints, int dim, double const* points);
 
 /** Add vertex to existing polytoop (increment). */
-void polytoop_addvertex(Polytoop* polytoop, double* point);
+void polytoop_addvertex(Polytoop* polytoop, double const* point);
 
 /** Print polytoop. */
 void polytoop_print(Polytoop* polytoop);

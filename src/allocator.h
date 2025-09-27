@@ -2,20 +2,16 @@
 
 #include <stdint.h>
 
-typedef unsigned char u8;
-typedef unsigned short u16;
-typedef unsigned int u32;
-
 #define ALLOCATOR_MAXSIZE 512
 #define ALLOCATOR_MAXPOOLS 8
 
 typedef struct _Block Block;
 
 typedef struct _Allocator {
-  u32 blocksize;
-  u32 npools;
+  uint32_t blocksize;
+  uint32_t npools;
   Block* freeps[ALLOCATOR_MAXPOOLS];
-  u8 indices[ALLOCATOR_MAXSIZE / sizeof(Block*)];
+  uint8_t indices[ALLOCATOR_MAXSIZE / sizeof(Block*)];
   Block* curblock;
   Block* curblock_freep;
 } Allocator;
@@ -24,10 +20,10 @@ typedef struct _Allocator {
 void allocator_init(Allocator* alc);
 
 /** Allocate number of bytes <= ALLOCATOR_MAXSIZE. */
-void* allocator_alloc(Allocator* alc, u16 numbytes);
+void* allocator_alloc(Allocator* alc, uint16_t numbytes);
 
 /** Release memory. */
-void allocator_free(Allocator* alc, void* mem, u16 numbytes);
+void allocator_free(Allocator* alc, void* mem, uint16_t numbytes);
 
-/** Release the allocator object, and all memory still associated with it. */
+/** Release the allocator object, and all memory associated with it. */
 void allocator_destroy(Allocator* alc);
