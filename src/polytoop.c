@@ -19,7 +19,7 @@ typedef polytoop_Facet Facet;
 
 
 /* Create and initialize a vertex struct with a position and id: */
-static Vertex* vertex_new(Polytoop* polytoop, double* pos, int index)
+static Vertex* vertex_new(Polytoop* polytoop, double const* pos, int index)
 {
   /* Allocate vertex: */
   Vertex* vertex = allocator_alloc(
@@ -878,7 +878,7 @@ Polytoop* polytoop_fromplanes(
 
 
 
-Polytoop* polytoop_frompoints(int npoints, int dim, double* orgpoints)
+Polytoop* polytoop_frompoints(int npoints, int dim, double const* orgpoints)
 {
   int ipoint;
   int idim;
@@ -944,7 +944,7 @@ Polytoop* polytoop_frompoints(int npoints, int dim, double* orgpoints)
 
 
 
-Polytoop* polytoop_delaunay(int npoints, int dim, double* orgpoints)
+Polytoop* polytoop_delaunay(int npoints, int dim, double const* orgpoints)
 {
   int ipoint;
   int i;
@@ -1079,7 +1079,7 @@ Polytoop* polytoop_delaunay(int npoints, int dim, double* orgpoints)
 
 
 
-void polytoop_addvertex(Polytoop* polytoop, double* point)
+void polytoop_addvertex(Polytoop* polytoop, double const* point)
 {
   int idim;
   Facet* facet;
@@ -1126,9 +1126,18 @@ void polytoop_print(Polytoop* polytoop)
 {
   int i;
   int j;
-  int d = polytoop->dim;
-  double* sv = alloca(d * sizeof(double));
+  int d;
+  double volume;
+  double* sv;
+  double* normal;
+  double* position;
   Facet* facet;
+  Vertex* vertex;
+
+  d = polytoop->dim;
+  sv = alloca(d * sizeof(double));
+  normal = alloca(d * sizeof(double));
+  position = alloca(d * sizeof(double));
 
   printf("%d facets\n", polytoop->nfacets);
   printf("%d ridges\n", polytoop->nridges);
@@ -1138,7 +1147,9 @@ void polytoop_print(Polytoop* polytoop)
 
   for (facet = polytoop->firstfacet, i = 0; facet != NULL;
        facet = facet->next, ++i) {
-    vec_adds(d, sv, facet->normal, facet->volume);
+    polytoop_facet_getnormal(facet, normal);
+    volume = polytoop_facet_getvolume(facet);
+    vec_adds(d, sv, normal, volume);
 
     printf("facet %d\n", i + 1);
     printf("  volume: %g\n", facet->volume);
@@ -1151,7 +1162,8 @@ void polytoop_print(Polytoop* polytoop)
 
     printf("  vertices:\n");
     for (j = 0; j < d; ++j) {
-      Vertex* vertex = facet->vertices[j];
+      vertex = facet->vertices[j];
+      polytoop_vertex_getposition(vertex, position);
       vec_print(d, vertex->position);
     }
     printf("\n");
