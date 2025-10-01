@@ -8,9 +8,9 @@ typedef struct _Ridge Ridge;
 typedef struct _Point Point;
 
 typedef struct _HashMap {
-  uint32_t cap;   /* current capacity */
-  uint32_t len;   /* number of elements */
-  Ridge** ridges; /* entries */
+  uint32_t cap; /* current capacity */
+  uint32_t len; /* number of elements */
+  u32* ridges;  /* entries */
   uint32_t* hashes;
 } HashMap;
 
@@ -22,52 +22,50 @@ struct _Polytoop {
   double* scales;
   double* center;
   int nfacets;
-  polytoop_Facet* firstfacet;
-  polytoop_Facet* lastfacet;
+  u32 firstfacet;
+  u32 lastfacet;
   int nridges;
-  Ridge* firstridge;
-  Ridge* lastridge;
+  u32 firstridge;
+  u32 lastridge;
   int nverts;
-  polytoop_Vertex* firstvertex;
+  u32 firstvertex;
   HashMap newridges;
-  Ridge** horizonridges;
+  u32* horizonridges;
   int horizonridges_len;
   int horizonridges_cap;
-  polytoop_Facet** newfacets;
+  u32* newfacets;
   int newfacets_len;
   int newfacets_cap;
 };
 
 struct _polytoop_Facet {
-  polytoop_Facet* next;
-  polytoop_Facet* prev;
+  u32 next;
+  u32 prev;
 
   Polytoop* polytoop;
   double volume;
-  double* centroid;
-  double* normal;             /* outward pointing plane normal */
-  double dist;                /* distance from origin */
-  Ridge** ridges;             /* d adjacent ridges */
-  polytoop_Vertex** vertices; /* d adjacent vertices */
-  Point* outsidehead;         /* visible points list */
-  Point* outsidetail;         /* last entry in visible points list */
+  double dist;        /* distance from origin */
+  Point* outsidehead; /* visible points list */
+  Point* outsidetail; /* last entry in visible points list */
   int visible;
+  double centroid[1];   /* d-vector
+  /*double* normal;*/   /* outward pointing plane normal */
+  /*u32* ridges;   */   /* d adjacent ridges */
+  /*u32* vertices; */   /* d adjacent vertices */
 };
 
 struct _Ridge {
-  Ridge* next;
-  Ridge* prev;
+  u32 next;
+  u32 prev;
 
   double volume;
-  double* centroid;
-  double* normal;
-  polytoop_Facet* facets[2];    /* 2 adjacent facets */
-  polytoop_Vertex* vertices[1]; /* d - 1 adjacent vertices */
+  u32 facets[2];   /* 2 adjacent facets */
+  u32 vertices[1]; /* d - 1 adjacent vertices */
 };
 
 struct _polytoop_Vertex {
-  polytoop_Vertex* next;
-  polytoop_Vertex* prev;
+  u32 next;
+  u32 prev;
 
   Polytoop* polytoop;
   int index;

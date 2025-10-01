@@ -7,7 +7,8 @@
 #define FIRST_BLOCKSIZE 4096
 
 struct _Block {
-  Block* next;
+  u32 next;
+  u32 _;
 };
 
 
@@ -21,78 +22,76 @@ void allocator_init(Allocator* alc)
 
 
 
-void* allocator_alloc(Allocator* alc, uint16_t numbytes)
+u32 allocator_alloc(Allocator* alc, uint16_t numbytes)
 {
   uint32_t numwords;
   uint32_t pool_index;
-  Block* ret;
+  u32 ret;
 
   assert(0 < numbytes && numbytes <= ALLOCATOR_MAXSIZE);
 
   /* Rounded size and pool index: */
-  numwords = (numbytes - 1) / sizeof(Block) + 1;
+  numwords = (numbytes - 1) / sizeof(void*) + 1;
   pool_index = alc->indices[numwords - 1];
 
   if (pool_index == 0xff) {
     /* Initialize new pool: */
     assert(alc->npools < ALLOCATOR_MAXPOOLS);
     pool_index = alc->npools;
-    alc->freeps[pool_index] = NULL;
+    alc->freeps[pool_index] = -1;
     alc->indices[numwords - 1] = pool_index;
     ++alc->npools;
   }
-  else if (alc->freeps[pool_index] != NULL) {
+  else if (alc->freeps[pool_index] != (u32)-1) {
     /* Prefer recycled memory: */
     ret = alc->freeps[pool_index];
-    alc->freeps[pool_index] = ret->next;
+    alc->freeps[pool_index] = alc->curblock[ret].next;
     return ret;
   }
 
   /* Check if requested memory exceeds current block: */
-  if (alc->curblock_freep + numwords > alc->curblock + alc->blocksize) {
+  if (alc->curblock_freep + numwords > alc->blocksize) {
     /* New block, double size: */
     alc->blocksize = alc->blocksize > 0 ? alc->blocksize << 1
                                         : (FIRST_BLOCKSIZE / sizeof(Block));
-    ret = malloc(alc->blocksize * sizeof(Block));
-
-    /* Prepend new block: */
-    ret->next = alc->curblock;
-    alc->curblock = ret;
-
-    /* User memory: */
-    ++ret;
-
-    /* Set block freeptr: */
-    alc->curblock_freep = ret + numwords;
+    alc->curblock = realloc(alc->curblock, alc->blocksize * sizeof(Block));
   }
-  else {
-    /* The memory to return: */
-    ret = alc->curblock_freep;
 
-    /* Next free memory in block: */
-    alc->curblock_freep += numwords;
-  }
+  /* The memory to return: */
+  ret = alc->curblock_freep;
+
+  /* Next free memory in block: */
+  alc->curblock_freep += numwords;
 
   return ret;
 }
 
 
 
-void allocator_free(Allocator* alc, void* mem, uint16_t numbytes)
+void* allocator_mem(Allocator* alc, u32 handle)
+{
+  return &alc->curblock[handle];
+}
+
+
+
+void allocator_free(Allocator* alc, u32 handle, uint16_t numbytes)
 {
   uint32_t numwords;
   uint32_t pool_index;
 
   /* Check input: */
   assert(0 < numbytes && numbytes <= ALLOCATOR_MAXSIZE);
-  assert(mem != NULL);
+  assert(handle != (u32)-1);
 
   /* Rounded size: */
   numwords = (numbytes - 1) / sizeof(Block) + 1;
 
+  memset(allocator_mem(alc, handle), 0xff, numwords * sizeof(Block));
+
   /* Prefer returning memory to current block: */
-  if (alc->curblock_freep == (Block*)mem + numwords) {
-    alc->curblock_freep = mem;
+  if (alc->curblock_freep == handle + numwords) {
+    alc->curblock_freep = handle;
     return;
   }
 
@@ -101,8 +100,8 @@ void allocator_free(Allocator* alc, void* mem, uint16_t numbytes)
   assert(pool_index < alc->npools);
 
   /* Prepend to freelist: */
-  ((Block*)mem)->next = alc->freeps[pool_index];
-  alc->freeps[pool_index] = mem;
+  alc->curblock[handle].next = alc->freeps[pool_index];
+  alc->freeps[pool_index] = handle;
 }
 
 
@@ -110,11 +109,5 @@ void allocator_free(Allocator* alc, void* mem, uint16_t numbytes)
 void allocator_destroy(Allocator* alc)
 {
   assert(alc != NULL);
-  while (alc->curblock) {
-    Block* next;
-
-    next = alc->curblock->next;
-    free(alc->curblock);
-    alc->curblock = next;
-  }
+  free(alc->curblock);
 }
