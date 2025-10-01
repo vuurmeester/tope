@@ -9,10 +9,10 @@ void hashmap_init(HashMap* hashmap);
 void hashmap_destroy(HashMap* hashmap);
 
 /** Insert ridge. */
-void hashmap_insert(HashMap* hashmap, int d, Ridge* ridge);
+void hashmap_insert(HashMap* hashmap, int d, u32* verts, u32 ridge);
 
 /** Clear hashmap for reuse. */
 void hashmap_clear(HashMap* hashmap);
 
 /** Retrieve ridge by its vertices. */
-Ridge* hashmap_retrieve(HashMap hashmap, int d, polytoop_Vertex** verts);
+u32 hashmap_retrieve(HashMap hashmap, int d, u32* verts, Allocator* alc);

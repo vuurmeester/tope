@@ -52,7 +52,7 @@ polytoop_Facet* polytoop_firstfacet(Polytoop* polytoop);
 polytoop_Vertex* polytoop_firstvertex(Polytoop* polytoop);
 
 /** Next facet. */
-polytoop_Facet* polytoop_facet_nextfacet(polytoop_Facet* facet);
+polytoop_Facet* polytoop_facet_nextfacet(Polytoop* polytoop, polytoop_Facet* facet);
 
 /** Facet normal. */
 void polytoop_facet_getnormal(polytoop_Facet* facet, double* normal);
@@ -70,7 +70,7 @@ double polytoop_facet_getvolume(polytoop_Facet* facet);
 int polytoop_facet_getnumvertices(polytoop_Facet* facet);
 
 /** Next vertex. */
-polytoop_Vertex* polytoop_vertex_nextvertex(polytoop_Vertex* vertex);
+polytoop_Vertex* polytoop_vertex_nextvertex(Polytoop* polytoop, polytoop_Vertex* vertex);
 
 /** Vertex position. */
 void polytoop_vertex_getposition(polytoop_Vertex* vertex, double* position);

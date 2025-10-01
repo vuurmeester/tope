@@ -11,29 +11,25 @@
 
 
 
-static uint32_t hashvertset(int d, polytoop_Vertex** verts)
+static uint32_t hashvertset(int d, u32* verts)
 {
   uint32_t hash;
 
   d -= 2; /* d - 1 vertices, so d - 2 is the last index */
-  hash = verts[d]->index;
+  hash = verts[d];
   while (d--) {
-    hash = 31 * hash ^ verts[d]->index;
+    hash = 31 * hash ^ verts[d];
   }
   return hash;
 }
 
 
 
-static int compvertsets(
-    int d,
-    polytoop_Vertex** vertset1,
-    polytoop_Vertex** vertset2
-)
+static int compvertsets(int d, u32* vertset1, u32* vertset2)
 {
   --d; /* d - 1 vertices per ridge */
   while (d--) {
-    if (vertset1[d]->index != vertset2[d]->index) {
+    if (vertset1[d] != vertset2[d]) {
       return -1;
     }
   }
@@ -49,19 +45,20 @@ static void expand(HashMap* hashmap)
   uint32_t newmask;
   uint32_t newindex;
   uint32_t* newhashes;
-  Ridge** newridges;
+  u32* newridges;
 
   newcap = hashmap->cap * 2;
-  newridges = calloc(newcap, sizeof(Ridge*) + sizeof(uint32_t));
-  newhashes = (uint32_t*)(newridges + newcap);
+  newridges = calloc(2 * newcap, sizeof(u32));
+  memset(newridges, 0xff, newcap * sizeof(u32));
+  newhashes = (u32*)(newridges + newcap);
   newmask = newcap - 1;
 
   for (i = 0; i < hashmap->cap; ++i) {
-    if (hashmap->ridges[i] == NULL) {
+    if (hashmap->ridges[i] == (u32)-1) {
       continue;
     }
     newindex = hashmap->hashes[i] & newmask;
-    while (newridges[newindex] != NULL) {
+    while (newridges[newindex] != (u32)-1) {
       newindex = (newindex + 1) & newmask;
     }
     newridges[newindex] = hashmap->ridges[i];
@@ -80,8 +77,9 @@ void hashmap_init(HashMap* hashmap)
 {
   hashmap->cap = MIN_CAP;
   hashmap->len = 0;
-  hashmap->ridges = calloc(MIN_CAP, sizeof(Ridge*) + sizeof(uint32_t));
-  hashmap->hashes = (uint32_t*)(hashmap->ridges + MIN_CAP);
+  hashmap->ridges = malloc(2 * MIN_CAP * sizeof(u32));
+  memset(hashmap->ridges, 0xff, MIN_CAP * sizeof(u32));
+  hashmap->hashes = (u32*)(hashmap->ridges + MIN_CAP);
 }
 
 
@@ -94,7 +92,7 @@ void hashmap_destroy(HashMap* hashmap)
 
 
 
-void hashmap_insert(HashMap* hashmap, int d, Ridge* ridge)
+void hashmap_insert(HashMap* hashmap, int d, u32* verts, u32 ridge)
 {
   uint32_t hash;
   uint32_t index;
@@ -104,14 +102,12 @@ void hashmap_insert(HashMap* hashmap, int d, Ridge* ridge)
     expand(hashmap);
   }
 
-  hash = hashvertset(d, ridge->vertices);
+  hash = hashvertset(d, verts);
   index = hash & (hashmap->cap - 1);
 
-  while (hashmap->ridges[index] != NULL) {
+  while (hashmap->ridges[index] != (u32)-1) {
     /* Don't insert stuff that is already in here: */
-    assert(
-        compvertsets(d, hashmap->ridges[index]->vertices, ridge->vertices) != 0
-    );
+    assert(hashmap->ridges[index] != ridge);
     index = (index + 1) & (hashmap->cap - 1); /* next in cluster */
   }
 
@@ -125,14 +121,13 @@ void hashmap_insert(HashMap* hashmap, int d, Ridge* ridge)
 
 void hashmap_clear(HashMap* hashmap)
 {
-  memset(hashmap->ridges, 0, hashmap->cap * sizeof(Ridge*));
-  memset(hashmap->hashes, 0, hashmap->cap * sizeof(uint32_t));
+  memset(hashmap->ridges, 0xff, hashmap->cap * sizeof(u32));
   hashmap->len = 0;
 }
 
 
 
-Ridge* hashmap_retrieve(HashMap hashmap, int d, polytoop_Vertex** verts)
+u32 hashmap_retrieve(HashMap hashmap, int d, u32* verts, Allocator* alc)
 {
   uint32_t hash;
   uint32_t index;
@@ -140,13 +135,15 @@ Ridge* hashmap_retrieve(HashMap hashmap, int d, polytoop_Vertex** verts)
   hash = hashvertset(d, verts);
   index = hash & (hashmap.cap - 1);
 
-  while (hashmap.ridges[index] != NULL) {
-    if (hashmap.hashes[index] == hash &&
-        compvertsets(d, verts, hashmap.ridges[index]->vertices) == 0) {
-      return hashmap.ridges[index];
+  while (hashmap.ridges[index] != (u32)-1) {
+    if (hashmap.hashes[index] == hash) {
+      Ridge* ridge = allocator_mem(alc, hashmap.ridges[index]);
+      if (compvertsets(d, verts, ridge->vertices) == 0) {
+        return hashmap.ridges[index];
+      }
     }
     index = (index + 1) & (hashmap.cap - 1); /* next in cluster */
   }
 
-  return NULL;
+  return (u32)-1;
 }
