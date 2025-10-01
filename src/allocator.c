@@ -52,7 +52,7 @@ u32 allocator_alloc(Allocator* alc, uint16_t numbytes)
 
   /* The memory to return: */
   ret = alc->blockfreep;
-  
+
 #ifndef NDEBUG
   memset(allocator_mem(alc, ret), 0x00, numwords * sizeof(Block));
 #endif

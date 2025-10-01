@@ -92,33 +92,6 @@ void hashmap_destroy(HashMap* hashmap)
 
 
 
-void hashmap_insert(HashMap* hashmap, int d, u32* verts, u32 ridge)
-{
-  uint32_t hash;
-  uint32_t index;
-
-  if (5 * hashmap->len > 4 * hashmap->cap) {
-    /* More than 4/5 filled. */
-    expand(hashmap);
-  }
-
-  hash = hashvertset(d, verts);
-  index = hash & (hashmap->cap - 1);
-
-  while (hashmap->ridges[index] != UINT32_MAX) {
-    /* Don't insert stuff that is already in here: */
-    assert(hashmap->ridges[index] != ridge);
-    index = (index + 1) & (hashmap->cap - 1); /* next in cluster */
-  }
-
-  hashmap->ridges[index] = ridge;
-  hashmap->hashes[index] = hash;
-
-  ++hashmap->len;
-}
-
-
-
 void hashmap_clear(HashMap* hashmap)
 {
   memset(hashmap->ridges, 0xff, hashmap->cap * sizeof(u32));
@@ -127,23 +100,29 @@ void hashmap_clear(HashMap* hashmap)
 
 
 
-u32 hashmap_retrieve(HashMap hashmap, int d, u32* verts, Allocator* alc)
+u32* hashmap_retrieve(HashMap* hashmap, int d, u32* verts, Allocator* alc)
 {
-  uint32_t hash;
-  uint32_t index;
-
-  hash = hashvertset(d, verts);
-  index = hash & (hashmap.cap - 1);
-
-  while (hashmap.ridges[index] != UINT32_MAX) {
-    if (hashmap.hashes[index] == hash) {
-      Ridge* ridge = allocator_mem(alc, hashmap.ridges[index]);
-      if (compvertsets(d, verts, ridge->vertices) == 0) {
-        return hashmap.ridges[index];
-      }
-    }
-    index = (index + 1) & (hashmap.cap - 1); /* next in cluster */
+  if (5 * hashmap->len > 4 * hashmap->cap) {
+    /* More than 4/5 filled. */
+    expand(hashmap);
   }
 
-  return UINT32_MAX;
+  u32 hash = hashvertset(d, verts);
+  u32 index = hash & (hashmap->cap - 1);
+
+  while (hashmap->ridges[index] != UINT32_MAX) {
+    if (hashmap->hashes[index] == hash) {
+      Ridge* ridge = allocator_mem(alc, hashmap->ridges[index]);
+      if (compvertsets(d, verts, ridge->vertices) == 0) {
+        return hashmap->ridges + index;
+      }
+    }
+    index = (index + 1) & (hashmap->cap - 1); /* next in cluster */
+  }
+
+  hashmap->hashes[index] = hash;
+
+  ++hashmap->len;
+
+  return hashmap->ridges + index;
 }
