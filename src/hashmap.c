@@ -54,11 +54,11 @@ static void expand(HashMap* hashmap)
   newmask = newcap - 1;
 
   for (i = 0; i < hashmap->cap; ++i) {
-    if (hashmap->ridges[i] == (u32)-1) {
+    if (hashmap->ridges[i] == UINT32_MAX) {
       continue;
     }
     newindex = hashmap->hashes[i] & newmask;
-    while (newridges[newindex] != (u32)-1) {
+    while (newridges[newindex] != UINT32_MAX) {
       newindex = (newindex + 1) & newmask;
     }
     newridges[newindex] = hashmap->ridges[i];
@@ -105,7 +105,7 @@ void hashmap_insert(HashMap* hashmap, int d, u32* verts, u32 ridge)
   hash = hashvertset(d, verts);
   index = hash & (hashmap->cap - 1);
 
-  while (hashmap->ridges[index] != (u32)-1) {
+  while (hashmap->ridges[index] != UINT32_MAX) {
     /* Don't insert stuff that is already in here: */
     assert(hashmap->ridges[index] != ridge);
     index = (index + 1) & (hashmap->cap - 1); /* next in cluster */
@@ -135,7 +135,7 @@ u32 hashmap_retrieve(HashMap hashmap, int d, u32* verts, Allocator* alc)
   hash = hashvertset(d, verts);
   index = hash & (hashmap.cap - 1);
 
-  while (hashmap.ridges[index] != (u32)-1) {
+  while (hashmap.ridges[index] != UINT32_MAX) {
     if (hashmap.hashes[index] == hash) {
       Ridge* ridge = allocator_mem(alc, hashmap.ridges[index]);
       if (compvertsets(d, verts, ridge->vertices) == 0) {
@@ -145,5 +145,5 @@ u32 hashmap_retrieve(HashMap hashmap, int d, u32* verts, Allocator* alc)
     index = (index + 1) & (hashmap.cap - 1); /* next in cluster */
   }
 
-  return (u32)-1;
+  return UINT32_MAX;
 }
