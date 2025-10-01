@@ -25,9 +25,9 @@ static u32 vertex_new(Polytoop* polytoop, double const* pos, int index)
 
   /* Allocate vertex: */
   u32 hvertex = allocator_alloc(
-      alc, sizeof(Vertex) + (polytoop->dim - 1) * sizeof(double)
+      alc, sizeof(Vertex) - sizeof(double) + polytoop->dim * sizeof(double)
   );
-  Vertex* vertex = allocator_mem(&polytoop->alc, hvertex);
+  Vertex* vertex = allocator_mem(alc, hvertex);
 
   /* Prepend to list: */
   vertex->next = polytoop->firstvertex;
@@ -193,7 +193,7 @@ static u32 facet_new(Polytoop* polytoop)
   facet->dist = 0.0;
   facet->outsidehead = NULL;
   facet->outsidetail = NULL;
-  facet->visible = 0;
+  facet->visible = false;
   vec_reset(d, facet->centroid);
   double* normal = facet->centroid + d;
   vec_reset(d, normal);
@@ -596,7 +596,7 @@ static void addpoint(Polytoop* polytoop, u32 hfacet, Point* apex)
   visiblelist = hfacet;
   facet->prev = UINT32_MAX;
   facet->next = UINT32_MAX;
-  facet->visible = 1;
+  facet->visible = true;
 
   /* Initialize outside points list: */
   outsidepoints = NULL;
@@ -677,7 +677,7 @@ static void addpoint(Polytoop* polytoop, u32 hfacet, Point* apex)
             neighbour->next = visiblelist;
             neighbour->prev = UINT32_MAX; /* singly linked */
             visiblelist = hneighbour;
-            neighbour->visible = 1;
+            neighbour->visible = true;
           }
           else {
             /* Neighbour not visible. Ridge belongs to horizon: */
@@ -745,11 +745,11 @@ static void addpoint(Polytoop* polytoop, u32 hfacet, Point* apex)
         /* Create new ridge: */
         hnewridge = create_ridge(polytoop, hridgeverts);
         hashmap_insert(&polytoop->newridges, d, hridgeverts, hnewridge);
+        facet = allocator_mem(alc, hfacet);
+        vertices = (u32*)(facet->centroid + 2 * d) + d;
+        horizonridge = allocator_mem(alc, hhorizonridge);
       }
       hfacetridges[iridge] = hnewridge;
-      facet = allocator_mem(alc, hfacet);
-      vertices = (u32*)(facet->centroid + 2 * d) + d;
-      horizonridge = allocator_mem(alc, hhorizonridge);
     }
 
     addfacet(polytoop, hfacet, hfacetridges);
