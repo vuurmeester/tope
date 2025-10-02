@@ -11,12 +11,10 @@
 
 
 
-static uint32_t hashvertset(int d, u32* verts)
+static u32 hashvertset(int d, u32* verts)
 {
-  uint32_t hash;
-
   d -= 2; /* d - 1 vertices, so d - 2 is the last index */
-  hash = verts[d];
+  u32 hash = verts[d];
   while (d--) {
     hash = 31 * hash ^ verts[d];
   }
@@ -102,8 +100,8 @@ void hashmap_clear(HashMap* hashmap)
 
 u32* hashmap_get(HashMap* hashmap, int d, u32* verts, Allocator* alc)
 {
-  if (5 * hashmap->len > 4 * hashmap->cap) {
-    /* More than 4/5 filled. */
+  if (4 * hashmap->len > 3 * hashmap->cap) {
+    /* More than 75% filled. */
     expand(hashmap);
   }
 
