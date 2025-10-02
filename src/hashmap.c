@@ -33,31 +33,33 @@ static int compvertsets(int d, u32* vertset1, u32* vertset2)
       return -1;
     }
   }
-  return 0;
+  return 0; /* same */
+}
+
+
+
+static void initarrays(u32** ridges, u32** hashes, u32 cap)
+{
+  *ridges = malloc(cap * 2 * sizeof(u32));
+  memset(*ridges, 0xff, cap * sizeof(u32));
+  *hashes = *ridges + cap;
 }
 
 
 
 static void expand(HashMap* hashmap)
 {
-  uint32_t newcap;
-  uint32_t i;
-  uint32_t newmask;
-  uint32_t newindex;
-  uint32_t* newhashes;
+  u32 newcap = hashmap->cap * 2;
+  u32 newmask = newcap - 1;
   u32* newridges;
+  u32* newhashes;
+  initarrays(&newridges, &newhashes, newcap);
 
-  newcap = hashmap->cap * 2;
-  newridges = calloc(2 * newcap, sizeof(u32));
-  memset(newridges, 0xff, newcap * sizeof(u32));
-  newhashes = (u32*)(newridges + newcap);
-  newmask = newcap - 1;
-
-  for (i = 0; i < hashmap->cap; ++i) {
+  for (u32 i = 0; i < hashmap->cap; ++i) {
     if (hashmap->ridges[i] == UINT32_MAX) {
       continue;
     }
-    newindex = hashmap->hashes[i] & newmask;
+    u32 newindex = hashmap->hashes[i] & newmask;
     while (newridges[newindex] != UINT32_MAX) {
       newindex = (newindex + 1) & newmask;
     }
@@ -77,9 +79,7 @@ void hashmap_init(HashMap* hashmap)
 {
   hashmap->cap = MIN_CAP;
   hashmap->len = 0;
-  hashmap->ridges = malloc(2 * MIN_CAP * sizeof(u32));
-  memset(hashmap->ridges, 0xff, MIN_CAP * sizeof(u32));
-  hashmap->hashes = (u32*)(hashmap->ridges + MIN_CAP);
+  initarrays(&hashmap->ridges, &hashmap->hashes, MIN_CAP);
 }
 
 
@@ -100,7 +100,7 @@ void hashmap_clear(HashMap* hashmap)
 
 
 
-u32* hashmap_retrieve(HashMap* hashmap, int d, u32* verts, Allocator* alc)
+u32* hashmap_get(HashMap* hashmap, int d, u32* verts, Allocator* alc)
 {
   if (5 * hashmap->len > 4 * hashmap->cap) {
     /* More than 4/5 filled. */
