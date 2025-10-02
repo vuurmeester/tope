@@ -33,7 +33,8 @@ static u32 vertex_new(Polytoop* polytoop, double const* pos, int index)
   vertex->next = polytoop->firstvertex;
   vertex->prev = UINT32_MAX;
   if (vertex->next != UINT32_MAX) {
-    ((Vertex*)allocator_mem(alc, vertex->next))->prev = hvertex;
+    Vertex* next = allocator_mem(alc, vertex->next);
+    next->prev = hvertex;
   }
   polytoop->firstvertex = hvertex;
   ++polytoop->nverts;
@@ -41,8 +42,8 @@ static u32 vertex_new(Polytoop* polytoop, double const* pos, int index)
   /* Fill in other variables: */
   vertex->polytoop = polytoop;
   vertex->index = index;
-  memcpy(vertex->position, pos, polytoop->dim * sizeof(double));
   vertex->nridges = 0;
+  memcpy(vertex->position, pos, polytoop->dim * sizeof(double));
 
   return hvertex;
 }
@@ -84,7 +85,6 @@ static void vertex_remove(Polytoop* polytoop, u32 hvertex)
 static u32 ridge_create(Polytoop* polytoop, u32* vertices)
 {
   Allocator* alc = &polytoop->alc;
-  int i;
 
   /* Create ridge: */
   u32 hridge =
@@ -98,7 +98,7 @@ static u32 ridge_create(Polytoop* polytoop, u32* vertices)
   memcpy(ridge->vertices, vertices, (polytoop->dim - 1) * sizeof(u32));
 
   /* Associate vertices with ridge: */
-  for (i = 0; i < polytoop->dim - 1; ++i) {
+  for (int i = 0; i < polytoop->dim - 1; ++i) {
     Vertex* vertex = allocator_mem(alc, vertices[i]);
     ++vertex->nridges;
   }
@@ -117,21 +117,6 @@ static u32 ridge_create(Polytoop* polytoop, u32* vertices)
   ++polytoop->nridges;
 
   return hridge;
-}
-
-
-
-static void ridge_free(Polytoop* polytoop, u32 hridge)
-{
-  Allocator* alc = &polytoop->alc;
-
-  Ridge* ridge = allocator_mem(alc, hridge);
-  if (ridge->hvdn != UINT32_MAX) {
-    allocator_free(alc, ridge->hvdn, (polytoop->dim + 1) * sizeof(double));
-  }
-  allocator_free(
-      alc, hridge, sizeof(Ridge) + (polytoop->dim - 2) * sizeof(u32)
-  );
 }
 
 
@@ -158,7 +143,13 @@ static void ridge_remove(Polytoop* polytoop, u32 hridge)
   }
   --polytoop->nridges;
 
-  ridge_free(polytoop, hridge);
+  if (ridge->hvdn != UINT32_MAX) {
+    allocator_free(alc, ridge->hvdn, (polytoop->dim + 1) * sizeof(double));
+  }
+  allocator_free(
+      alc, hridge,
+      sizeof(Ridge) - sizeof(u32) + (polytoop->dim - 1) * sizeof(u32)
+  );
 }
 
 
@@ -240,8 +231,10 @@ static void facet_remove(Polytoop* polytoop, u32 hfacet)
     assert(polytoop->firstfacet == hfacet);
     polytoop->firstfacet = facet->next;
   }
+
+  facet->next = UINT32_MAX;
+  facet->prev = UINT32_MAX;
   --polytoop->nfacets;
-  facet_free(polytoop, hfacet);
 }
 
 
@@ -522,6 +515,7 @@ static void initialsimplex(Polytoop* polytoop, int npoints, Point* points)
 
       u32* phnewridge = hashmap_get(&polytoop->newridges, d, hridgeverts, alc);
       if (*phnewridge == UINT32_MAX) {
+        /* new ridge apparently */
         *phnewridge = ridge_create(polytoop, hridgeverts);
       }
       hfacetridges[j] = *phnewridge;
@@ -563,41 +557,22 @@ static void initialsimplex(Polytoop* polytoop, int npoints, Point* points)
 /* Add point to polytoop: */
 static void addpoint(Polytoop* polytoop, u32 hfacet, Point* apex)
 {
+  int d = polytoop->dim;
+  Allocator* alc = &polytoop->alc;
   int i;
   int ivertex;
   int iridge;
-  int d = polytoop->dim;
-  u32 visiblelist;
-  Point* outsidepoints;
   double nh;
-  Allocator* alc = &polytoop->alc;
+
+  facet_remove(polytoop, hfacet);
   Facet* facet = allocator_mem(alc, hfacet);
-
-  /* Remove facet from polytoop list: */
-  if (facet->prev != UINT32_MAX) {
-    Facet* prev = allocator_mem(alc, facet->prev);
-    prev->next = facet->next;
-  }
-  else {
-    polytoop->firstfacet = facet->next;
-  }
-  if (facet->next != UINT32_MAX) {
-    Facet* next = allocator_mem(alc, facet->next);
-    next->prev = facet->prev;
-  }
-  else {
-    polytoop->lastfacet = facet->prev;
-  }
-  --polytoop->nfacets;
-
-  /* Add facet to visible list: */
-  visiblelist = hfacet;
-  facet->prev = UINT32_MAX;
-  facet->next = UINT32_MAX;
   facet->visible = true;
 
+  /* Add facet to visible list: */
+  u32 visiblelist = hfacet;
+
   /* Initialize outside points list: */
-  outsidepoints = NULL;
+  Point* outsidepoints = NULL;
 
   while (visiblelist != UINT32_MAX) {
     /* Pop a value: */
@@ -655,25 +630,10 @@ static void addpoint(Polytoop* polytoop, u32 hfacet, Point* apex)
           /* Decide if neighbour is visible: */
           if (h > EPS) {
             /* Remove neighbour from polytoop list: */
-            if (neighbour->prev != UINT32_MAX) {
-              Facet* prev = allocator_mem(alc, neighbour->prev);
-              prev->next = neighbour->next;
-            }
-            else {
-              polytoop->firstfacet = neighbour->next;
-            }
-            if (neighbour->next != UINT32_MAX) {
-              Facet* next = allocator_mem(alc, neighbour->next);
-              next->prev = neighbour->prev;
-            }
-            else {
-              polytoop->lastfacet = neighbour->prev;
-            }
-            --polytoop->nfacets;
+            facet_remove(polytoop, hneighbour);
 
             /* Prepend neighbour to visible list: */
             neighbour->next = visiblelist;
-            neighbour->prev = UINT32_MAX; /* singly linked */
             visiblelist = hneighbour;
             neighbour->visible = true;
           }
@@ -943,7 +903,7 @@ Polytoop* polytoop_frompoints(int npoints, int dim, double const* orgpoints)
 
   /* Initialize member variables: */
   polytoop->dim = dim;
-  polytoop->isdelaunay = 0;
+  polytoop->isdelaunay = false;
   polytoop->shift = malloc(polytoop->dim * sizeof(double));
   polytoop->scales = malloc(polytoop->dim * sizeof(double));
   polytoop->center = malloc(polytoop->dim * sizeof(double));
@@ -1010,7 +970,7 @@ Polytoop* polytoop_delaunay(int npoints, int dim, double const* orgpoints)
 
   /* Initialize member variables: */
   polytoop->dim = dim + 1;
-  polytoop->isdelaunay = 1;
+  polytoop->isdelaunay = true;
   polytoop->shift = malloc(polytoop->dim * sizeof(double));
   polytoop->scales = malloc(polytoop->dim * sizeof(double));
   polytoop->center = malloc(polytoop->dim * sizeof(double));
@@ -1107,6 +1067,7 @@ Polytoop* polytoop_delaunay(int npoints, int dim, double const* orgpoints)
 
       /* Remove facet: */
       facet_remove(polytoop, hfacet);
+      facet_free(polytoop, hfacet);
     }
 
     if (ridge->facets[0] == UINT32_MAX && ridge->facets[1] == UINT32_MAX) {
@@ -1402,9 +1363,9 @@ Vertex* polytoop_firstvertex(Polytoop* polytoop)
 
 
 
-Facet* polytoop_facet_nextfacet(Polytoop* polytoop, Facet* facet)
+Facet* polytoop_facet_nextfacet(Facet* facet)
 {
-  return allocator_mem(&polytoop->alc, facet->next);
+  return allocator_mem(&facet->polytoop->alc, facet->next);
 }
 
 
@@ -1461,25 +1422,20 @@ int polytoop_facet_getnumvertices(Facet* facet)
 
 
 
-Vertex* polytoop_vertex_nextvertex(Polytoop* polytoop, Vertex* vertex)
+Vertex* polytoop_vertex_nextvertex(Vertex* vertex)
 {
-  return allocator_mem(&polytoop->alc, vertex->next);
+  return allocator_mem(&vertex->polytoop->alc, vertex->next);
 }
 
 
 
 void polytoop_vertex_getposition(Vertex* vertex, double* position)
 {
-  int i;
-
-  int dim = vertex->polytoop->dim;
-  if (vertex->polytoop->isdelaunay) {
-    --dim;
+  double* scales = vertex->polytoop->scales;
+  double* shift = vertex->polytoop->shift;
+  int i = vertex->polytoop->dim;
+  i -= vertex->polytoop->isdelaunay ? 1 : 0;
+  while (i--) {
+    position[i] = vertex->position[i] * scales[i] + shift[i];
   }
-
-  memcpy(position, vertex->position, dim * sizeof(double));
-  for (i = 0; i < dim; ++i) {
-    position[i] *= vertex->polytoop->scales[i];
-  }
-  vec_add(dim, position, vertex->polytoop->shift);
 }

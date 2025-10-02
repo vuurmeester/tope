@@ -18,7 +18,7 @@ typedef struct _HashMap {
 struct _Polytoop {
   Allocator alc;
   int dim;
-  int isdelaunay;
+  bool isdelaunay;
   double* shift;
   double* scales;
   double* center;
