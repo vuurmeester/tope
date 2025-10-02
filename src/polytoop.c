@@ -81,22 +81,18 @@ static void vertex_remove(Polytoop* polytoop, u32 hvertex)
 
 
 /* Create and initialize a ridge struct with vertices: */
-static u32 create_ridge(Polytoop* polytoop, u32* vertices)
+static u32 ridge_create(Polytoop* polytoop, u32* vertices)
 {
   Allocator* alc = &polytoop->alc;
   int i;
 
   /* Create ridge: */
-  u32 hridge = allocator_alloc(
-      alc,
-      sizeof(Ridge) +
-          (polytoop->dim - 2 + (polytoop->dim % 2 == 0 ? 1 : 0)) * sizeof(u32) +
-          (polytoop->isdelaunay ? 2 * (polytoop->dim - 1) * sizeof(double) : 0)
-  );
+  u32 hridge =
+      allocator_alloc(alc, sizeof(Ridge) + (polytoop->dim - 2) * sizeof(u32));
   Ridge* ridge = allocator_mem(alc, hridge);
   ridge->next = UINT32_MAX;
   ridge->prev = UINT32_MAX;
-  ridge->volume = 0.0;
+  ridge->hvdn = UINT32_MAX;
   ridge->facets[0] = UINT32_MAX;
   ridge->facets[1] = UINT32_MAX;
   memcpy(ridge->vertices, vertices, (polytoop->dim - 1) * sizeof(u32));
@@ -129,11 +125,12 @@ static void ridge_free(Polytoop* polytoop, u32 hridge)
 {
   Allocator* alc = &polytoop->alc;
 
+  Ridge* ridge = allocator_mem(alc, hridge);
+  if (ridge->hvdn != UINT32_MAX) {
+    allocator_free(alc, ridge->hvdn, (polytoop->dim + 1) * sizeof(double));
+  }
   allocator_free(
-      alc, hridge,
-      sizeof(Ridge) +
-          (polytoop->dim - 2 + (polytoop->dim % 2 == 0 ? 1 : 0)) * sizeof(u32) +
-          (polytoop->isdelaunay ? 2 * (polytoop->dim - 1) * sizeof(double) : 0)
+      alc, hridge, sizeof(Ridge) + (polytoop->dim - 2) * sizeof(u32)
   );
 }
 
@@ -523,10 +520,9 @@ static void initialsimplex(Polytoop* polytoop, int npoints, Point* points)
         hridgeverts[k - 1] = vertices[k];
       }
 
-      u32* phnewridge =
-          hashmap_retrieve(&polytoop->newridges, d, hridgeverts, alc);
+      u32* phnewridge = hashmap_get(&polytoop->newridges, d, hridgeverts, alc);
       if (*phnewridge == UINT32_MAX) {
-        *phnewridge = create_ridge(polytoop, hridgeverts);
+        *phnewridge = ridge_create(polytoop, hridgeverts);
       }
       hfacetridges[j] = *phnewridge;
     }
@@ -742,11 +738,10 @@ static void addpoint(Polytoop* polytoop, u32 hfacet, Point* apex)
       }
 
       /* Get or create new ridge: */
-      u32* phnewridge =
-          hashmap_retrieve(&polytoop->newridges, d, hridgeverts, alc);
+      u32* phnewridge = hashmap_get(&polytoop->newridges, d, hridgeverts, alc);
       if (*phnewridge == UINT32_MAX) {
         /* Create new ridge: */
-        *phnewridge = create_ridge(polytoop, hridgeverts);
+        *phnewridge = ridge_create(polytoop, hridgeverts);
         facet = allocator_mem(alc, hfacet);
         vertices = (u32*)(facet->centroid + 2 * d) + d;
         horizonridge = allocator_mem(alc, hhorizonridge);
@@ -888,28 +883,21 @@ Polytoop* polytoop_fromplanes(
     double const* xc
 )
 {
-  int i;
-  double dist;
-  Polytoop* recpolytoop;
-  Polytoop* polytoop;
-  int nfacets;
-  int ifacet;
-
   /* Construct reciprocal points: */
   double* points = malloc(n * d * sizeof(double));
-  for (i = 0; i < n; ++i) {
+  for (int i = 0; i < n; ++i) {
     memcpy(&points[i * d], &normals[i * d], d * sizeof(double));
-    dist = dists[i] - vec_dot(d, xc, &normals[i * d]);
+    double dist = dists[i] - vec_dot(d, xc, &normals[i * d]);
     assert(dist > 0.0);
     vec_scale(d, &points[i * d], 1.0 / dist);
   }
 
   /* Construct reciprocal polytoop: */
-  recpolytoop = polytoop_frompoints(n, d, points);
+  Polytoop* recpolytoop = polytoop_frompoints(n, d, points);
   free(points);
 
   /* Convert reciprocal polytoop to polytoop: */
-  nfacets = polytoop_getnumfacets(recpolytoop);
+  int nfacets = polytoop_getnumfacets(recpolytoop);
   points = malloc(nfacets * d * sizeof(double));
 
   for (u32 hfacet = recpolytoop->firstfacet, ifacet = 0; hfacet != UINT32_MAX;
@@ -919,7 +907,7 @@ Polytoop* polytoop_fromplanes(
     Facet* facet = allocator_mem(&recpolytoop->alc, hfacet);
     double* normal = facet->centroid + d;
     double dist = facet->dist;
-    for (i = 0; i < d; ++i) {
+    for (int i = 0; i < d; ++i) {
       points[ifacet * d + i] = normal[i] / recpolytoop->scales[i];
       dist += points[ifacet * d + i] * recpolytoop->shift[i];
     }
@@ -929,7 +917,7 @@ Polytoop* polytoop_fromplanes(
     vec_add(d, points + ifacet * d, xc);
   }
 
-  polytoop = polytoop_frompoints(nfacets, d, points);
+  Polytoop* polytoop = polytoop_frompoints(nfacets, d, points);
 
   /* Clean up: */
   polytoop_delete(recpolytoop);
@@ -1280,7 +1268,6 @@ void polytoop_interpolate(
   double* xiprime;
   double* verts;
   double hmin;
-  double dist;
   double h;
   Ridge* minridge;
   double totalweight;
@@ -1293,6 +1280,7 @@ void polytoop_interpolate(
   /* Some space for various tasks: */
   int d = polytoop->dim - 1;
   xiprime = alloca(d * sizeof(double));
+  double* centroid = alloca(d * sizeof(double));
   verts = alloca(d * d * sizeof(double));
 
   /* Transform xi to local coordinates: */
@@ -1320,10 +1308,16 @@ void polytoop_interpolate(
       u32 hvertex = vertices[iridge];
       Vertex* vertex = allocator_mem(alc, hvertex);
 
-      /* On demand construction of ridge normal and centroid (d - 1): */
-      double* normal = (double*)(ridge->vertices + d + (d % 2 == 0 ? 0 : 1));
-      double* centroid = normal + d - 1;
-      if (normal[0] == HUGE_VAL) {
+      /* On demand construction of ridge volume, distance and normal
+       * (polytoop->dim - 1): */
+      double* vdn = NULL;
+      if (ridge->hvdn != UINT32_MAX) {
+        vdn = allocator_mem(alc, ridge->hvdn);
+      }
+      else {
+        ridge->hvdn = allocator_alloc(alc, (2 + d) * sizeof(double));
+        vdn = allocator_mem(alc, ridge->hvdn);
+
         /* Matrix of vertex coordinates: */
         for (ivertex = 0; ivertex < d; ++ivertex) {
           Vertex* vertex = allocator_mem(alc, ridge->vertices[ivertex]);
@@ -1331,33 +1325,33 @@ void polytoop_interpolate(
         }
 
         /* Analyse ridge simplex: */
-        analysesimplex(d, d, verts, &ridge->volume, centroid);
+        analysesimplex(d, d, verts, vdn + 0, centroid);
 
         /* Construct normal: */
-        memcpy(normal, centroid, d * sizeof(double));
-        vec_sub(d, normal, currentfacet->centroid);
+        memcpy(vdn + 2, centroid, d * sizeof(double));
+        vec_sub(d, vdn + 2, currentfacet->centroid);
         for (i = 0; i < d - 1; ++i) {
-          double fac = vec_dot(d, normal, &verts[i * d]);
-          vec_adds(d, normal, &verts[i * d], -fac);
+          double fac = vec_dot(d, vdn + 2, &verts[i * d]);
+          vec_adds(d, vdn + 2, &verts[i * d], -fac);
         }
-        vec_normalize(d, normal);
-      }
+        vec_normalize(d, vdn + 2);
 
-      /* Ridge plane distance: */
-      dist = vec_dot(d, normal, centroid);
+        /* Ridge plane distance: */
+        vdn[1] = vec_dot(d, vdn + 2, centroid);
+      }
 
       /* Sign of normal: */
       sign = 1.0;
-      if (vec_dot(d, currentfacet->centroid, normal) < dist) {
+      if (vec_dot(d, currentfacet->centroid, vdn + 2) < vdn[1]) {
         /* outward pointing normal */
         sign = -1.0;
       }
 
       /* Height of interpolation point above ridge: */
-      h = sign * (vec_dot(d, xiprime, normal) - dist);
+      h = sign * (vec_dot(d, xiprime, vdn + 2) - vdn[1]);
 
       /* Weight for this ridge: */
-      weights[iridge] = h * ridge->volume;
+      weights[iridge] = h * vdn[0];
       totalweight += weights[iridge];
 
       /* Index for this ridge: */

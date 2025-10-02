@@ -49,17 +49,17 @@ struct _polytoop_Facet {
   Point* outsidehead; /* visible points list */
   Point* outsidetail; /* last entry in visible points list */
   bool visible;
-  double centroid[1];   /* d-vector
-  /*double* normal;*/   /* d-vector outward pointing plane normal */
-  /*u32* ridges;   */ /* d adjacent ridges */
-  /*u32* vertices; */ /* d adjacent vertices */
+  double centroid[1]; /* actually d-vector */
+  /*double normal[d];*/
+  /*u32 ridges[d];*/
+  /*u32 vertices[d];*/
 };
 
 struct _Ridge {
   u32 next;
   u32 prev;
 
-  double volume;
+  u32 hvdn;        /* handle to volume, distance and normal */
   u32 facets[2];   /* 2 adjacent facets */
   u32 vertices[1]; /* d - 1 adjacent vertices */
 };

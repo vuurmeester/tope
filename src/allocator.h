@@ -11,7 +11,7 @@ typedef uint32_t u32;
 
 typedef struct _Block {
   u32 next;
-  u32 _; /* 8 byte alignment */
+  u32 _; /* sizeof(Block) must be 8 bytes */
 } Block;
 
 typedef struct _Allocator {
@@ -30,7 +30,7 @@ void allocator_init(Allocator* alc);
 u32 allocator_alloc(Allocator* alc, u16 numbytes);
 
 /** The actual memory. */
-inline void* allocator_mem(Allocator* alc, u32 handle)
+static inline void* allocator_mem(Allocator* alc, u32 handle)
 {
   return alc->block + handle;
 }
