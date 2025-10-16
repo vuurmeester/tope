@@ -108,7 +108,7 @@ int linprog(int m, int n, double const* A, double const* b, double const* c,
     cr(stride, apply_matrix, err, dz, 1e-9, &data);
     vec_neg(stride, dz);
 
-    /* Adjust stepsize to remain feasible: */
+    /* Adjust stepsize to remain feasible (y, s > 0): */
     step = 1.0;
     for (i = 0; i < m; ++i) {
       if (y[i] + step * dz[i] < 0.0) {
@@ -120,14 +120,14 @@ int linprog(int m, int n, double const* A, double const* b, double const* c,
     }
     step *= 0.98;
 
-    if (step * vec_norm(stride, dz) <= EPS) {
-      break;
-    }
-
     /* Perform step: */
     vec_adds(m, y, dz, step);
     vec_adds(n, x, dz + m, step);
     vec_adds(m, s, dz + m + n, step);
+
+    if (step * vec_norm(stride, dz) <= EPS) {
+      break;
+    }
   }
 
 #ifndef NDEBUG
