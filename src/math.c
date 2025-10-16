@@ -56,9 +56,8 @@ void vec_reset(int n, double* x)
 void vec_normalize(int n, double* x)
 {
   double nrmsq = vec_nrmsq(n, x);
-  if (nrmsq > 0.0) {
-    vec_scale(n, x, 1.0 / sqrt(nrmsq));
-  }
+  assert(nrmsq > 0.0);
+  vec_scale(n, x, 1.0 / sqrt(nrmsq));
 }
 
 
@@ -123,9 +122,9 @@ double vec_dot(int n, double const* x, double const* y)
 
 int vec_minindex(int n, double const* x)
 {
-  int i;
+  assert(n > 0);
   int result = 0;
-  for (i = 1; i < n; ++i) {
+  for (int i = 1; i < n; ++i) {
     if (x[i] < x[result]) {
       result = i;
     }
@@ -137,9 +136,9 @@ int vec_minindex(int n, double const* x)
 
 int vec_maxindex(int n, double const* x)
 {
-  int i;
+  assert(n > 0);
   int result = 0;
-  for (i = 1; i < n; ++i) {
+  for (int i = 1; i < n; ++i) {
     if (x[i] > x[result]) {
       result = i;
     }
@@ -174,8 +173,7 @@ void vec_print(int n, double const* x)
 
 void mat_vecmul(int m, int n, double const* mat, double const* x, double* y)
 {
-  int i;
-  for (i = 0; i < m; ++i) {
+  for (int i = 0; i < m; ++i) {
     y[i] = vec_dot(n, mat + i * n, x);
   }
 }
@@ -191,14 +189,10 @@ void mat_matmul(
     double* result
 )
 {
-  int i;
-  int j;
-  int k;
-
   memset(result, 0, m * o * sizeof(double));
-  for (i = 0; i < m; ++i) {
-    for (k = 0; k < n; ++k) {
-      for (j = 0; j < o; ++j) {
+  for (int i = 0; i < m; ++i) {
+    for (int k = 0; k < n; ++k) {
+      for (int j = 0; j < o; ++j) {
         result[i * n + j] += mat1[i * n + k] * mat2[k * o + j];
       }
     }
@@ -289,13 +283,11 @@ void matrix_reset(int m, int n, double* mat)
 
 void mat_unit(int m, double* mat)
 {
-  int i;
-
   /* Clear the matrix: */
   matrix_reset(m, m, mat);
 
   /* Fill diagonal with ones: */
-  for (i = 0; i < m; ++i) {
+  for (int i = 0; i < m; ++i) {
     mat[i * m + i] = 1.0;
   }
 }
@@ -415,12 +407,10 @@ double gauss(int n, double* A, double* b)
 {
   double det = 1.0;
   int i = 0;
-  int j;
-
   for (; i < n; ++i) {
     /* Find pivot element (largest magnitude in column i): */
     int pivot = i;
-    for (j = i + 1; j < n; ++j) {
+    for (int j = i + 1; j < n; ++j) {
       if (fabs(A[j * n + i]) > fabs(A[pivot * n + i])) {
         pivot = j;
       }
@@ -443,7 +433,7 @@ double gauss(int n, double* A, double* b)
     }
 
     /* Update U: */
-    for (j = i + 1; j < n; ++j) {
+    for (int j = i + 1; j < n; ++j) {
       double mult = A[j * n + i] / A[i * n + i];
       vec_adds(n - i - 1, A + j * n + i + 1, A + i * n + i + 1, -mult);
       b[j] -= mult * b[i];
@@ -470,11 +460,6 @@ void cr(
     void const* data
 )
 {
-  double rar;
-  double beta;
-  double paap;
-  double alfa;
-
   /* Allocations: */
   double* r = alloca(n * sizeof(double));
   double* p = alloca(n * sizeof(double));
@@ -492,20 +477,20 @@ void cr(
   vec_neg(n, r);
   vec_add(n, r, b);
 
-  while (true) { /* while residue relatively large */
+  while (true) {
     ++niter;
 
     /* A r: */
     applymatrix(n, r, ar, data);
 
     /* r' A r: */
-    rar = vec_dot(n, r, ar);
+    double rar = vec_dot(n, r, ar);
     if (fabs(rar) < tol * tol) {
       break;
     }
 
     /* p = r + beta p: */
-    beta = rar / oldrar;
+    double beta = rar / oldrar;
     vec_scale(n, p, beta);
     vec_add(n, p, r);
 
@@ -517,13 +502,13 @@ void cr(
     vec_add(n, ap, ar);
 
     /* p' A' A p: */
-    paap = vec_nrmsq(n, ap);
+    double paap = vec_nrmsq(n, ap);
     if (paap == 0) {
       break;
     }
 
     /* alfa = (r' A r) / (p' A' A p): */
-    alfa = rar / paap;
+    double alfa = rar / paap;
     if (fabs(alfa) * vec_norm(n, p) < tol * vec_norm(n, x)) {
       break;
     }

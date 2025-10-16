@@ -118,9 +118,8 @@ u32* hashmap_get(HashMap* hashmap, int d, u32* verts, Allocator* alc)
     index = (index + 1) & (hashmap->cap - 1); /* next in cluster */
   }
 
+  /* Not found, create new entry and return reference: */
   hashmap->hashes[index] = hash;
-
   ++hashmap->len;
-
   return hashmap->ridges + index;
 }

@@ -19,13 +19,11 @@ static double const s_nrmfac = 1.0 / ((double)UINT_MAX + 1.0);
 
 void memswp(void* ptr1, void* ptr2, int numbytes)
 {
-  void* tmp;
-
   assert(
       (char*)ptr1 + numbytes <= (char*)ptr2 ||
       (char*)ptr2 + numbytes <= (char*)ptr1
   );
-  tmp = alloca(numbytes);
+  void* tmp = alloca(numbytes);
   memcpy(tmp, ptr1, numbytes);
   memcpy(ptr1, ptr2, numbytes);
   memcpy(ptr2, tmp, numbytes);
@@ -51,12 +49,10 @@ double random_getdouble(void)
 
 int random_getint(int lo, int hi)
 {
-  int n;
-
   assert(lo < hi);
   /* Returns int n, where lo <= n < hi: */
   s_seed = 1664525U * s_seed + 1013904223U;
-  n = s_seed % (hi - lo) + lo;
+  int n = s_seed % (hi - lo) + lo;
   return n;
 }
 
@@ -95,9 +91,8 @@ static double getperiod(void)
 {
 #ifdef _WIN32
   LARGE_INTEGER temp;
-  double period;
   QueryPerformanceFrequency(&temp);
-  period = 1.0 / large2double(&temp);
+  double period = 1.0 / large2double(&temp);
   return period;
 #else
   return 1.0e-6;

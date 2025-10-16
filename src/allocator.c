@@ -10,10 +10,12 @@
 
 void allocator_init(Allocator* alc)
 {
-  memset(alc, 0, sizeof *alc);
-
-  /* Invalidate indices: */
+  alc->blocksize = FIRST_BLOCKSIZE;
+  alc->npools = 0;
+  memset(alc->freeps, 0xff, sizeof(alc->freeps));
+  alc->blockfreep = 0;
   memset(alc->indices, 0xff, sizeof alc->indices);
+  alc->block = malloc(alc->blocksize * sizeof(Block));
 }
 
 
@@ -32,7 +34,6 @@ u32 allocator_alloc(Allocator* alc, uint16_t numbytes)
     /* Initialize new pool: */
     assert(alc->npools < ALLOCATOR_MAXPOOLS);
     pool_index = alc->npools;
-    alc->freeps[pool_index] = -1;
     alc->indices[numblocks - 1] = pool_index;
     ++alc->npools;
   }
@@ -46,8 +47,7 @@ u32 allocator_alloc(Allocator* alc, uint16_t numbytes)
   /* Check if requested memory exceeds current block: */
   if (alc->blockfreep + numblocks > alc->blocksize) {
     /* New block, double size: */
-    alc->blocksize = alc->blocksize > 0 ? alc->blocksize << 1
-                                        : (FIRST_BLOCKSIZE / sizeof(Block));
+    alc->blocksize <<= 1;
     alc->block = realloc(alc->block, alc->blocksize * sizeof(Block));
   }
 
@@ -79,7 +79,7 @@ void allocator_free(Allocator* alc, u32 handle, uint16_t numbytes)
   memset(allocator_mem(alc, handle), 0xcd, numblocks * sizeof(Block));
 #endif
 
-  /* Prefer returning memory to current block: */
+  /* Prefer returning memory to block freepointer: */
   if (alc->blockfreep == handle + numblocks) {
     alc->blockfreep = handle;
     return;
@@ -89,7 +89,7 @@ void allocator_free(Allocator* alc, u32 handle, uint16_t numbytes)
   u32 pool_index = alc->indices[numblocks - 1];
   assert(pool_index < alc->npools);
 
-  /* Prepend to freelist: */
+  /* Prepend to pool freelist: */
   alc->block[handle].next = alc->freeps[pool_index];
   alc->freeps[pool_index] = handle;
 }
