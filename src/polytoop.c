@@ -302,30 +302,24 @@ static void facet_addoutside(Polytoop* polytoop, u32 hfacet, Point* point)
 /* Integrate facet into polytoop (compute volume, create ridges, etc): */
 static void addfacet(Polytoop* polytoop, u32 hfacet, u32* hridges)
 {
-  int i;
-  int j;
-  double nrm;
-  double* dirs;
-  double* x0;
   int d = polytoop->dim;
   Allocator* alc = &polytoop->alc;
   Facet* facet = allocator_mem(alc, hfacet);
-  Vertex* vertex;
 
   /* Facet centroid: */
   vec_reset(d, facet->centroid);
   u32* vertices = (u32*)(facet->centroid + 2 * d) + d;
-  for (i = 0; i < d; ++i) {
-    vertex = allocator_mem(alc, vertices[i]);
+  for (int i = 0; i < d; ++i) {
+    Vertex* vertex = allocator_mem(alc, vertices[i]);
     vec_add(d, facet->centroid, vertex->position);
   }
   vec_scale(d, facet->centroid, 1.0 / (double)d);
 
   /* Vertex span: */
-  dirs = alloca((d - 1) * d * sizeof(double));
-  vertex = allocator_mem(alc, vertices[0]);
-  x0 = vertex->position;
-  for (i = 0; i < d - 1; ++i) {
+  double* dirs = alloca((d - 1) * d * sizeof(double));
+  Vertex* vertex = allocator_mem(alc, vertices[0]);
+  double* x0 = vertex->position;
+  for (int i = 0; i < d - 1; ++i) {
     /* Vertex position difference: */
     vertex = allocator_mem(alc, vertices[i + 1]);
     memcpy(dirs + i * d, vertex->position, d * sizeof(double));
@@ -334,11 +328,11 @@ static void addfacet(Polytoop* polytoop, u32 hfacet, u32* hridges)
 
   /* Basis and volume: */
   facet->volume = 1.0;
-  for (i = 0; i < d - 1; ++i) {
+  for (int i = 0; i < d - 1; ++i) {
     /* Pivot largest row on top: */
     int pivot = i;
     double maxnrmsq = vec_nrmsq(d, dirs + i * d);
-    for (j = i + 1; j < d - 1; ++j) {
+    for (int j = i + 1; j < d - 1; ++j) {
       double nrmsq = vec_nrmsq(d, dirs + j * d);
       if (nrmsq > maxnrmsq) {
         maxnrmsq = nrmsq;
@@ -350,11 +344,11 @@ static void addfacet(Polytoop* polytoop, u32 hfacet, u32* hridges)
     }
 
     /* Normalize: */
-    nrm = sqrt(maxnrmsq);
+    double nrm = sqrt(maxnrmsq);
     vec_scale(d, dirs + i * d, 1.0 / nrm);
 
     /* Orthogonalize: */
-    for (j = i + 1; j < d - 1; ++j) {
+    for (int j = i + 1; j < d - 1; ++j) {
       double ip = vec_dot(d, dirs + j * d, dirs + i * d);
       vec_adds(d, dirs + j * d, dirs + i * d, -ip);
     }
@@ -367,7 +361,7 @@ static void addfacet(Polytoop* polytoop, u32 hfacet, u32* hridges)
   double* normal = facet->centroid + d;
   memcpy(normal, facet->centroid, d * sizeof(double));
   vec_sub(d, normal, polytoop->center);
-  for (i = 0; i < d - 1; ++i) {
+  for (int i = 0; i < d - 1; ++i) {
     double ip = vec_dot(d, normal, dirs + i * d);
     vec_adds(d, normal, dirs + i * d, -ip);
   }
@@ -378,7 +372,7 @@ static void addfacet(Polytoop* polytoop, u32 hfacet, u32* hridges)
 
   /* Assign ridges: */
   u32* ridges = (u32*)(facet->centroid + 2 * d);
-  for (i = 0; i < d; ++i) {
+  for (int i = 0; i < d; ++i) {
     /* Get ridge: */
     Ridge* ridge = allocator_mem(alc, hridges[i]);
 
@@ -1148,6 +1142,7 @@ void polytoop_print(Polytoop* polytoop)
   int d = polytoop->dim;
   double* sv = alloca(d * sizeof(double));
   double* normal = alloca(d * sizeof(double));
+  double* centroid = alloca(d * sizeof(double));
   double* position = alloca(d * sizeof(double));
 
   printf("%d facets\n", polytoop->nfacets);
@@ -1163,14 +1158,14 @@ void polytoop_print(Polytoop* polytoop)
     polytoop_facet_getnormal(facet, normal);
     double volume = polytoop_facet_getvolume(facet);
     vec_adds(d, sv, normal, volume);
+    polytoop_facet_getcentroid(facet, centroid);
 
     printf("facet %d\n", i + 1);
-    printf("  volume: %g\n", facet->volume);
+    printf("  volume: %g\n", volume);
     printf("  centroid: ");
-    vec_print(d, facet->centroid);
+    vec_print(d, centroid);
     printf("\n");
     printf("  normal: ");
-    double* normal = facet->centroid + d;
     vec_print(d, normal);
     printf("\n");
 
@@ -1372,11 +1367,9 @@ Facet* polytoop_facet_nextfacet(Facet* facet)
 
 void polytoop_facet_getnormal(Facet* facet, double* normal)
 {
-  int i;
   int d = facet->polytoop->dim;
-
   memcpy(normal, facet->centroid + d, d * sizeof(double));
-  for (i = 0; i < d; ++i) {
+  for (int i = 0; i < d; ++i) {
     normal[i] /= facet->polytoop->scales[i];
   }
   vec_normalize(d, normal);
@@ -1410,7 +1403,8 @@ double polytoop_facet_getoffset(Facet* facet)
 
 double polytoop_facet_getvolume(Facet* facet)
 {
-  return facet->volume;
+  double volume = facet->volume;
+  return volume;
 }
 
 
