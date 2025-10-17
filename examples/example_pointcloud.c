@@ -1,9 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/*#include <qhull/libqhull.h>
-#include <qhull/io.h>*/
-
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -76,72 +73,10 @@ double benchmark(int ntests, int npoints, int ndims, int cospherical)
 
 
 
-void benchqhull(int ntests, int npoints, int ndims, int cospherical)
-{
-  int nfacets;
-  int nverts;
-  int itest;
-  int idim;
-  int ipoint;
-  double start;
-  double dt;
-  double* points;
-
-  points = malloc(npoints * ndims * sizeof(double));
-
-  printf("***** qhull test *****\n");
-  printf("ntests      = %d\n", ntests);
-  printf("npoints     = %d\n", npoints);
-  printf("ndims       = %d\n", ndims);
-  printf("cospherical = %s\n", cospherical ? "true" : "false");
-
-  start = polytoop_gettime();
-  nfacets = 0;
-  nverts = 0;
-  for (itest = 0; itest < ntests; ++itest) {
-    /* Random points: */
-    for (ipoint = 0; ipoint < npoints; ++ipoint) {
-      for (idim = 0; idim < ndims; ++idim) {
-        points[ipoint * ndims + idim] = random_getdouble() - 0.5;
-      }
-      if (cospherical) {
-        vec_normalize(ndims, &points[ipoint * ndims]);
-      }
-    }
-
-    /* Call qhull: */
-    /*qh_new_qhull(ndims, npoints, points, 0, "qhull Qt", 0, stderr);*/
-
-    /* Accumulate total number of facets and vertices created: */
-    /*nfacets += qh_qh.num_facets;
-    nverts += qh_qh.num_vertices;*/
-
-    /* Clean up: */
-    /*qh_freeqhull(1);
-    {
-      int curlong;
-      int totlong;
-      qh_memfreeshort(&curlong, &totlong);
-    }*/
-  }
-  dt = polytoop_gettime() - start;
-  printf("facets      = %d\n", nfacets);
-  printf("verts       = %d\n", nverts);
-  printf("time        = %g\n\n", dt);
-
-  free(points);
-}
-
-
-
 int main(void)
 {
-  /* #ifndef NDEBUG */
-  /*   benchmark(1, 64, 8, 0); */
-  /*   benchqhull(1, 64, 8, 0); */
-  /*   return 0; */
-  /* #endif */
   double t = 0.0;
+
   /* 4D non-cospherical: */
   t += benchmark(200, 32, 4, 0);
   t += benchmark(200, 64, 4, 0);
@@ -157,7 +92,7 @@ int main(void)
   /* Many small hulls: */
   t += benchmark(2000, 16, 3, 1);
 
-  /* One large polytoop: */
+  /* One large cospherical polytoop: */
   t += benchmark(1, 20000, 3, 1);
 
   /* Large 4D polytoop: */

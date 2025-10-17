@@ -42,7 +42,7 @@ int main(void)
   /* Compute polytoop from pyramid planes: */
   xi[0] = 0.0;
   xi[1] = 0.0;
-  xi[2] = 0.5;
+  xi[2] = 0.25;
   polytoop = polytoop_fromplanes(m, DIM, normals, distances, xi);
 
   if (polytoop) {
