@@ -1175,7 +1175,7 @@ void polytoop_print(Polytoop* polytoop)
       u32 hvertex = vertices[j];
       Vertex* vertex = allocator_mem(alc, hvertex);
       polytoop_vertex_getposition(vertex, position);
-      vec_print(d, vertex->position);
+      vec_print(d, position);
     }
     printf("\n");
 
@@ -1403,7 +1403,25 @@ double polytoop_facet_getoffset(Facet* facet)
 
 double polytoop_facet_getvolume(Facet* facet)
 {
+  int d = facet->polytoop->dim;
+  double* s = facet->polytoop->scales;
+  double* n = facet->centroid + d;
   double volume = facet->volume;
+
+  /* Transformed normal: */
+  double scale = 0.0;
+  for (int i = 0; i < d; ++i) {
+    scale += n[i] * n[i] / (s[i] * s[i]);
+  }
+
+  /* Determinant of S: */
+  double prod = 1.0;
+  for (int i = 0; i < d; ++i) {
+    prod *= s[i];
+  }
+
+  volume *= prod * sqrt(scale);
+
   return volume;
 }
 
