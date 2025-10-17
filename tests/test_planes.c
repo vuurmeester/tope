@@ -24,19 +24,22 @@ int main(void)
   distances[m] = 0.0;
   ++m;
 
+  double height = 4.0;  // nice 3 4 5 triangles
+  double offset = 3.0;
+  double steepness = atan2(height, offset);
   for (; m < NPLANES; ++m) {
     double angle = (double)(m - 1) / (double)(NPLANES - 1) * M_2PI;
-    normals[m * DIM + 0] = M_SQRT1_2 * cos(angle);
-    normals[m * DIM + 1] = M_SQRT1_2 * sin(angle);
-    normals[m * DIM + 2] = M_SQRT1_2;
-    distances[m] = M_SQRT1_2;
+    normals[m * DIM + 0] = sin(steepness) * cos(angle);
+    normals[m * DIM + 1] = sin(steepness) * sin(angle);
+    normals[m * DIM + 2] = cos(steepness);
+    distances[m] = offset * sin(steepness);
   }
 
   /* Add a redundant plane: */
   normals[m * DIM + 0] = 0.0;
   normals[m * DIM + 1] = 0.0;
   normals[m * DIM + 2] = 1.0;
-  distances[m] = 2.0;
+  distances[m] = 5.0;
   ++m;
 
   /* Compute polytoop from pyramid planes: */
