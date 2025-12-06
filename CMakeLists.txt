@@ -102,3 +102,8 @@ if(EXAMPLES_ENABLED)
     target_link_libraries(${exename} polytoop)
   endforeach()
 endif()
+
+# Executable:
+add_executable(poly exe/main.c)
+set_target_properties(poly PROPERTIES LINKER_LANGUAGE C)
+target_link_libraries(poly polytoop)
