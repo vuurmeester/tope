@@ -181,12 +181,12 @@ void mat_vecmul(int m, int n, double const* mat, double const* x, double* y)
 
 
 void mat_matmul(
-    int m,
-    int n,
-    int o,
-    double const* mat1,
-    double const* mat2,
-    double* result
+  int m,
+  int n,
+  int o,
+  double const* mat1,
+  double const* mat2,
+  double* result
 )
 {
   memset(result, 0, m * o * sizeof(double));
@@ -203,18 +203,10 @@ void mat_matmul(
 
 void mat_sprint(int m, int n, double const* mat, char* str)
 {
-  int i;
-  int j;
-  int width;
-  int candidate;
-  double number;
-  char format[256];
-  char buffer[32];
-
   /* Determine the largest entry: */
   double maxel = 0.0;
-  for (i = 0; i < m; ++i) {
-    for (j = 0; j < n; ++j) {
+  for (int i = 0; i < m; ++i) {
+    for (int j = 0; j < n; ++j) {
       if (fabs(mat[i * n + j]) > maxel) {
         maxel = fabs(mat[i * n + j]);
       }
@@ -222,15 +214,16 @@ void mat_sprint(int m, int n, double const* mat, char* str)
   }
 
   /* Determine the width of the widest entry: */
-  width = 0;
-  for (i = 0; i < m; ++i) {
-    for (j = 0; j < n; ++j) {
-      number = mat[i * n + j];
+  int width = 0;
+  for (int i = 0; i < m; ++i) {
+    for (int j = 0; j < n; ++j) {
+      double number = mat[i * n + j];
       if (fabs(number) == 0.0) {
         number = 0.0;
       }
 
-      candidate = sprintf(buffer, "%0.6g", number);
+      char buffer[32];
+      int candidate = sprintf(buffer, "%0.6g", number);
       if (candidate > width) {
         width = candidate;
       }
@@ -239,11 +232,12 @@ void mat_sprint(int m, int n, double const* mat, char* str)
 
   width += 2; /* text separation */
 
+  char format[256];
   sprintf(format, "%%%d.6g", width);
   /* Now actually print the data: */
-  for (i = 0; i < m; ++i) {
-    for (j = 0; j < n; ++j) {
-      number = mat[i * n + j];
+  for (int i = 0; i < m; ++i) {
+    for (int j = 0; j < n; ++j) {
+      double number = mat[i * n + j];
       if (fabs(number) == 0.0) {
         number = 0.0;
       }
@@ -304,19 +298,16 @@ void boundingbox(
     double* maxima
 )
 {
-  int i;
-  int j;
-
   /* Initialize minima and maxima: */
-  for (j = 0; j < ndims; ++j) {
+  for (int j = 0; j < ndims; ++j) {
     minima[j] = HUGE_VAL;
     maxima[j] = -HUGE_VAL;
   }
 
   /* Loop over vertices: */
-  for (i = 0; i < npoints; ++i) {
+  for (int i = 0; i < npoints; ++i) {
     /* Loop over dimensions: */
-    for (j = 0; j < ndims; ++j) {
+    for (int j = 0; j < ndims; ++j) {
       if (vertices[i * ndims + j] < minima[j]) {
         /* Update minimum of dimension j: */
         minindices[j] = i;
@@ -335,43 +326,35 @@ void boundingbox(
 
 
 void analysesimplex(
-    int npoints,
-    int ndims,
-    double* points,
-    double* volume,
-    double* centroid
+  int npoints,
+  int ndims,
+  double* points,
+  double* volume,
+  double* centroid
 )
 {
-  int i;
-  int j;
-  int pivot;
-  double maxnrmsq;
-  double nrmsq;
-  double nrm;
-  double fac;
-
   assert(npoints <= ndims + 1);
 
   /* Accumulate centroid: */
   vec_reset(ndims, centroid);
-  for (i = 0; i < npoints; ++i) {
+  for (int i = 0; i < npoints; ++i) {
     vec_add(ndims, centroid, &points[i * ndims]);
   }
   vec_scale(ndims, centroid, 1.0 / (double)npoints);
 
   /* Subtract last point from all points: */
-  for (i = 0; i < npoints - 1; ++i) {
+  for (int i = 0; i < npoints - 1; ++i) {
     vec_sub(ndims, &points[i * ndims], &points[(npoints - 1) * ndims]);
   }
   memset(&points[(npoints - 1) * ndims], 0, ndims * sizeof(double));
 
   *volume = 1.0;
-  for (i = 0; i < npoints - 1; ++i) {
+  for (int i = 0; i < npoints - 1; ++i) {
     /* Get pivot: */
-    maxnrmsq = 0.0;
-    pivot = -1;
-    for (j = i; j < npoints - 1; ++j) {
-      nrmsq = vec_nrmsq(ndims, &points[j * ndims]);
+    double maxnrmsq = 0.0;
+    int pivot = -1;
+    for (int j = i; j < npoints - 1; ++j) {
+      double nrmsq = vec_nrmsq(ndims, &points[j * ndims]);
       if (nrmsq > maxnrmsq) {
         maxnrmsq = nrmsq;
         pivot = j;
@@ -379,14 +362,13 @@ void analysesimplex(
     }
 
     /* Update volume: */
-    nrm = sqrt(maxnrmsq);
+    double nrm = sqrt(maxnrmsq);
     *volume *= nrm / (double)(i + 1);
     assert(nrm > 0.0);
 
     /* Perform pivot: */
     if (pivot > i) {
-      memswp(
-          &points[i * ndims], &points[pivot * ndims], ndims * sizeof(double)
+      memswp(&points[i * ndims], &points[pivot * ndims], ndims * sizeof(double)
       );
     }
 
@@ -394,8 +376,8 @@ void analysesimplex(
     vec_scale(ndims, &points[i * ndims], 1.0 / nrm);
 
     /* Orthogonalize (subtract projection of row i from those below): */
-    for (j = i + 1; j < npoints - 1; ++j) {
-      fac = vec_dot(ndims, &points[i * ndims], &points[j * ndims]);
+    for (int j = i + 1; j < npoints - 1; ++j) {
+      double fac = vec_dot(ndims, &points[i * ndims], &points[j * ndims]);
       vec_adds(ndims, &points[j * ndims], &points[i * ndims], -fac);
     }
   }
@@ -452,12 +434,12 @@ double gauss(int n, double* A, double* b)
 
 
 void cr(
-    int n,
-    void (*applymatrix)(int n, double const* x, double* y, void const* data),
-    double const* b,
-    double* x,
-    double tol,
-    void const* data
+  int n,
+  void (*applymatrix)(int n, double const* x, double* y, void const* data),
+  double const* b,
+  double* x,
+  double tol,
+  void const* data
 )
 {
   /* Allocations: */

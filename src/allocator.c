@@ -20,7 +20,7 @@ void allocator_init(Allocator* alc)
 
 
 
-u32 allocator_alloc(Allocator* alc, uint16_t numbytes)
+u32 allocator_alloc(Allocator* alc, u16 numbytes)
 {
   u32 ret;
 
@@ -41,7 +41,7 @@ u32 allocator_alloc(Allocator* alc, uint16_t numbytes)
     /* Prefer recycled memory: */
     ret = alc->freeps[pool_index];
     alc->freeps[pool_index] = alc->block[ret].next;
-    return ret;
+    goto _return;
   }
 
   /* Check if requested memory exceeds current block: */
@@ -54,19 +54,20 @@ u32 allocator_alloc(Allocator* alc, uint16_t numbytes)
   /* The memory to return: */
   ret = alc->blockfreep;
 
+  /* Next free memory in block: */
+  alc->blockfreep += numblocks;
+
+_return:
 #ifndef NDEBUG
   memset(allocator_mem(alc, ret), 0x00, numblocks * sizeof(Block));
 #endif
-
-  /* Next free memory in block: */
-  alc->blockfreep += numblocks;
 
   return ret;
 }
 
 
 
-void allocator_free(Allocator* alc, u32 handle, uint16_t numbytes)
+void allocator_free(Allocator* alc, u32 handle, u16 numbytes)
 {
   /* Check input: */
   assert(0 < numbytes && numbytes <= ALLOCATOR_MAXSIZE);
@@ -79,7 +80,7 @@ void allocator_free(Allocator* alc, u32 handle, uint16_t numbytes)
   memset(allocator_mem(alc, handle), 0xcd, numblocks * sizeof(Block));
 #endif
 
-  /* Prefer returning memory to block freepointer: */
+  /* Memory at end of block?: */
   if (alc->blockfreep == handle + numblocks) {
     alc->blockfreep = handle;
     return;
