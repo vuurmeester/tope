@@ -9,11 +9,11 @@ void polytoop_delete(Polytoop* polytoop);
 
 /** Create polytoop from planes and interior point. */
 Polytoop* polytoop_fromplanes(
-    int nplanes,
-    int dim,
-    double const* normals,
-    double const* distances,
-    double const* xc
+  int nplanes,
+  int dim,
+  double const* normals,
+  double const* distances,
+  double const* xc
 );
 
 /** Create polytoop from point cloud. */
@@ -22,7 +22,7 @@ Polytoop* polytoop_frompoints(int npoints, int dim, double const* points);
 /** Delaunay triangulation. */
 Polytoop* polytoop_delaunay(int npoints, int dim, double const* points);
 
-/** Add vertex to existing polytoop (increment). */
+/** Add vertex to existing polytoop. */
 void polytoop_addvertex(Polytoop* polytoop, double const* point);
 
 /** Print polytoop. */
@@ -34,15 +34,15 @@ int polytoop_getnumfacets(Polytoop* polytoop);
 /** Number of ridges. */
 int polytoop_getnumridges(Polytoop* polytoop);
 
-/** Total number of vertices. */
+/** Number of vertices. */
 int polytoop_getnumvertices(Polytoop* polytoop);
 
-/** Interpolate if polytoop is Delaunay grid. */
+/** Interpolate (when polytoop is Delaunay). */
 void polytoop_interpolate(
-    Polytoop* polytoop,
-    double const* xi,
-    int* indices,
-    double* weights
+  Polytoop* polytoop,
+  double const* xi,
+  int* indices,
+  double* weights
 );
 
 /** First facet. */
