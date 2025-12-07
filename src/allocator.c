@@ -4,7 +4,7 @@
 
 #include "allocator.h"
 
-#define FIRST_BLOCKSIZE 4096
+#define FIRST_BLOCKSIZE 512
 
 
 
@@ -46,8 +46,10 @@ u32 allocator_alloc(Allocator* alc, u16 numbytes)
 
   /* Check if requested memory exceeds current block: */
   if (alc->blockfreep + numblocks > alc->blocksize) {
-    /* New block, double size: */
-    alc->blocksize <<= 1;
+    /* Increase block size by 50%, round up to 4k: */
+    u32 numpages = alc->blocksize / 512;
+    numpages = 3 * numpages / 2 + 1;
+    alc->blocksize = numpages * 512;
     alc->block = realloc(alc->block, alc->blocksize * sizeof(Block));
   }
 

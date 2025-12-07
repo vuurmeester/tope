@@ -432,7 +432,7 @@ static void initialsimplex(Polytoop* polytoop, int npoints, Point* points)
   }
 
   /* Permutation vector: */
-  int* p = alloca(npoints * sizeof(int));
+  int* p = malloc(npoints * sizeof(int));
   for (i = 0; i < npoints; ++i) {
     p[i] = i;
   }
@@ -543,6 +543,7 @@ static void initialsimplex(Polytoop* polytoop, int npoints, Point* points)
   }
 
   /* Clean up: */
+  free(p);
   free(span);
 }
 
