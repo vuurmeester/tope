@@ -157,15 +157,21 @@ static void ridge_remove(Tope* tope, u32 hridge)
 /* Create and initialize a facet struct: */
 static u32 facet_new(Tope* tope)
 {
+  ++tope->nfacets;
+ 
   Allocator* alc = &tope->alc;
   int d = tope->dim;
 
-  u32 hfacet = allocator_alloc(
-      alc, sizeof(Facet) - sizeof(double) +
-               d * (2 * sizeof(double) + 2 * sizeof(u32))
-  );
-  ++tope->nfacets;
+  u32 hfacet = allocator_alloc(alc, sizeof(Facet));
+  u32 hcentroid = allocator_alloc(alc, d * sizeof(double));
+  u32 hnormal = allocator_alloc(alc, d * sizeof(double));
+  u32 hridges = allocator_alloc(alc, d * sizeof(u32));
+  u32 hverts = allocator_alloc(alc, d * sizeof(u32));
   Facet* facet = allocator_mem(alc, hfacet);
+  facet->hcentroid = hcentroid;
+  facet->hnormal = hnormal;
+  facet->hridges = hridges;
+  facet->hvertices = hverts;
 
   /* Append to list: */
   facet->prev = tope->lastfacet;
@@ -185,12 +191,14 @@ static u32 facet_new(Tope* tope)
   facet->outsidehead = NULL;
   facet->outsidetail = NULL;
   facet->visible = false;
-  vec_reset(d, facet->centroid);
-  double* normal = facet->centroid + d;
+
+  double* centroid = allocator_mem(alc, hcentroid);
+  vec_reset(d, centroid);
+  double* normal = allocator_mem(alc, hnormal);
   vec_reset(d, normal);
-  u32* ridges = (u32*)(normal + d);
+  u32* ridges = allocator_mem(alc, hridges);
   memset(ridges, 0xff, d * sizeof(u32));
-  u32* vertices = ridges + d;
+  u32* vertices = allocator_mem(alc, hverts);
   memset(vertices, 0xff, d * sizeof(u32));
 
   return hfacet;
@@ -198,13 +206,16 @@ static u32 facet_new(Tope* tope)
 
 
 
-static void facet_free(Tope* tope, u32 facet)
+static void facet_free(Tope* tope, u32 hfacet)
 {
-  allocator_free(
-      &tope->alc, facet,
-      sizeof(Facet) - sizeof(double) +
-          tope->dim * (2 * sizeof(double) + 2 * sizeof(u32))
-  );
+  int d = tope->dim;
+  Allocator* alc = &tope->alc;
+  Facet* facet = allocator_mem(alc, hfacet);
+  allocator_free(alc, facet->hvertices, d * sizeof(u32));
+  allocator_free(alc, facet->hridges, d * sizeof(u32));
+  allocator_free(alc, facet->hnormal, d * sizeof(double));
+  allocator_free(alc, facet->hcentroid, d * sizeof(double));
+  allocator_free(alc, hfacet, sizeof(Facet));
 }
 
 
@@ -307,13 +318,14 @@ static void addfacet(Tope* tope, u32 hfacet, u32* hridges)
   Facet* facet = allocator_mem(alc, hfacet);
 
   /* Facet centroid: */
-  vec_reset(d, facet->centroid);
-  u32* vertices = (u32*)(facet->centroid + 2 * d) + d;
+  double* centroid = allocator_mem(alc, facet->hcentroid);
+  vec_reset(d, centroid);
+  u32* vertices = allocator_mem(alc, facet->hvertices);
   for (int i = 0; i < d; ++i) {
     Vertex* vertex = allocator_mem(alc, vertices[i]);
-    vec_add(d, facet->centroid, vertex->position);
+    vec_add(d, centroid, vertex->position);
   }
-  vec_scale(d, facet->centroid, 1.0 / (double)d);
+  vec_scale(d, centroid, 1.0 / (double)d);
 
   /* Vertex span: */
   double* dirs = alloca((d - 1) * d * sizeof(double));
@@ -358,8 +370,8 @@ static void addfacet(Tope* tope, u32 hfacet, u32* hridges)
   }
 
   /* Compute normal: */
-  double* normal = facet->centroid + d;
-  memcpy(normal, facet->centroid, d * sizeof(double));
+  double* normal = allocator_mem(alc, facet->hnormal);
+  memcpy(normal, centroid, d * sizeof(double));
   vec_sub(d, normal, tope->center);
   for (int i = 0; i < d - 1; ++i) {
     double ip = vec_dot(d, normal, dirs + i * d);
@@ -368,10 +380,10 @@ static void addfacet(Tope* tope, u32 hfacet, u32* hridges)
   vec_normalize(d, normal);
 
   /* Plane distance: */
-  facet->dist = vec_dot(d, normal, facet->centroid);
+  facet->dist = vec_dot(d, normal, centroid);
 
   /* Assign ridges: */
-  u32* ridges = (u32*)(facet->centroid + 2 * d);
+  u32* ridges = allocator_mem(alc, facet->hridges);
   for (int i = 0; i < d; ++i) {
     /* Get ridge: */
     Ridge* ridge = allocator_mem(alc, hridges[i]);
@@ -487,7 +499,7 @@ static void initialsimplex(Tope* tope, int npoints, Point* points)
     /* Create facet: */
     u32 hfacet = facet_new(tope);
     Facet* facet = allocator_mem(alc, hfacet);
-    u32* vertices = (u32*)(facet->centroid + 2 * d) + d;
+    u32* vertices = allocator_mem(alc, facet->hvertices);
 
     /* Add all vertices except for one: */
     for (j = 0; j < i; ++j) {
@@ -527,7 +539,7 @@ static void initialsimplex(Tope* tope, int npoints, Point* points)
     Facet* facet = allocator_mem(alc, hfacet);
     while (hfacet != UINT32_MAX) {
       /* Distance to facet: */
-      double* normal = facet->centroid + d;
+      double* normal = allocator_mem(alc, facet->hnormal);
       double h = vec_dot(tope->dim, normal, points[p[i]].pos) - facet->dist;
 
       /* If above facet, add it to outside set and move to next point. */
@@ -576,7 +588,7 @@ static void addpoint(Tope* tope, u32 hfacet, Point* apex)
     visiblelist = facet->next;
 
     /* Loop over ridges to visit neighbours: */
-    u32* ridges = (u32*)(facet->centroid + 2 * d);
+    u32* ridges = allocator_mem(alc, facet->hridges);
     for (i = 0; i < d; ++i) {
       /* Ridge i: */
       u32 hridge = ridges[i];
@@ -619,7 +631,7 @@ static void addpoint(Tope* tope, u32 hfacet, Point* apex)
           /* Neighbour is untested. */
 
           /* Height of apex above neighbour: */
-          double* normal = neighbour->centroid + d;
+          double* normal = allocator_mem(alc, neighbour->hnormal);
           double h = vec_dot(d, apex->pos, normal) - neighbour->dist;
 
           /* Decide if neighbour is visible: */
@@ -676,7 +688,7 @@ static void addpoint(Tope* tope, u32 hfacet, Point* apex)
     Ridge* horizonridge = allocator_mem(alc, hhorizonridge);
 
     /* Facet vertices are apex + horizon vertices: */
-    u32* vertices = (u32*)(facet->centroid + 2 * d) + d;
+    u32* vertices = allocator_mem(alc, facet->hvertices);
     vertices[0] = hvertex;
     for (ivertex = 1; ivertex < d; ++ivertex) {
       vertices[ivertex] = horizonridge->vertices[ivertex - 1];
@@ -698,7 +710,7 @@ static void addpoint(Tope* tope, u32 hfacet, Point* apex)
         /* Create new ridge: */
         *phnewridge = ridge_create(tope, hridgeverts);
         facet = allocator_mem(alc, hfacet);
-        vertices = (u32*)(facet->centroid + 2 * d) + d;
+        vertices = allocator_mem(alc, facet->hvertices);
         horizonridge = allocator_mem(alc, hhorizonridge);
       }
       hfacetridges[iridge] = *phnewridge;
@@ -724,11 +736,11 @@ static void addpoint(Tope* tope, u32 hfacet, Point* apex)
     facet = allocator_mem(alc, hfacet);
 
     /* Height of outside point above facet: */
-    double* normal = facet->centroid + d;
+    double* normal = allocator_mem(alc, facet->hnormal);
     double h = vec_dot(tope->dim, outsidepoints->pos, normal) - facet->dist;
 
     /* Visit neighbours, skipping horizon ridge: */
-    u32* ridges = (u32*)(facet->centroid + 2 * d);
+    u32* ridges = allocator_mem(alc, facet->hridges);
     u32 prev = UINT32_MAX;
     for (iridge = 1; iridge < d; ++iridge) {
       u32 hridge = ridges[iridge];
@@ -747,13 +759,13 @@ static void addpoint(Tope* tope, u32 hfacet, Point* apex)
 
       /* Neighbour height: */
       Facet* neighbour = allocator_mem(alc, hneighbour);
-      double* normal = neighbour->centroid + d;
+      double* normal = allocator_mem(alc, neighbour->hnormal);
       nh = vec_dot(tope->dim, outsidepoints->pos, normal) - neighbour->dist;
       if (nh > h) {
         prev = hfacet;
         hfacet = hneighbour;
         facet = allocator_mem(alc, hfacet);
-        ridges = (u32*)(facet->centroid + 2 * d);
+        ridges = allocator_mem(alc, facet->hridges);
         h = nh;
         iridge = 0; /* reset iteration (new base facet) */
       }
@@ -860,7 +872,7 @@ Tope* tope_fromplanes(
            ++ifacet) {
     /* Unscaled normal and distance: */
     Facet* facet = allocator_mem(&rectope->alc, hfacet);
-    double* normal = facet->centroid + d;
+    double* normal = allocator_mem(&rectope->alc, facet->hnormal);
     double dist = facet->dist;
     for (int i = 0; i < d; ++i) {
       points[ifacet * d + i] = normal[i] / rectope->scales[i];
@@ -1038,7 +1050,7 @@ Tope* tope_delaunay(int npoints, int dim, double const* orgpoints)
       }
 
       Facet* facet = allocator_mem(alc, hfacet);
-      double* normal = facet->centroid + tope->dim;
+      double* normal = allocator_mem(alc, facet->hnormal);
       if (normal[tope->dim - 1] < 0.0) {
         continue;
       }
@@ -1048,7 +1060,7 @@ Tope* tope_delaunay(int npoints, int dim, double const* orgpoints)
       /* Disassociate facet from ridges: */
       ridge->facets[j] = UINT32_MAX;
 
-      u32* ridges = (u32*)(facet->centroid + 2 * tope->dim);
+      u32* ridges = allocator_mem(alc, facet->hridges);
       for (k = 0; k < tope->dim; ++k) {
         u32 hridgek = ridges[k];
         Ridge* ridgek = allocator_mem(alc, hridgek);
@@ -1119,7 +1131,7 @@ void tope_addvertex(Tope* tope, double const* point)
   u32 hfacet = tope->firstfacet;
   while (hfacet != UINT32_MAX) {
     Facet* facet = allocator_mem(alc, hfacet);
-    double* normal = facet->centroid + tope->dim;
+    double* normal = allocator_mem(alc, facet->hnormal);
     double h = vec_dot(tope->dim, pos, normal) - facet->dist;
     if (h > EPS) {
       hmaxfacet = hfacet;
@@ -1171,7 +1183,7 @@ void tope_print(Tope* tope)
     printf("\n");
 
     printf("  vertices:\n");
-    u32* vertices = (u32*)(facet->centroid + 2 * d) + d;
+    u32* vertices = allocator_mem(alc, facet->hvertices);
     for (int j = 0; j < d; ++j) {
       u32 hvertex = vertices[j];
       Vertex* vertex = allocator_mem(alc, hvertex);
@@ -1251,7 +1263,7 @@ void tope_interpolate(
 
   while (1) {
     Facet* currentfacet = allocator_mem(alc, hcurrentfacet);
-    u32* ridges = (u32*)(currentfacet->centroid + 2 * tope->dim);
+    u32* ridges = allocator_mem(alc, currentfacet->hridges);
     u32* vertices = ridges + tope->dim;
 
     /* In the current facet, find the ridge where xi is highest above: */
@@ -1286,7 +1298,7 @@ void tope_interpolate(
 
         /* Construct normal: */
         memcpy(vdn + 2, centroid, d * sizeof(double));
-        vec_sub(d, vdn + 2, currentfacet->centroid);
+        vec_sub(d, vdn + 2, allocator_mem(alc, currentfacet->hcentroid));
         for (i = 0; i < d - 1; ++i) {
           double fac = vec_dot(d, vdn + 2, &verts[i * d]);
           vec_adds(d, vdn + 2, &verts[i * d], -fac);
@@ -1299,7 +1311,7 @@ void tope_interpolate(
 
       /* Sign of normal: */
       sign = 1.0;
-      if (vec_dot(d, currentfacet->centroid, vdn + 2) < vdn[1]) {
+      if (vec_dot(d, allocator_mem(alc, currentfacet->hcentroid), vdn + 2) < vdn[1]) {
         /* outward pointing normal */
         sign = -1.0;
       }
@@ -1369,7 +1381,8 @@ Facet* tope_facet_nextfacet(Facet* facet)
 void tope_facet_getnormal(Facet* facet, double* normal)
 {
   int d = facet->tope->dim;
-  memcpy(normal, facet->centroid + d, d * sizeof(double));
+  Allocator* alc = &facet->tope->alc;
+  memcpy(normal, allocator_mem(alc, facet->hnormal), d * sizeof(double));
   for (int i = 0; i < d; ++i) {
     normal[i] /= facet->tope->scales[i];
   }
@@ -1380,10 +1393,11 @@ void tope_facet_getnormal(Facet* facet, double* normal)
 
 void tope_facet_getcentroid(Facet* facet, double* centroid)
 {
-  int i;
-
-  memcpy(centroid, facet->centroid, facet->tope->dim * sizeof(double));
-  for (i = 0; i < facet->tope->dim; ++i) {
+  int d = facet->tope->dim;
+  Allocator* alc = &facet->tope->alc;
+  double* fcentroid = allocator_mem(alc, facet->hcentroid);
+  memcpy(centroid, fcentroid, d * sizeof(double));
+  for (int i = 0; i < d; ++i) {
     centroid[i] *= facet->tope->scales[i];
   }
   vec_add(facet->tope->dim, centroid, facet->tope->shift);
@@ -1405,8 +1419,9 @@ double tope_facet_getoffset(Facet* facet)
 double tope_facet_getvolume(Facet* facet)
 {
   int d = facet->tope->dim;
+  Allocator* alc = &facet->tope->alc;
   double* s = facet->tope->scales;
-  double* n = facet->centroid + d;
+  double* n = allocator_mem(alc, facet->hnormal);
   double volume = facet->volume;
 
   /* Transformed normal: */

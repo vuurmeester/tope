@@ -49,10 +49,10 @@ struct _tope_Facet {
   Point* outsidehead; /* visible points list */
   Point* outsidetail; /* last entry in visible points list */
   bool visible;
-  double centroid[1]; /* actually d-vector */
-  /*double normal[d];*/
-  /*u32 ridges[d];*/
-  /*u32 vertices[d];*/
+  u32 hcentroid;
+  u32 hnormal;
+  u32 hridges;
+  u32 hvertices;
 };
 
 struct _Ridge {
