@@ -1,6 +1,6 @@
 #pragma once
 
-#include <polytoop.h>
+#include <tope.h>
 #include <stdbool.h>
 
 #include "allocator.h"
@@ -15,7 +15,7 @@ typedef struct _HashMap {
   u32* hashes;
 } HashMap;
 
-struct _Polytoop {
+struct _Tope {
   Allocator alc;
   int dim;
   bool isdelaunay;
@@ -39,11 +39,11 @@ struct _Polytoop {
   int newfacets_cap;
 };
 
-struct _polytoop_Facet {
+struct _tope_Facet {
   u32 next;
   u32 prev;
 
-  Polytoop* polytoop;
+  Tope* tope;
   double volume;
   double dist;        /* distance from origin */
   Point* outsidehead; /* visible points list */
@@ -64,11 +64,11 @@ struct _Ridge {
   u32 vertices[1]; /* d - 1 adjacent vertices */
 };
 
-struct _polytoop_Vertex {
+struct _tope_Vertex {
   u32 next;
   u32 prev;
 
-  Polytoop* polytoop;
+  Tope* tope;
   int index;
   int nridges;        /* the number of ridges attached to this vertex */
   double position[1]; /* d-vector */

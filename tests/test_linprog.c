@@ -14,7 +14,7 @@ int main()
   int j;
   double d;
 
-  double start = polytoop_gettime();
+  double start = tope_gettime();
   int nunb = 0;
   int nopt = 0;
   int ntests = 1000;
@@ -92,7 +92,7 @@ int main()
     free(A);
   }
 
-  printf("t = %g\n", polytoop_gettime() - start);
+  printf("t = %g\n", tope_gettime() - start);
   printf("%d unbounded\n", nunb);
   printf("%d optimized\n", nopt);
 

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.31)
 
-project(polytoop LANGUAGES C)
+project(tope LANGUAGES C)
 
 # Only debug and release:
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "" FORCE)
@@ -66,15 +66,15 @@ source_group(header FILES ${header_files})
 source_group(source FILES ${source_files})
 
 # Define library:
-add_library(polytoop ${header_files} ${source_files})
-set_target_properties(polytoop PROPERTIES LINKER_LANGUAGE C)
+add_library(tope ${header_files} ${source_files})
+set_target_properties(tope PROPERTIES LINKER_LANGUAGE C)
 if (UNIX)
-  target_link_libraries(polytoop m)
+  target_link_libraries(tope m)
 endif()
 
 # Install library and headers:
-install(TARGETS polytoop ARCHIVE DESTINATION lib)
-install(FILES ${header_files} DESTINATION include/polytoop)
+install(TARGETS tope ARCHIVE DESTINATION lib)
+install(FILES ${header_files} DESTINATION include/tope)
 
 # Tests:
 if(TESTS_ENABLED)
@@ -83,10 +83,10 @@ if(TESTS_ENABLED)
   file(GLOB_RECURSE test_files tests/*.c)
   foreach(sname ${test_files})
     get_filename_component(name ${sname} NAME_WE)
-    set (exename polytoop_${name})
+    set (exename tope_${name})
     add_executable(${exename} ${sname})
     set_target_properties(${exename} PROPERTIES LINKER_LANGUAGE C)
-    target_link_libraries(${exename} polytoop)
+    target_link_libraries(${exename} tope)
     add_test(${exename} ${exename})
   endforeach()
 endif()
@@ -96,14 +96,14 @@ if(EXAMPLES_ENABLED)
   file(GLOB_RECURSE example_files examples/*.c)
   foreach(sname ${example_files})
     get_filename_component(name ${sname} NAME_WE)
-    set (exename polytoop_${name})
+    set (exename tope_${name})
     add_executable(${exename} ${sname})
     set_target_properties(${exename} PROPERTIES LINKER_LANGUAGE C)
-    target_link_libraries(${exename} polytoop)
+    target_link_libraries(${exename} tope)
   endforeach()
 endif()
 
 # Executable:
 add_executable(poly exe/main.c)
 set_target_properties(poly PROPERTIES LINKER_LANGUAGE C)
-target_link_libraries(poly polytoop)
+target_link_libraries(poly tope)

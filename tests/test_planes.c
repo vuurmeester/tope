@@ -1,6 +1,6 @@
 #include "../src/math.h"
 
-#include <polytoop.h>
+#include <tope.h>
 
 #define DIM 3
 #define NPLANES 5
@@ -9,7 +9,7 @@
 
 int main(void)
 {
-  Polytoop* polytoop;
+  Tope* tope;
   double normals[(NPLANES + 1) * DIM];
   double distances[NPLANES + 1];
 
@@ -42,18 +42,18 @@ int main(void)
   distances[m] = 5.0;
   ++m;
 
-  /* Compute polytoop from pyramid planes: */
+  /* Compute tope from pyramid planes: */
   xi[0] = 0.0;
   xi[1] = 0.0;
   xi[2] = 0.25;
-  polytoop = polytoop_fromplanes(m, DIM, normals, distances, xi);
+  tope = tope_fromplanes(m, DIM, normals, distances, xi);
 
-  if (polytoop) {
-    /* Print the polytoop: */
-    polytoop_print(polytoop);
+  if (tope) {
+    /* Print the tope: */
+    tope_print(tope);
 
-    /* Delete polytoop object: */
-    polytoop_delete(polytoop);
+    /* Delete tope object: */
+    tope_delete(tope);
   }
 
   return 0;

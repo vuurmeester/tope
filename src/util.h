@@ -20,4 +20,4 @@ double random_getdouble(void);
 int random_getint(int lo, int hi);
 
 /** Time difference [s] since last call. */
-double polytoop_gettime(void);
+double tope_gettime(void);

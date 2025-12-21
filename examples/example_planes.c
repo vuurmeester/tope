@@ -4,7 +4,7 @@
 #include "../src/math.h"
 #include "../src/util.h"
 
-#include <polytoop.h>
+#include <tope.h>
 
 
 
@@ -21,9 +21,9 @@ void benchmark(int ntests, int nplanes, int ndims)
   double* center;
   double* normals;
   double* dists;
-  Polytoop* polytoop;
+  Tope* tope;
 
-  start = polytoop_gettime();
+  start = tope_gettime();
   random_reset();
   for (itest = 0; itest < ntests; ++itest) {
     /* Random center: */
@@ -44,22 +44,22 @@ void benchmark(int ntests, int nplanes, int ndims)
                       vec_dot(ndims, center, &normals[iplane * ndims]);
     }
 
-    /* Create polytoop object: */
-    polytoop = polytoop_fromplanes(nplanes, ndims, normals, dists, center);
+    /* Create tope object: */
+    tope = tope_fromplanes(nplanes, ndims, normals, dists, center);
 
     /* Accumulate total number of vertices created: */
-    if (polytoop) {
-      nfacets += polytoop_getnumfacets(polytoop);
-      nverts += polytoop_getnumvertices(polytoop);
-      nridges += polytoop_getnumridges(polytoop);
-      polytoop_delete(polytoop);
+    if (tope) {
+      nfacets += tope_getnumfacets(tope);
+      nverts += tope_getnumvertices(tope);
+      nridges += tope_getnumridges(tope);
+      tope_delete(tope);
     }
 
     free(dists);
     free(normals);
     free(center);
   }
-  dt = polytoop_gettime() - start;
+  dt = tope_gettime() - start;
   printf("ntests      = %d\n", ntests);
   printf("nplanes     = %d\n", nplanes);
   printf("ndims       = %d\n", ndims);
