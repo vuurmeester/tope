@@ -101,7 +101,7 @@ static double getperiod(void)
 
 
 
-double polytoop_gettime(void)
+double tope_gettime(void)
 {
   unsigned hi;
   unsigned lo;

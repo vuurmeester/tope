@@ -6,7 +6,7 @@
 #include "../src/math.h"
 #include "../src/util.h"
 
-#include <polytoop.h>
+#include <tope.h>
 
 static int linenr = 0;
 
@@ -43,7 +43,7 @@ int main(void)
   char* start = NULL;
   char* next = NULL;
 
-  // Read dimension:
+  /* Read dimension: */
   start = read_line();
   int d = strtol(start, &next, 10);
   if (next == start) {
@@ -54,7 +54,7 @@ int main(void)
   }
   printf("dimension %d\n", d);
 
-  // Read point count:
+  /* Read point count: */
   start = read_line();
   int npoints = strtol(start, &next, 10);
   if (next == start) {
@@ -64,10 +64,10 @@ int main(void)
 
   double* points = malloc(d * npoints * sizeof(double));
   for (int i = 0; i < npoints; ++i) {
-    // Read vertex:
+    /* Read vertex: */
     start = read_line();
     for (int j = 0; j < d; ++j) {
-      // Read point component:
+      /* Read point component: */
       points[i * d + j] = strtod(start, &next);
       if (next == start) {
         error("could not read point %d component %d", i, j);
@@ -80,19 +80,19 @@ int main(void)
     mat_print(npoints, d, points);
   }
   
-    /* Add points to polytoop: */
-  double starttime = polytoop_gettime();
-  Polytoop* polytoop = polytoop_frompoints(npoints, d, points);
-  double endtime = polytoop_gettime();
-  int nfacets = polytoop_getnumfacets(polytoop);
-  int nridges = polytoop_getnumridges(polytoop);
-  int nverts = polytoop_getnumvertices(polytoop);
+  /* Add points to tope: */
+  double starttime = tope_gettime();
+  Tope* tope = tope_frompoints(npoints, d, points);
+  double endtime = tope_gettime();
+  int nfacets = tope_getnumfacets(tope);
+  int nridges = tope_getnumridges(tope);
+  int nverts = tope_getnumvertices(tope);
   printf("facets      = %d\n"  , nfacets);
   printf("ridges      = %d\n"  , nridges);
   printf("verts       = %d\n"  , nverts);
   printf("time        = %g\n\n", endtime - starttime);
 
-  polytoop_delete(polytoop);
+  tope_delete(tope);
   free(points);
 
   return 0;

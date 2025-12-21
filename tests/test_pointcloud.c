@@ -4,7 +4,7 @@
 #include "../src/util.h"
 #include "../src/math.h"
 
-#include <polytoop.h>
+#include <tope.h>
 
 #define DIM 3
 #define NPOINTS 20
@@ -15,7 +15,7 @@ int main()
 {
   int m;
   double points[NPOINTS * DIM];
-  Polytoop* polytoop;
+  Tope* tope;
 
   /* Define a cube. */
   m = 0;
@@ -90,23 +90,23 @@ int main()
   points[m * DIM + 2] = 2.0;
   ++m;
 
-  /* Initialize polytoop with all but the last: */
-  polytoop = polytoop_frompoints(m - 1, 3, points);
-  if (polytoop_getnumfacets(polytoop) != 12) {
+  /* Initialize tope with all but the last: */
+  tope = tope_frompoints(m - 1, 3, points);
+  if (tope_getnumfacets(tope) != 12) {
     return -1;
   }
 
   /* Add the last point: */
-  polytoop_addvertex(polytoop, &points[(m - 1) * DIM]);
-  if (polytoop_getnumfacets(polytoop) != 14) {
+  tope_addvertex(tope, &points[(m - 1) * DIM]);
+  if (tope_getnumfacets(tope) != 14) {
     return -1;
   }
 
-  /* Print the polytoop: */
-  polytoop_print(polytoop);
+  /* Print the tope: */
+  tope_print(tope);
 
-  /* Delete polytoop object: */
-  polytoop_delete(polytoop);
+  /* Delete tope object: */
+  tope_delete(tope);
 
   return 0;
 }

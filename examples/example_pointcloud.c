@@ -7,7 +7,7 @@
 #include "../src/math.h"
 #include "../src/util.h"
 
-#include <polytoop.h>
+#include <tope.h>
 
 
 
@@ -22,19 +22,19 @@ double benchmark(int ntests, int npoints, int ndims, int cospherical)
   double start;
   double dt;
   double* points;
-  Polytoop* polytoop;
+  Tope* tope;
 
   points = malloc(npoints * ndims * sizeof(double));
 
   random_reset();
 
-  printf("***** polytoop test *****\n");
+  printf("***** tope test *****\n");
   printf("ntests      = %d\n", ntests);
   printf("npoints     = %d\n", npoints);
   printf("ndims       = %d\n", ndims);
   printf("cospherical = %s\n", cospherical ? "true" : "false");
 
-  start = polytoop_gettime();
+  start = tope_gettime();
   nfacets = 0;
   nridges = 0;
   nverts = 0;
@@ -49,18 +49,18 @@ double benchmark(int ntests, int npoints, int ndims, int cospherical)
       }
     }
 
-    /* Add points to polytoop: */
-    polytoop = polytoop_frompoints(npoints, ndims, points);
+    /* Add points to tope: */
+    tope = tope_frompoints(npoints, ndims, points);
 
     /* Accumulate total number of facets and vertices created: */
-    nfacets += polytoop_getnumfacets(polytoop);
-    nridges += polytoop_getnumridges(polytoop);
-    nverts += polytoop_getnumvertices(polytoop);
+    nfacets += tope_getnumfacets(tope);
+    nridges += tope_getnumridges(tope);
+    nverts += tope_getnumvertices(tope);
 
     /* Clean up: */
-    polytoop_delete(polytoop);
+    tope_delete(tope);
   }
-  dt = polytoop_gettime() - start;
+  dt = tope_gettime() - start;
   printf("facets      = %d\n", nfacets);
   printf("ridges      = %d\n", nridges);
   printf("verts       = %d\n", nverts);
@@ -92,13 +92,13 @@ int main(void)
   /* Many small hulls: */
   t += benchmark(2000, 16, 3, 1);
 
-  /* One large cospherical polytoop: */
+  /* One large cospherical tope: */
   t += benchmark(1, 20000, 3, 1);
 
-  /* Large 4D polytoop: */
+  /* Large 4D tope: */
   t += benchmark(1, 200000, 4, 0);
 
-  /* Large 5D polytoop: */
+  /* Large 5D tope: */
   t += benchmark(1, 50000, 5, 0);
 
   printf("t_total = %g\n", t);
