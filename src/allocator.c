@@ -12,17 +12,18 @@ void allocator_init(Allocator* alc)
 {
   alc->blocksize = FIRST_BLOCKSIZE;
   alc->npools = 0;
-  memset(alc->freeps, 0xff, sizeof(alc->freeps));
-  alc->blockfreep = 0;
+  memset(alc->freeps , 0x00, sizeof alc->freeps );
   memset(alc->indices, 0xff, sizeof alc->indices);
   alc->block = malloc(alc->blocksize * sizeof(Block));
+  alc->block->next = NULL;
+  alc->blockfreep = alc->block + 1;
 }
 
 
 
-u32 allocator_alloc(Allocator* alc, u16 numbytes)
+void* allocator_alloc(Allocator* alc, u16 numbytes)
 {
-  u32 ret;
+  Block* mem;
 
   assert(0 < numbytes && numbytes <= ALLOCATOR_MAXSIZE);
 
@@ -37,54 +38,57 @@ u32 allocator_alloc(Allocator* alc, u16 numbytes)
     alc->indices[numblocks - 1] = pool_index;
     ++alc->npools;
   }
-  else if (alc->freeps[pool_index] != UINT32_MAX) {
+  else if (alc->freeps[pool_index] != NULL) {
     /* Prefer recycled memory: */
-    ret = alc->freeps[pool_index];
-    alc->freeps[pool_index] = alc->block[ret].next;
+    mem = alc->freeps[pool_index];
+    alc->freeps[pool_index] = mem->next;
     goto _return;
   }
 
   /* Check if requested memory exceeds current block: */
-  if (alc->blockfreep + numblocks > alc->blocksize) {
+  if (alc->blockfreep + numblocks > alc->block + alc->blocksize) {
     /* Increase block size by 50%, round up to 4k: */
     u32 numpages = alc->blocksize / 512;
     numpages = 3 * numpages / 2 + 1;
     alc->blocksize = numpages * 512;
-    alc->block = realloc(alc->block, alc->blocksize * sizeof(Block));
+    Block* newblock = malloc(alc->blocksize * sizeof(Block));
+    newblock->next = alc->block;
+    alc->block = newblock;
+    alc->blockfreep = alc->block + 1;
   }
 
   /* The memory to return: */
-  ret = alc->blockfreep;
+  mem = alc->blockfreep;
 
   /* Next free memory in block: */
   alc->blockfreep += numblocks;
 
 _return:
 #ifndef NDEBUG
-  memset(allocator_mem(alc, ret), 0x00, numblocks * sizeof(Block));
+  memset(mem, 0x00, numblocks * sizeof(Block));
 #endif
 
-  return ret;
+  return mem;
 }
 
 
 
-void allocator_free(Allocator* alc, u32 handle, u16 numbytes)
+void allocator_free(Allocator* alc, void* mem, u16 numbytes)
 {
   /* Check input: */
   assert(0 < numbytes && numbytes <= ALLOCATOR_MAXSIZE);
-  assert(handle != UINT32_MAX);
+  assert(mem != NULL);
 
   /* Rounded size: */
   u32 numblocks = (numbytes - 1) / sizeof(Block) + 1;
 
 #ifndef NDEBUG
-  memset(allocator_mem(alc, handle), 0xcd, numblocks * sizeof(Block));
+  memset(mem, 0xcd, numblocks * sizeof(Block));
 #endif
 
   /* Memory at end of block?: */
-  if (alc->blockfreep == handle + numblocks) {
-    alc->blockfreep = handle;
+  if (alc->blockfreep == (Block*)mem + numblocks) {
+    alc->blockfreep = mem;
     return;
   }
 
@@ -93,8 +97,8 @@ void allocator_free(Allocator* alc, u32 handle, u16 numbytes)
   assert(pool_index < alc->npools);
 
   /* Prepend to pool freelist: */
-  alc->block[handle].next = alc->freeps[pool_index];
-  alc->freeps[pool_index] = handle;
+  ((Block*)mem)->next = alc->freeps[pool_index];
+  alc->freeps[pool_index] = mem;
 }
 
 
@@ -102,5 +106,10 @@ void allocator_free(Allocator* alc, u32 handle, u16 numbytes)
 void allocator_destroy(Allocator* alc)
 {
   assert(alc != NULL);
-  free(alc->block);
+  while (alc->block != NULL) {
+    Block* next = alc->block->next;
+    free(alc->block);
+    alc->block = next;
+  }
+  memset(alc, 0x00, sizeof *alc);
 }

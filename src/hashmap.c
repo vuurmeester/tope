@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "allocator.h"
 #include "hashmap.h"
@@ -11,36 +12,37 @@
 
 
 
-static u32 hashvertset(int d, u32* verts)
+static u32 hashvertset(int d, tope_Vertex** verts)
 {
-  d -= 2; /* d - 1 vertices, so d - 2 is the last index */
-  u32 hash = verts[d];
+  u32 hash = 0x811c9dc5;  /* fnv-1a */
+  d -= 1; /* d - 1 vertices */
   while (d--) {
-    hash = 31 * hash ^ verts[d];
+    hash = hash ^ (u32)((u64)verts[d] >> 3);
+    hash *= 0x01000193;
   }
   return hash;
 }
 
 
 
-static int compvertsets(int d, u32* vertset1, u32* vertset2)
+static bool vertsets_equal(int d, Vertex** vertset1, Vertex** vertset2)
 {
   --d; /* d - 1 vertices per ridge */
   while (d--) {
     if (vertset1[d] != vertset2[d]) {
-      return -1;
+      return false;
     }
   }
-  return 0; /* same */
+  return true; /* same */
 }
 
 
 
-static void initarrays(u32** ridges, u32** hashes, u32 cap)
+static void initarrays(Ridge*** ridges, u32** hashes, u32 cap)
 {
-  *ridges = malloc(cap * 2 * sizeof(u32));
-  memset(*ridges, 0xff, cap * sizeof(u32));
-  *hashes = *ridges + cap;
+  *ridges = malloc(cap * (sizeof(Ridge*) + sizeof(u32)));
+  memset(*ridges, 0x00, cap * sizeof(Ridge*));
+  *hashes = (u32*)(*ridges + cap);
 }
 
 
@@ -49,16 +51,16 @@ static void expand(HashMap* hashmap)
 {
   u32 newcap = hashmap->cap * 2;
   u32 newmask = newcap - 1;
-  u32* newridges;
+  Ridge** newridges;
   u32* newhashes;
   initarrays(&newridges, &newhashes, newcap);
 
   for (u32 i = 0; i < hashmap->cap; ++i) {
-    if (hashmap->ridges[i] == UINT32_MAX) {
+    if (hashmap->ridges[i] == NULL) {
       continue;
     }
     u32 newindex = hashmap->hashes[i] & newmask;
-    while (newridges[newindex] != UINT32_MAX) {
+    while (newridges[newindex] != NULL) {
       newindex = (newindex + 1) & newmask;
     }
     newridges[newindex] = hashmap->ridges[i];
@@ -92,13 +94,13 @@ void hashmap_destroy(HashMap* hashmap)
 
 void hashmap_clear(HashMap* hashmap)
 {
-  memset(hashmap->ridges, 0xff, hashmap->cap * sizeof(u32));
+  memset(hashmap->ridges, 0x00, hashmap->cap * sizeof(Ridge*));
   hashmap->len = 0;
 }
 
 
 
-u32* hashmap_get(HashMap* hashmap, int d, u32* verts, Allocator* alc)
+Ridge** hashmap_get(HashMap* hashmap, int d, Vertex** verts, Allocator* alc)
 {
   if (4 * hashmap->len > 3 * hashmap->cap) {
     /* More than 75% filled. */
@@ -108,10 +110,10 @@ u32* hashmap_get(HashMap* hashmap, int d, u32* verts, Allocator* alc)
   u32 hash = hashvertset(d, verts);
   u32 index = hash & (hashmap->cap - 1);
 
-  while (hashmap->ridges[index] != UINT32_MAX) {
+  while (hashmap->ridges[index] != NULL) {
     if (hashmap->hashes[index] == hash) {
-      Ridge* ridge = allocator_mem(alc, hashmap->ridges[index]);
-      if (compvertsets(d, verts, ridge->vertices) == 0) {
+      Ridge* ridge = hashmap->ridges[index];
+      if (vertsets_equal(d, verts, ridge->vertices)) {
         return hashmap->ridges + index;
       }
     }

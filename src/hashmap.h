@@ -12,4 +12,4 @@ void hashmap_destroy(HashMap* hashmap);
 void hashmap_clear(HashMap* hashmap);
 
 /** Retrieve ridge by its vertices (inserts when not found). */
-u32* hashmap_get(HashMap* hashmap, int d, u32* verts, Allocator* alc);
+Ridge** hashmap_get(HashMap* hashmap, int d, Vertex** verts, Allocator* alc);

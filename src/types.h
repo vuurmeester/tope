@@ -7,11 +7,13 @@
 
 typedef struct _Ridge Ridge;
 typedef struct _Point Point;
+typedef tope_Vertex Vertex;
+typedef tope_Facet Facet;
 
 typedef struct _HashMap {
   u32 cap;     /* current capacity */
   u32 len;     /* number of elements */
-  u32* ridges; /* entries */
+  Ridge** ridges; /* entries */
   u32* hashes;
 } HashMap;
 
@@ -23,25 +25,25 @@ struct _Tope {
   double* scales;
   double* center;
   int nfacets;
-  u32 firstfacet;
-  u32 lastfacet;
+  Facet* firstfacet;
+  Facet* lastfacet;
   int nridges;
-  u32 firstridge;
-  u32 lastridge;
+  Ridge* firstridge;
+  Ridge* lastridge;
   int nverts;
-  u32 firstvertex;
+  Vertex* firstvertex;
   HashMap newridges;
-  u32* horizonridges;
+  Ridge** horizonridges;
   int horizonridges_len;
   int horizonridges_cap;
-  u32* newfacets;
+  Facet** newfacets;
   int newfacets_len;
   int newfacets_cap;
 };
 
 struct _tope_Facet {
-  u32 next;
-  u32 prev;
+  Facet* next;
+  Facet* prev;
 
   Tope* tope;
   double volume;
@@ -49,24 +51,24 @@ struct _tope_Facet {
   Point* outsidehead; /* visible points list */
   Point* outsidetail; /* last entry in visible points list */
   bool visible;
-  u32 hcentroid;
-  u32 hnormal;
-  u32 hridges;
-  u32 hvertices;
+  double* centroid;
+  double* normal;
+  Ridge** ridges;
+  Vertex** vertices;
 };
 
 struct _Ridge {
-  u32 next;
-  u32 prev;
+  Ridge* next;
+  Ridge* prev;
 
-  u32 hvdn;        /* handle to volume, distance and normal */
-  u32 facets[2];   /* 2 adjacent facets */
-  u32 vertices[1]; /* d - 1 adjacent vertices */
+  double* vdn;        /* volume, distance, normal */
+  Facet* facets[2];   /* 2 adjacent facets */
+  Vertex* vertices[1]; /* d - 1 adjacent vertices */
 };
 
 struct _tope_Vertex {
-  u32 next;
-  u32 prev;
+  Vertex* next;
+  Vertex* prev;
 
   Tope* tope;
   int index;
