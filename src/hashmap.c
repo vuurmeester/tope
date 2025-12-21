@@ -12,28 +12,15 @@
 
 
 
-static u32 hashvertset(int d, tope_Vertex** verts)
+static u32 hashvertset(int d, Vertex** verts)
 {
   u32 hash = 0x811c9dc5;  /* fnv-1a */
   d -= 1; /* d - 1 vertices */
   while (d--) {
-    hash = hash ^ (u32)((u64)verts[d] >> 3);
+    hash = hash ^ (u32)((u64)verts[d] >> 6);
     hash *= 0x01000193;
   }
   return hash;
-}
-
-
-
-static bool vertsets_equal(int d, Vertex** vertset1, Vertex** vertset2)
-{
-  --d; /* d - 1 vertices per ridge */
-  while (d--) {
-    if (vertset1[d] != vertset2[d]) {
-      return false;
-    }
-  }
-  return true; /* same */
 }
 
 
@@ -111,13 +98,11 @@ Ridge** hashmap_get(HashMap* hashmap, int d, Vertex** verts, Allocator* alc)
   u32 index = hash & (hashmap->cap - 1);
 
   while (hashmap->ridges[index] != NULL) {
-    if (hashmap->hashes[index] == hash) {
-      Ridge* ridge = hashmap->ridges[index];
-      if (vertsets_equal(d, verts, ridge->vertices)) {
-        return hashmap->ridges + index;
-      }
+    if (hashmap->hashes[index] == hash &&
+        memcmp(verts, hashmap->ridges[index]->vertices, (d - 1) * sizeof(Vertex*)) == 0) {
+      return hashmap->ridges + index;
     }
-    index = (index + 1) & (hashmap->cap - 1); /* next in cluster */
+    index = (index + 1) & (hashmap->cap - 1);  /* next in cluster */
   }
 
   /* Not found, create new entry and return reference: */

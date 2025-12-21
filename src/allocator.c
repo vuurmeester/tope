@@ -4,19 +4,18 @@
 
 #include "allocator.h"
 
-#define FIRST_BLOCKSIZE 512
+#define BLOCKSIZE_STEP 512
 
 
 
 void allocator_init(Allocator* alc)
 {
-  alc->blocksize = FIRST_BLOCKSIZE;
+  alc->blocksize = 0;
   alc->npools = 0;
   memset(alc->freeps , 0x00, sizeof alc->freeps );
   memset(alc->indices, 0xff, sizeof alc->indices);
-  alc->block = malloc(alc->blocksize * sizeof(Block));
-  alc->block->next = NULL;
-  alc->blockfreep = alc->block + 1;
+  alc->block = NULL;
+  alc->blockfreep = NULL;
 }
 
 
@@ -29,7 +28,7 @@ void* allocator_alloc(Allocator* alc, u16 numbytes)
 
   /* Rounded size and pool index: */
   u32 numblocks = (numbytes - 1) / sizeof(Block) + 1;
-  u32 pool_index = alc->indices[numblocks - 1];
+  u8 pool_index = alc->indices[numblocks - 1];
 
   if (pool_index == 0xff) {
     /* Initialize new pool: */
@@ -47,14 +46,12 @@ void* allocator_alloc(Allocator* alc, u16 numbytes)
 
   /* Check if requested memory exceeds current block: */
   if (alc->blockfreep + numblocks > alc->block + alc->blocksize) {
-    /* Increase block size by 50%, round up to 4k: */
-    u32 numpages = alc->blocksize / 512;
-    numpages = 3 * numpages / 2 + 1;
-    alc->blocksize = numpages * 512;
+    /* Increase block size : */
+    alc->blocksize += BLOCKSIZE_STEP;
     Block* newblock = malloc(alc->blocksize * sizeof(Block));
     newblock->next = alc->block;
     alc->block = newblock;
-    alc->blockfreep = alc->block + 1;
+    alc->blockfreep = alc->block + 1;  /* step over 'next' pointer */
   }
 
   /* The memory to return: */
