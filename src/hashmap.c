@@ -87,7 +87,7 @@ void hashmap_clear(HashMap* hashmap)
 
 
 
-Ridge** hashmap_get(HashMap* hashmap, int d, Vertex** verts, Allocator* alc)
+Ridge** hashmap_get(HashMap* hashmap, int d, Vertex** verts)
 {
   if (4 * hashmap->len > 3 * hashmap->cap) {
     /* More than 75% filled. */
