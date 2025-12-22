@@ -1145,11 +1145,8 @@ void tope_interpolate(
   double* weights
 )
 {
-  int i;
   int ivertex;
   int iridge;
-  double* xiprime;
-  double* verts;
   double hmin;
   double h;
   Ridge* minridge;
@@ -1162,12 +1159,12 @@ void tope_interpolate(
 
   /* Some space for various tasks: */
   int d = tope->dim - 1;
-  xiprime = alloca(d * sizeof(double));
+  double* xiprime = alloca(d * sizeof(double));
   double* centroid = alloca(d * sizeof(double));
-  verts = alloca(d * d * sizeof(double));
+  double* verts = alloca(d * d * sizeof(double));
 
   /* Transform xi to local coordinates: */
-  for (i = 0; i < d; ++i) {
+  for (int i = 0; i < d; ++i) {
     xiprime[i] = (xi[i] - tope->shift[i]) / tope->scales[i];
   }
 
@@ -1205,7 +1202,7 @@ void tope_interpolate(
         /* Construct normal: */
         memcpy(ridge->vdn + 2, centroid, d * sizeof(double));
         vec_sub(d, ridge->vdn + 2, currentfacet->centroid);
-        for (i = 0; i < d - 1; ++i) {
+        for (int i = 0; i < d - 1; ++i) {
           double fac = vec_dot(d, ridge->vdn + 2, &verts[i * d]);
           vec_adds(d, ridge->vdn + 2, &verts[i * d], -fac);
         }
