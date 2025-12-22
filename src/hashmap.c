@@ -27,8 +27,9 @@ static u32 hashvertset(int d, Vertex** verts)
 
 static void initarrays(Ridge*** ridges, u32** hashes, u32 cap)
 {
-  *ridges = malloc(cap * (sizeof(Ridge*) + sizeof(u32)));
-  memset(*ridges, 0x00, cap * sizeof(Ridge*));
+  int numbytes = cap * (sizeof(Ridge*) + sizeof(u32));
+  *ridges = malloc(numbytes);
+  memset(*ridges, 0x00, numbytes);
   *hashes = (u32*)(*ridges + cap);
 }
 
@@ -89,7 +90,7 @@ void hashmap_clear(HashMap* hashmap)
 
 Ridge** hashmap_get(HashMap* hashmap, int d, Vertex** verts)
 {
-  if (4 * hashmap->len > 3 * hashmap->cap) {
+  if (4 * hashmap->len >= 3 * hashmap->cap) {
     /* More than 75% filled. */
     expand(hashmap);
   }
@@ -99,7 +100,11 @@ Ridge** hashmap_get(HashMap* hashmap, int d, Vertex** verts)
 
   while (hashmap->ridges[index] != NULL) {
     if (hashmap->hashes[index] == hash &&
-        memcmp(verts, hashmap->ridges[index]->vertices, (d - 1) * sizeof(Vertex*)) == 0) {
+        memcmp(
+          verts,
+          hashmap->ridges[index]->vertices,
+          (d - 1) * sizeof(Vertex*)
+        ) == 0) {
       return hashmap->ridges + index;
     }
     index = (index + 1) & (hashmap->cap - 1);  /* next in cluster */
