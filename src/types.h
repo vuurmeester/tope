@@ -28,10 +28,7 @@ struct _Tope {
   Facet* firstfacet;
   Facet* lastfacet;
   int nridges;
-  Ridge* firstridge;
-  Ridge* lastridge;
   int nverts;
-  Vertex* firstvertex;
   HashMap newridges;
   Ridge** horizonridges;
   int horizonridges_len;
@@ -45,7 +42,6 @@ struct _tope_Facet {
   Facet* next;
   Facet* prev;
 
-  Tope* tope;
   double volume;
   double dist;        /* distance from origin */
   Point* outsidehead; /* visible points list */
@@ -53,24 +49,17 @@ struct _tope_Facet {
   bool visible;
   double* centroid;
   double* normal;
-  Ridge** ridges;
-  Vertex** vertices;
+  Ridge** ridges;  /* d ridges */
+  Vertex** vertices;  /* d verts */
 };
 
 struct _Ridge {
-  Ridge* next;
-  Ridge* prev;
-
   double* vdn;        /* volume, distance, normal */
   Facet* facets[2];   /* 2 adjacent facets */
   Vertex* vertices[1]; /* d - 1 adjacent vertices */
 };
 
 struct _tope_Vertex {
-  Vertex* next;
-  Vertex* prev;
-
-  Tope* tope;
   int index;
   int nridges;        /* the number of ridges attached to this vertex */
   double position[1]; /* d-vector */
