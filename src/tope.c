@@ -13,9 +13,6 @@
 
 #define EPS 1.0e-9
 
-typedef tope_Vertex Vertex;
-typedef tope_Facet Facet;
-
 
 
 /* Create and initialize a vertex struct with a position and id: */
@@ -287,7 +284,6 @@ static void facet_addoutside(Tope* tope, Facet* facet, Point* point)
 static void addfacet(Tope* tope, Facet* facet, Ridge** ridges)
 {
   int d = tope->dim;
-  Allocator* alc = &tope->alc;
 
   /* Facet centroid: */
   vec_reset(d, facet->centroid);
@@ -371,7 +367,6 @@ static void addfacet(Tope* tope, Facet* facet, Ridge** ridges)
 static void initialsimplex(Tope* tope, int npoints, Point* points)
 {
   int d = tope->dim;
-  Allocator* alc = &tope->alc;
 
   /* Allocation: */
   double* span = malloc((npoints - 1) * d * sizeof(double));
@@ -476,7 +471,7 @@ static void initialsimplex(Tope* tope, int npoints, Point* points)
         ridgeverts[k - 1] = facet->vertices[k];
       }
 
-      Ridge** pnewridge = hashmap_get(&tope->newridges, d, ridgeverts, alc);
+      Ridge** pnewridge = hashmap_get(&tope->newridges, d, ridgeverts);
       if (*pnewridge == NULL) {
         /* new ridge apparently */
         *pnewridge = ridge_create(tope, ridgeverts);
@@ -519,7 +514,6 @@ static void initialsimplex(Tope* tope, int npoints, Point* points)
 static void addpoint(Tope* tope, Facet* facet, Point* apex)
 {
   int d = tope->dim;
-  Allocator* alc = &tope->alc;
 
   facet_remove(tope, facet);
   facet->visible = true;
@@ -646,7 +640,7 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
       }
 
       /* Get or create new ridge: */
-      Ridge** pnewridge = hashmap_get(&tope->newridges, d, ridgeverts, alc);
+      Ridge** pnewridge = hashmap_get(&tope->newridges, d, ridgeverts);
       if (*pnewridge == NULL) {
         /* Create new ridge: */
         *pnewridge = ridge_create(tope, ridgeverts);
@@ -721,7 +715,6 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
 
 static void build(Tope* tope, int npoints, Point* points)
 {
-  Allocator* alc = &tope->alc;
   assert(npoints >= tope->dim + 1);
 
   initialsimplex(tope, npoints, points);
@@ -900,7 +893,6 @@ Tope* tope_delaunay(int npoints, int dim, double const* orgpoints)
   Point* points;
 
   Tope* tope = tope_new();
-  Allocator* alc = &tope->alc;
 
   /* Reciprocal of dimension: */
   double recd = 1.0 / (double)dim;
@@ -916,8 +908,13 @@ Tope* tope_delaunay(int npoints, int dim, double const* orgpoints)
   minindices = alloca(dim * sizeof(int));
   maxindices = alloca(dim * sizeof(int));
   boundingbox(
-      npoints, dim, orgpoints, minindices, maxindices, tope->shift,
-      tope->scales
+    npoints,
+    dim,
+    orgpoints,
+    minindices,
+    maxindices,
+    tope->shift,
+    tope->scales
   );
   tope->shift[dim] = 0.0;
 
@@ -938,8 +935,8 @@ Tope* tope_delaunay(int npoints, int dim, double const* orgpoints)
       /* Transformed point: */
       for (i = 0; i < dim; ++i) {
         points[ipoint].pos[i] =
-            (orgpoints[ipoint * dim + i] - tope->shift[i]) /
-            tope->scales[i];
+          (orgpoints[ipoint * dim + i] - tope->shift[i]) /
+          tope->scales[i];
       }
 
       /* Create paraboloid in extra dimension: */
@@ -1029,9 +1026,6 @@ Tope* tope_delaunay(int npoints, int dim, double const* orgpoints)
 
 void tope_addvertex(Tope* tope, double const* point)
 {
-  int idim;
-  Allocator* alc = &tope->alc;
-
   /* Allocations: */
   double* pos = alloca(tope->dim * sizeof(double));
 
@@ -1045,7 +1039,7 @@ void tope_addvertex(Tope* tope, double const* point)
   /* Transformed position: */
   memcpy(pos, point, tope->dim * sizeof(double));
   vec_sub(tope->dim, pos, tope->shift);
-  for (idim = 0; idim < tope->dim; ++idim) {
+  for (int idim = 0; idim < tope->dim; ++idim) {
     if (tope->scales[idim] > 0.0) {
       pos[idim] /= tope->scales[idim];
     }
@@ -1073,9 +1067,8 @@ void tope_addvertex(Tope* tope, double const* point)
 
 void tope_print(Tope* tope)
 {
-  Allocator* alc = &tope->alc;
-
   int d = tope->dim;
+
   double* sv       = alloca(d * sizeof(double));
   double* normal   = alloca(d * sizeof(double));
   double* centroid = alloca(d * sizeof(double));
@@ -1293,7 +1286,6 @@ Facet* tope_facet_nextfacet(Facet* facet)
 void tope_facet_getnormal(Facet* facet, double* normal)
 {
   int d = facet->tope->dim;
-  Allocator* alc = &facet->tope->alc;
   memcpy(normal, facet->normal, d * sizeof(double));
   for (int i = 0; i < d; ++i) {
     normal[i] /= facet->tope->scales[i];
@@ -1306,7 +1298,6 @@ void tope_facet_getnormal(Facet* facet, double* normal)
 void tope_facet_getcentroid(Facet* facet, double* centroid)
 {
   int d = facet->tope->dim;
-  Allocator* alc = &facet->tope->alc;
   double* fcentroid = facet->centroid;
   memcpy(centroid, fcentroid, d * sizeof(double));
   for (int i = 0; i < d; ++i) {
@@ -1331,7 +1322,6 @@ double tope_facet_getoffset(Facet* facet)
 double tope_facet_getvolume(Facet* facet)
 {
   int d = facet->tope->dim;
-  Allocator* alc = &facet->tope->alc;
   double* s = facet->tope->scales;
   double* n = facet->normal;
   double volume = facet->volume;
