@@ -55,22 +55,22 @@ tope_Vertex* tope_firstvertex(Tope* tope);
 tope_Facet* tope_facet_nextfacet(tope_Facet* facet);
 
 /** Facet normal. */
-void tope_facet_getnormal(tope_Facet* facet, double* normal);
+void tope_facet_getnormal(Tope* tope, tope_Facet* facet, double* normal);
 
 /** Facet centroid. */
-void tope_facet_getcentroid(tope_Facet* facet, double* centroid);
+void tope_facet_getcentroid(Tope* tope, tope_Facet* facet, double* centroid);
 
 /** Facet plane offset. */
-double tope_facet_getoffset(tope_Facet* facet);
+double tope_facet_getoffset(Tope* tope, tope_Facet* facet);
 
 /** Facet volume. */
-double tope_facet_getvolume(tope_Facet* facet);
+double tope_facet_getvolume(Tope* tope, tope_Facet* facet);
 
 /** Number of facet vertices. */
-int tope_facet_getnumvertices(tope_Facet* facet);
+int tope_facet_getnumvertices(Tope* tope, tope_Facet* facet);
 
 /** Next vertex. */
 tope_Vertex* tope_vertex_nextvertex(tope_Vertex* vertex);
 
 /** Vertex position. */
-void tope_vertex_getposition(tope_Vertex* vertex, double* position);
+void tope_vertex_getposition(Tope* tope, tope_Vertex* vertex, double* position);

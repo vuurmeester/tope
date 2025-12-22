@@ -18,6 +18,7 @@
 /* Create and initialize a vertex struct with a position and id: */
 static Vertex* vertex_new(Tope* tope, double const* pos, int index)
 {
+  ++tope->nverts;
   Allocator* alc = &tope->alc;
 
   /* Allocate vertex: */
@@ -26,17 +27,7 @@ static Vertex* vertex_new(Tope* tope, double const* pos, int index)
     sizeof(Vertex) + (tope->dim - 1) * sizeof(double)
   );
 
-  /* Prepend to list: */
-  vertex->next = tope->firstvertex;
-  vertex->prev = NULL;
-  if (vertex->next != NULL) {
-    vertex->next->prev = vertex;
-  }
-  tope->firstvertex = vertex;
-  ++tope->nverts;
-
   /* Fill in other variables: */
-  vertex->tope = tope;
   vertex->index = index;
   vertex->nridges = 0;
   memcpy(vertex->position, pos, tope->dim * sizeof(double));
@@ -59,17 +50,7 @@ static void vertex_free(Tope* tope, Vertex* vertex)
 
 static void vertex_remove(Tope* tope, Vertex* vertex)
 {
-  if (vertex->next != NULL) {
-    vertex->next->prev = vertex->prev;
-  }
-  if (vertex->prev != NULL) {
-    vertex->prev->next = vertex->next;
-  }
-  else {
-    tope->firstvertex = vertex->next;
-  }
   --tope->nverts;
-
   vertex_free(tope, vertex);
 }
 
@@ -83,8 +64,6 @@ static Ridge* ridge_create(Tope* tope, Vertex** vertices)
 
   /* Create ridge: */
   Ridge* ridge = allocator_alloc(alc, sizeof(Ridge) + (d - 2) * sizeof(Vertex*));
-  ridge->next = NULL;
-  ridge->prev = NULL;
   ridge->vdn = NULL;
   ridge->facets[0] = NULL;
   ridge->facets[1] = NULL;
@@ -96,15 +75,6 @@ static Ridge* ridge_create(Tope* tope, Vertex** vertices)
   }
 
   /* Append ridge to tope list: */
-  ridge->prev = tope->lastridge;
-  ridge->next = NULL;
-  tope->lastridge = ridge;
-  if (ridge->prev != NULL) {
-    ridge->prev->next = ridge;
-  }
-  else {
-    tope->firstridge = ridge;
-  }
   ++tope->nridges;
 
   return ridge;
@@ -116,21 +86,17 @@ static void ridge_remove(Tope* tope, Ridge* ridge)
 {
   Allocator* alc = &tope->alc;
   int d = tope->dim;
-  if (ridge->prev != NULL) {
-    ridge->prev->next = ridge->next;
-  }
-  else {
-    assert(tope->firstridge == ridge);
-    tope->firstridge = ridge->next;
-  }
-  if (ridge->next != NULL) {
-    ridge->next->prev = ridge->prev;
-  }
-  else {
-    assert(tope->lastridge == ridge);
-    tope->lastridge = ridge->prev;
-  }
   --tope->nridges;
+
+  /* Remove reference to this ridge from adjacent vertices: */
+  for (int ivertex = 0; ivertex < tope->dim - 1; ++ivertex) {
+    Vertex* vertex = ridge->vertices[ivertex];
+    --vertex->nridges;
+    if (vertex->nridges == 0) {
+      /* Remove the vertex as well: */
+      vertex_remove(tope, vertex);
+    }
+  }
 
   if (ridge->vdn != NULL) {
     assert(tope->isdelaunay);
@@ -170,7 +136,6 @@ static Facet* facet_new(Tope* tope)
   tope->lastfacet = facet;
   facet->next = NULL;
 
-  facet->tope = tope;
   facet->volume = 0.0;
   facet->dist = 0.0;
   facet->outsidehead = NULL;
@@ -551,16 +516,6 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
       if (neighbour == NULL) {
         /* This neighbour was already removed, remove ridge. */
 
-        /* Remove reference to this ridge from adjacent vertices: */
-        for (int ivertex = 0; ivertex < tope->dim - 1; ++ivertex) {
-          Vertex* vertex = ridge->vertices[ivertex];
-          --vertex->nridges;
-          if (vertex->nridges == 0) {
-            /* Remove the vertex as well: */
-            vertex_remove(tope, vertex);
-          }
-        }
-
         /* Remove the ridge from the tope: */
         ridge_remove(tope, ridge);
       }
@@ -653,9 +608,7 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
     /* Add new facet to newfacets array: */
     if (tope->newfacets_len == tope->newfacets_cap) {
       tope->newfacets_cap = 3 * tope->newfacets_cap / 2 + 1;
-      tope->newfacets = realloc(
-        tope->newfacets, tope->newfacets_cap * sizeof(Facet*)
-      );
+      tope->newfacets = realloc(tope->newfacets, tope->newfacets_cap * sizeof(Facet*));
     }
     tope->newfacets[tope->newfacets_len++] = facet;
   }
@@ -883,15 +836,6 @@ Tope* tope_frompoints(int npoints, int dim, double const* orgpoints)
 
 Tope* tope_delaunay(int npoints, int dim, double const* orgpoints)
 {
-  int ipoint;
-  int i;
-  int j;
-  int k;
-  int* minindices;
-  int* maxindices;
-  double* positions;
-  Point* points;
-
   Tope* tope = tope_new();
 
   /* Reciprocal of dimension: */
@@ -905,8 +849,8 @@ Tope* tope_delaunay(int npoints, int dim, double const* orgpoints)
   tope->center = malloc(tope->dim * sizeof(double));
 
   /* Bounding box: */
-  minindices = alloca(dim * sizeof(int));
-  maxindices = alloca(dim * sizeof(int));
+  int* minindices = alloca(dim * sizeof(int));
+  int* maxindices = alloca(dim * sizeof(int));
   boundingbox(
     npoints,
     dim,
@@ -923,9 +867,9 @@ Tope* tope_delaunay(int npoints, int dim, double const* orgpoints)
   tope->scales[dim] = 1.0;
 
   /* Points array: */
-  points = malloc((npoints + 1) * sizeof(Point));
-  positions = malloc((npoints + 1) * (dim + 1) * sizeof(double));
-  for (ipoint = 0; ipoint < npoints + 1; ++ipoint) {
+  Point* points = malloc((npoints + 1) * sizeof(Point));
+  double* positions = malloc((npoints + 1) * (dim + 1) * sizeof(double));
+  for (int ipoint = 0; ipoint < npoints + 1; ++ipoint) {
     points[ipoint].next = NULL;
     points[ipoint].index = ipoint;
     points[ipoint].height = 0.0;
@@ -933,7 +877,7 @@ Tope* tope_delaunay(int npoints, int dim, double const* orgpoints)
 
     if (ipoint < npoints) {
       /* Transformed point: */
-      for (i = 0; i < dim; ++i) {
+      for (int i = 0; i < dim; ++i) {
         points[ipoint].pos[i] =
           (orgpoints[ipoint * dim + i] - tope->shift[i]) /
           tope->scales[i];
@@ -946,7 +890,7 @@ Tope* tope_delaunay(int npoints, int dim, double const* orgpoints)
 
   /* Add point above paraboloid to guarantee full dimensionality: */
   vec_reset(dim, points[npoints].pos);
-  for (ipoint = 0; ipoint < npoints; ++ipoint) {
+  for (int ipoint = 0; ipoint < npoints; ++ipoint) {
     vec_add(dim, points[npoints].pos, points[ipoint].pos);
   }
   vec_scale(dim, points[npoints].pos, 1.0 / (double)npoints);
@@ -959,65 +903,33 @@ Tope* tope_delaunay(int npoints, int dim, double const* orgpoints)
   free(positions);
   free(points);
 
-  /* Remove upper delaunay surfaces: */
-  Ridge** ridges = malloc(tope->nridges * sizeof(Ridge*));
-  Ridge* ridge = tope->firstridge;
-  for (i = 0; i < tope->nridges; ++i, ridge = ridge->next) {
-    ridges[i] = ridge;
-  }
-
-  for (i = 0; i < tope->nridges; ++i) {
-    Ridge* ridge = ridges[i];
-    for (j = 0; j < 2; ++j) {
-      Facet* facet = ridge->facets[j];
-      if (facet == NULL) {
-        continue;
-      }
-
-      if (facet->normal[tope->dim - 1] < 0.0) {
-        continue;
-      }
-
-      /* Upper delaunay. */
-
-      /* Disassociate facet from ridges: */
-      ridge->facets[j] = NULL;
-
-      Ridge** ridges = facet->ridges;
-      for (k = 0; k < tope->dim; ++k) {
-        Ridge* ridgek = ridges[k];
-        if (ridgek->facets[0] == facet) {
-          ridgek->facets[0] = NULL;
+  /* Find upper Delaunay facet: */
+  Facet* facet = tope->firstfacet;
+  while (facet != NULL) {
+    Facet* next = facet->next;
+    if (facet->normal[dim] > -EPS) {
+      // Upper delaunay
+      for (int i = 0; i <= dim; ++i) {
+        Ridge* ridge = facet->ridges[i];
+        if (ridge->facets[0] == facet) {
+          ridge->facets[0] = NULL;
+          if (ridge->facets[1] == NULL) {
+            ridge_remove(tope, ridge);
+          }
         }
-        else if (ridgek->facets[1] == facet) {
-          ridgek->facets[1] = NULL;
+        else {
+          assert(ridge->facets[1] == facet);
+          ridge->facets[1] = NULL;
+          if (ridge->facets[0] == NULL) {
+            ridge_remove(tope, ridge);
+          }
         }
       }
-
-      /* Remove facet: */
       facet_remove(tope, facet);
       facet_free(tope, facet);
     }
-
-    if (ridge->facets[0] == NULL && ridge->facets[1] == NULL) {
-      /* Both adjacent facets are gone. */
-
-      /* Disassociate from adjacent vertices: */
-      for (j = 0; j < tope->dim - 1; ++j) {
-        Vertex* vertex = ridge->vertices[j];
-        --vertex->nridges;
-        if (vertex->nridges == 0) {
-          /* Remove vertex as well: */
-          vertex_remove(tope, vertex);
-        }
-      }
-
-      /* Remove ridge: */
-      ridge_remove(tope, ridge);
-      ridges[i] = NULL; /* forget reference */
-    }
+    facet = next;
   }
-  free(ridges);
 
   return tope;
 }
@@ -1030,11 +942,12 @@ void tope_addvertex(Tope* tope, double const* point)
   double* pos = alloca(tope->dim * sizeof(double));
 
   /* Initialize apex: */
-  Point apex;
-  apex.next = NULL;
-  apex.index = tope->nverts;
-  apex.height = 0.0;
-  apex.pos = pos;
+  Point apex = {
+    .next = NULL,
+    .index = tope->nverts,
+    .height = 0.0,
+    .pos = pos,
+  };
 
   /* Transformed position: */
   memcpy(pos, point, tope->dim * sizeof(double));
@@ -1083,10 +996,10 @@ void tope_print(Tope* tope)
   int i = 0;
   Facet* facet = tope->firstfacet;
   while (facet != NULL) {
-    tope_facet_getnormal(facet, normal);
-    double volume = tope_facet_getvolume(facet);
+    tope_facet_getnormal(tope, facet, normal);
+    double volume = tope_facet_getvolume(tope, facet);
     vec_adds(d, sv, normal, volume);
-    tope_facet_getcentroid(facet, centroid);
+    tope_facet_getcentroid(tope, facet, centroid);
 
     printf("facet %d\n", i + 1);
     printf("  volume: %g\n", volume);
@@ -1101,7 +1014,7 @@ void tope_print(Tope* tope)
     Vertex** vertices = facet->vertices;
     for (int j = 0; j < d; ++j) {
       Vertex* vertex = vertices[j];
-      tope_vertex_getposition(vertex, position);
+      tope_vertex_getposition(tope, vertex, position);
       vec_print(d, position);
     }
     printf("\n");
@@ -1266,13 +1179,6 @@ Facet* tope_firstfacet(Tope* tope)
 
 
 
-Vertex* tope_firstvertex(Tope* tope)
-{
-  return tope->firstvertex;
-}
-
-
-
 Facet* tope_facet_nextfacet(Facet* facet)
 {
   return facet->next;
@@ -1280,46 +1186,46 @@ Facet* tope_facet_nextfacet(Facet* facet)
 
 
 
-void tope_facet_getnormal(Facet* facet, double* normal)
+void tope_facet_getnormal(Tope* tope, Facet* facet, double* normal)
 {
-  int d = facet->tope->dim;
+  int d = tope->dim;
   memcpy(normal, facet->normal, d * sizeof(double));
   for (int i = 0; i < d; ++i) {
-    normal[i] /= facet->tope->scales[i];
+    normal[i] /= tope->scales[i];
   }
   vec_normalize(d, normal);
 }
 
 
 
-void tope_facet_getcentroid(Facet* facet, double* centroid)
+void tope_facet_getcentroid(Tope* tope, Facet* facet, double* centroid)
 {
-  int d = facet->tope->dim;
+  int d = tope->dim;
   double* fcentroid = facet->centroid;
   memcpy(centroid, fcentroid, d * sizeof(double));
   for (int i = 0; i < d; ++i) {
-    centroid[i] *= facet->tope->scales[i];
+    centroid[i] *= tope->scales[i];
   }
-  vec_add(facet->tope->dim, centroid, facet->tope->shift);
+  vec_add(tope->dim, centroid, tope->shift);
 }
 
 
 
-double tope_facet_getoffset(Facet* facet)
+double tope_facet_getoffset(Tope* tope, Facet* facet)
 {
-  double* centroid = alloca(facet->tope->dim * sizeof(double));
-  double* normal = alloca(facet->tope->dim * sizeof(double));
-  tope_facet_getcentroid(facet, centroid);
-  tope_facet_getnormal(facet, normal);
-  return vec_dot(facet->tope->dim, centroid, normal);
+  double* centroid = alloca(tope->dim * sizeof(double));
+  double* normal = alloca(tope->dim * sizeof(double));
+  tope_facet_getcentroid(tope, facet, centroid);
+  tope_facet_getnormal(tope, facet, normal);
+  return vec_dot(tope->dim, centroid, normal);
 }
 
 
 
-double tope_facet_getvolume(Facet* facet)
+double tope_facet_getvolume(Tope* tope, Facet* facet)
 {
-  int d = facet->tope->dim;
-  double* s = facet->tope->scales;
+  int d = tope->dim;
+  double* s = tope->scales;
   double* n = facet->normal;
   double volume = facet->volume;
 
@@ -1342,26 +1248,20 @@ double tope_facet_getvolume(Facet* facet)
 
 
 
-int tope_facet_getnumvertices(Facet* facet)
+int tope_facet_getnumvertices(Tope* tope, Facet* facet)
 {
-  return facet->tope->dim;
+  (void)facet;
+  return tope->dim;
 }
 
 
 
-Vertex* tope_vertex_nextvertex(Vertex* vertex)
+void tope_vertex_getposition(Tope* tope, Vertex* vertex, double* position)
 {
-  return vertex->next;
-}
-
-
-
-void tope_vertex_getposition(Vertex* vertex, double* position)
-{
-  double* scales = vertex->tope->scales;
-  double* shift = vertex->tope->shift;
-  int i = vertex->tope->dim;
-  i -= vertex->tope->isdelaunay ? 1 : 0;
+  double* scales = tope->scales;
+  double* shift = tope->shift;
+  int i = tope->dim;
+  i -= tope->isdelaunay ? 1 : 0;
   while (i--) {
     position[i] = vertex->position[i] * scales[i] + shift[i];
   }
