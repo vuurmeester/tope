@@ -11,7 +11,7 @@
 
 #include <tope.h>
 
-#define EPS 1.0e-9
+#define EPS 1e-9
 
 
 
@@ -115,8 +115,7 @@ static Facet* facet_create(Tope* tope)
   Facet* facet    = allocator_alloc(alc,     sizeof(Facet  ));
   facet->centroid = allocator_alloc(alc, d * sizeof(double ));
   facet->normal   = allocator_alloc(alc, d * sizeof(double ));
-  facet->ridges   = allocator_alloc(alc, d * sizeof(Ridge* ));
-  facet->verts = NULL;
+  facet->rvs = NULL;
 
   /* Append to list: */
   facet->prev = tope->lastfacet;
@@ -137,7 +136,6 @@ static Facet* facet_create(Tope* tope)
 
   vec_reset(d, facet->centroid);
   vec_reset(d, facet->normal);
-  memset(facet->ridges, 0x00, d * sizeof(Ridge* ));
 
   return facet;
 }
@@ -148,12 +146,11 @@ static void facet_free(Tope* tope, Facet* facet)
 {
   int d = tope->dim;
   Allocator* alc = &tope->alc;
-  while (facet->verts) {
-    List* next = facet->verts->tail;
-    allocator_free(alc, facet->verts, sizeof(List));
-    facet->verts = next;
+  while (facet->rvs) {
+    List* next = facet->rvs->tail;
+    allocator_free(alc, facet->rvs, sizeof(List));
+    facet->rvs = next;
   }
-  allocator_free(alc, facet->ridges  , d * sizeof(Ridge*));
   allocator_free(alc, facet->normal  , d * sizeof(double));
   allocator_free(alc, facet->centroid, d * sizeof(double));
   allocator_free(alc, facet, sizeof(Facet));
@@ -248,22 +245,22 @@ static void addfacet(Tope* tope, Facet* facet, Ridge** ridges)
 
   /* Facet centroid: */
   vec_reset(d, facet->centroid);
-  for (List* lst = facet->verts; lst != NULL; lst = lst->tail) {
-    Vertex* vertex = lst->head;
+  for (List* lst = facet->rvs; lst != NULL; lst = lst->tail) {
+    Vertex* vertex = lst->vert;
     vec_add(d, facet->centroid, vertex->position);
   }
   vec_scale(d, facet->centroid, 1.0 / (double)d);
 
   /* Vertex span: */
   double* dirs = alloca((d - 1) * d * sizeof(double));
-  List* lst = facet->verts;
-  Vertex* vertex = lst->head;
+  List* lst = facet->rvs;
+  Vertex* vertex = lst->vert;
   double* x0 = vertex->position;
   int i = 0;
   lst = lst->tail;
   for (int i = 0; lst != NULL; ++i) {
     /* Vertex position difference: */
-    vertex = lst->head;
+    vertex = lst->vert;
     memcpy(dirs + i * d, vertex->position, d * sizeof(double));
     vec_sub(d, dirs + i * d, x0);
     lst = lst->tail;
@@ -313,10 +310,12 @@ static void addfacet(Tope* tope, Facet* facet, Ridge** ridges)
   facet->dist = vec_dot(d, facet->normal, facet->centroid);
 
   /* Assign ridges: */
-  memcpy(facet->ridges, ridges, d * sizeof(Ridge*));
+  lst = facet->rvs;
   for (int i = 0; i < d; ++i) {
     /* Get ridge: */
-    Ridge* ridge = facet->ridges[i];
+    Ridge* ridge = ridges[i];
+    lst->ridge = ridge;
+    lst = lst->tail;
 
     /* Remember facet. */
     if (ridge->facets[0] == NULL) {
@@ -423,13 +422,14 @@ static void initialsimplex(Tope* tope, int npoints, Point* points)
     Facet* facet = facet_create(tope);
 
     /* Add all vertices except for one: */
-    List** pli = &facet->verts;
+    List** pli = &facet->rvs;
     for (int j = 0; j < d + 1; ++j) {
       if (i == j) {
         continue;
       }
       *pli = allocator_alloc(alc, sizeof(List));
-      (*pli)->head = vertices[j];
+      (*pli)->vert = vertices[j];
+      (*pli)->ridge = NULL;
       (*pli)->tail = NULL;
       pli = &(*pli)->tail;
     }
@@ -437,12 +437,12 @@ static void initialsimplex(Tope* tope, int npoints, Point* points)
     /* Add ridges: */
     for (int j = 0; j < d; ++j) {
       /* Ridge verts: */
-      List* lst = facet->verts;
+      List* lst = facet->rvs;
       for (int k = 0; k < d - 1; ++k) {
         if (k == j) {
           lst = lst->tail;
         }
-        ridgeverts[k] = lst->head;
+        ridgeverts[k] = lst->vert;
         lst = lst->tail;
       }
 
@@ -506,9 +506,11 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
     visiblelist = facet->next;
 
     /* Loop over ridges to visit neighbours: */
+    List* lst = facet->rvs;
     for (int i = 0; i < d; ++i) {
       /* Ridge i: */
-      Ridge* ridge = facet->ridges[i];
+      Ridge* ridge = lst->ridge;
+      lst = lst->tail;
 
       /* Retrieve neighbour: */
       Facet* neighbour = NULL;
@@ -589,14 +591,16 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
     Ridge* horizonridge = tope->horizonridges[--tope->horizonridges_len];
 
     /* Facet vertices are apex + horizon vertices: */
-    List** pli = &facet->verts;
+    List** pli = &facet->rvs;
     *pli = allocator_alloc(alc, sizeof(List));
-    (*pli)->head = vertex;
+    (*pli)->vert = vertex;
+    (*pli)->ridge = NULL;
     (*pli)->tail = NULL;
     pli = &(*pli)->tail;
     for (int ivertex = 1; ivertex < d; ++ivertex) {
       *pli = allocator_alloc(alc, sizeof(List));
-      (*pli)->head = horizonridge->vertices[ivertex - 1];
+      (*pli)->vert = horizonridge->vertices[ivertex - 1];
+      (*pli)->ridge = NULL;
       (*pli)->tail = NULL;
       pli = &(*pli)->tail;
     }
@@ -604,12 +608,12 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
     facetridges[0] = horizonridge;
     for (int iridge = 1; iridge < d; ++iridge) {
       /* Add all facet vertices except the one at index 'iridge': */
-      List* li = facet->verts;
+      List* li = facet->rvs;
       for (int ivertex = 0; ivertex < d - 1; ++ivertex) {
         if (ivertex == iridge) {
           li = li->tail;
         }
-        ridgeverts[ivertex] = li->head;
+        ridgeverts[ivertex] = li->vert;
         li = li->tail;
       }
 
@@ -643,8 +647,10 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
 
     /* Visit neighbours, skipping horizon ridge: */
     Facet* prev = NULL;
+    List* lst = facet->rvs;
     for (int iridge = 1; iridge < d; ++iridge) {
-      Ridge* ridge = facet->ridges[iridge];
+      lst = lst->tail;
+      Ridge* ridge = lst->ridge;
       Facet* neighbour = NULL;
       if (ridge->facets[0] == facet) {
         neighbour = ridge->facets[1];
@@ -663,6 +669,7 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
         prev = facet;
         facet = neighbour;
         h = nh;
+        lst = facet->rvs;
         iridge = 0; /* reset iteration (new base facet) */
       }
     }
@@ -926,8 +933,10 @@ Tope* tope_delaunay(int npoints, int dim, double const* orgpoints)
     Facet* next = facet->next;
     if (facet->normal[dim] > -EPS) {
       // Upper delaunay
+      List* lst = facet->rvs;
       for (int i = 0; i <= dim; ++i) {
-        Ridge* ridge = facet->ridges[i];
+        Ridge* ridge = lst->ridge;
+        lst = lst->tail;
         if (ridge->facets[0] == facet) {
           ridge->facets[0] = NULL;
           if (ridge->facets[1] == NULL) {
@@ -1028,9 +1037,9 @@ void tope_print(Tope* tope)
     printf("\n");
 
     printf("  vertices:\n");
-    List* li = facet->verts;
+    List* li = facet->rvs;
     while (li) {
-      Vertex* vertex = li->head;
+      Vertex* vertex = li->vert;
       tope_vertex_getposition(tope, vertex, position);
       vec_print(d, position);
       li = li->tail;
@@ -1101,11 +1110,11 @@ void tope_interpolate(
     totalweight = 0.0;
     double hmin = HUGE_VAL;
     Ridge* minridge = NULL;
-    List* li = currentfacet->verts;
+    List* li = currentfacet->rvs;
     for (int iridge = 0; iridge < tope->dim; ++iridge) {
       /* Retrieve ridge: */
-      Ridge* ridge = currentfacet->ridges[iridge];
-      Vertex* vertex = li->head;
+      Ridge* ridge = li->ridge;
+      Vertex* vertex = li->vert;
       li = li->tail;
 
       /* On demand construction of ridge volume, distance and normal
