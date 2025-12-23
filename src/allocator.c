@@ -16,6 +16,7 @@ void allocator_init(Allocator* alc)
   memset(alc->indices, 0xff, sizeof alc->indices);
   alc->block = NULL;
   alc->blockfreep = NULL;
+  alc->used = 0;
 }
 
 
@@ -49,6 +50,7 @@ void* allocator_alloc(Allocator* alc, u16 numbytes)
     /* Increase block size : */
     alc->blocksize += BLOCKSIZE_STEP;
     Block* newblock = malloc(alc->blocksize * sizeof(Block));
+    alc->used += alc->blocksize * sizeof(Block);
     newblock->next = alc->block;
     alc->block = newblock;
     alc->blockfreep = alc->block + 1;  /* step over 'next' pointer */

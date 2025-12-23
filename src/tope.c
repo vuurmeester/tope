@@ -16,7 +16,7 @@
 
 
 /* Create and initialize a vertex struct with a position and id: */
-static Vertex* vertex_new(Tope* tope, double const* pos, int index)
+static Vertex* vertex_create(Tope* tope, double const* pos, int index)
 {
   ++tope->nverts;
   Allocator* alc = &tope->alc;
@@ -37,21 +37,14 @@ static Vertex* vertex_new(Tope* tope, double const* pos, int index)
 
 
 
-static void vertex_free(Tope* tope, Vertex* vertex)
+static void vertex_remove(Tope* tope, Vertex* vertex)
 {
+  --tope->nverts;
   allocator_free(
     &tope->alc,
     vertex,
     sizeof(Vertex) + (tope->dim - 1) * sizeof(double)
   );
-}
-
-
-
-static void vertex_remove(Tope* tope, Vertex* vertex)
-{
-  --tope->nverts;
-  vertex_free(tope, vertex);
 }
 
 
@@ -112,7 +105,7 @@ static void ridge_remove(Tope* tope, Ridge* ridge)
 
 
 /* Create and initialize a facet struct: */
-static Facet* facet_new(Tope* tope)
+static Facet* facet_create(Tope* tope)
 {
   ++tope->nfacets;
  
@@ -405,7 +398,7 @@ static void initialsimplex(Tope* tope, int npoints, Point* points)
   /* Create initial simplex vertices: */
   Vertex** vertices = alloca((tope->dim + 1) * sizeof(Vertex*));
   for (int i = 0; i < tope->dim + 1; ++i) {
-    vertices[i] = vertex_new(tope, points[p[i]].pos, points[p[i]].index);
+    vertices[i] = vertex_create(tope, points[p[i]].pos, points[p[i]].index);
   }
 
   Ridge** facetridges = alloca(tope->dim * sizeof(Ridge*));
@@ -416,7 +409,7 @@ static void initialsimplex(Tope* tope, int npoints, Point* points)
   /* Create facets: */
   for (int i = 0; i < tope->dim + 1; ++i) {
     /* Create facet: */
-    Facet* facet = facet_new(tope);
+    Facet* facet = facet_create(tope);
 
     /* Add all vertices except for one: */
     for (int j = 0; j < i; ++j) {
@@ -563,7 +556,7 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
   }
 
   /* Add apex vertex to tope: */
-  Vertex* vertex = vertex_new(tope, apex->pos, apex->index);
+  Vertex* vertex = vertex_create(tope, apex->pos, apex->index);
   Vertex** ridgeverts = alloca((d - 1) * sizeof(Vertex*));
   Ridge** facetridges = alloca(d * sizeof(Ridge*));
 
@@ -572,7 +565,7 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
   /* Form new facets: */
   while (tope->horizonridges_len > 0) {
     /* New facet: */
-    facet = facet_new(tope);
+    facet = facet_create(tope);
 
     /* Pop a horizon ridge: */
     Ridge* horizonridge = tope->horizonridges[--tope->horizonridges_len];
@@ -1265,4 +1258,11 @@ void tope_vertex_getposition(Tope* tope, Vertex* vertex, double* position)
   while (i--) {
     position[i] = vertex->position[i] * scales[i] + shift[i];
   }
+}
+
+
+
+u64 tope_bytes_used(Tope* tope)
+{
+  return tope->alc.used;
 }

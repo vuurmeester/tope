@@ -22,6 +22,7 @@ typedef struct _Allocator {
   u8 indices[ALLOCATOR_MAXSIZE / sizeof(Block)];
   Block* block;
   Block* blockfreep;
+  u64 used;
 } Allocator;
 
 /** Initialize allocator object. */
