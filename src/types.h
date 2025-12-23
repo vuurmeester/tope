@@ -13,7 +13,8 @@ typedef tope_Facet Facet;
 typedef struct _List List;
 struct _List {
   List* tail;
-  void* head;
+  Vertex* vert;
+  Ridge* ridge;
 };
 
 typedef struct _HashMap {
@@ -55,8 +56,7 @@ struct _tope_Facet {
   bool visible;
   double* centroid;
   double* normal;
-  Ridge** ridges;  /* d+ ridges */
-  List* verts;  /* d+ verts */
+  List* rvs;  /* ridge/vertex list */
 };
 
 struct _Ridge {
