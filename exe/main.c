@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+#include <inttypes.h>
 
 #include "../src/math.h"
 #include "../src/util.h"
@@ -91,7 +92,7 @@ int main(void)
   printf("ridges      = %d\n"  , nridges);
   printf("verts       = %d\n"  , nverts);
   printf("time        = %g\n", endtime - starttime);
-  printf("memory      = %llu\n\n", tope_bytes_used(tope));
+  printf("memory      = %" PRIu64 "\n\n", tope_bytes_used(tope));
 
   tope_delete(tope);
   free(points);
