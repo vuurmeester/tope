@@ -1051,14 +1051,6 @@ void tope_interpolate(
   double* weights
 )
 {
-  int ivertex;
-  int iridge;
-  double hmin;
-  double h;
-  Ridge* minridge;
-  double totalweight;
-  double sign;
-  Ridge* ridge;
   Allocator* alc = &tope->alc;
 
   assert(tope->isdelaunay);
@@ -1078,15 +1070,16 @@ void tope_interpolate(
   assert(tope->firstfacet != NULL);
   Facet* currentfacet = tope->firstfacet;
 
+  double totalweight = 0.0;
   while (1) {
     Ridge** ridges = currentfacet->ridges;
     Vertex** vertices = currentfacet->vertices;
 
     /* In the current facet, find the ridge where xi is highest above: */
     totalweight = 0.0;
-    hmin = HUGE_VAL;
-    minridge = NULL;
-    for (iridge = 0; iridge < tope->dim; ++iridge) {
+    double hmin = HUGE_VAL;
+    Ridge* minridge = NULL;
+    for (int iridge = 0; iridge < tope->dim; ++iridge) {
       /* Retrieve ridge: */
       Ridge* ridge = ridges[iridge];
       Vertex* vertex = vertices[iridge];
@@ -1097,7 +1090,7 @@ void tope_interpolate(
         ridge->vdn = allocator_alloc(alc, (2 + d) * sizeof(double));
 
         /* Matrix of vertex coordinates: */
-        for (ivertex = 0; ivertex < d; ++ivertex) {
+        for (int ivertex = 0; ivertex < d; ++ivertex) {
           Vertex* vertex = ridge->vertices[ivertex];
           memcpy(&verts[ivertex * d], vertex->position, d * sizeof(double));
         }
@@ -1119,14 +1112,14 @@ void tope_interpolate(
       }
 
       /* Sign of normal: */
-      sign = 1.0;
+      double sign = 1.0;
       if (vec_dot(d, currentfacet->centroid, ridge->vdn + 2) < ridge->vdn[1]) {
         /* outward pointing normal */
         sign = -1.0;
       }
 
       /* Height of interpolation point above ridge: */
-      h = sign * (vec_dot(d, xiprime, ridge->vdn + 2) - ridge->vdn[1]);
+      double h = sign * (vec_dot(d, xiprime, ridge->vdn + 2) - ridge->vdn[1]);
 
       /* Weight for this ridge: */
       weights[iridge] = h * ridge->vdn[0];
@@ -1148,13 +1141,12 @@ void tope_interpolate(
     }
 
     /* Else, goto next facet (cross ridge): */
-    ridge = minridge;
-    if (ridge->facets[0] == currentfacet) {
-      currentfacet = ridge->facets[1];
+    if (minridge->facets[0] == currentfacet) {
+      currentfacet = minridge->facets[1];
     }
     else {
-      assert(ridge->facets[1] == currentfacet);
-      currentfacet = ridge->facets[0];
+      assert(minridge->facets[1] == currentfacet);
+      currentfacet = minridge->facets[0];
     }
   }
 

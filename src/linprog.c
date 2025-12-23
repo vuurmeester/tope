@@ -22,7 +22,6 @@ typedef struct {
 
 void apply_matrix(int stride, double const* z, double* w, void const* pdata)
 {
-  int i;
   Data const* data = pdata;
   int m = data->m;
   int n = data->n;
@@ -45,21 +44,21 @@ void apply_matrix(int stride, double const* z, double* w, void const* pdata)
   mat_matmul(1, m, n, z, A, w + m);
 
   /* y + S^-1 Y s: */
-  for (i = 0; i < m; ++i) {
+  for (int i = 0; i < m; ++i) {
     w[m + n + i] = z[i] + d[i] * z[m + n + i];
   }
 }
 
 
 
-int linprog(int m, int n, double const* A, double const* b, double const* c,
-            double* x)
-{
-  Data data;
-  double step;
-  int i;
-  int niter;
-  double nu;
+int linprog(
+  int m,
+  int n,
+  double const* A,
+  double const* b,
+  double const* c,
+  double* x
+) {
   int stride = m + n + m;
   double* y = alloca(m * sizeof(double));        /* dual */
   double* s = alloca(m * sizeof(double));        /* slack */
@@ -70,12 +69,12 @@ int linprog(int m, int n, double const* A, double const* b, double const* c,
   vec_set(m, y, 1.0);
   vec_set(m, s, 1.0);
 
-  niter = 0;
+  int niter = 0;
   while (true) {
     ++niter;
 
     /* Desired duality gap (one-tenth of current average duality gap): */
-    nu = 0.1 * vec_dot(m, s, y) / (double)m;
+    double nu = 0.1 * vec_dot(m, s, y) / (double)m;
     if (nu < EPS) {
       break;
     }
@@ -90,27 +89,29 @@ int linprog(int m, int n, double const* A, double const* b, double const* c,
     vec_sub(n, err + m, c);
 
     /* S^-1 (s o y) - nu S^-1 e: */
-    for (i = 0; i < m; ++i) {
+    for (int i = 0; i < m; ++i) {
       err[m + n + i] = y[i] - nu / s[i];
     }
 
     /* S^-1 Y (diagonal): */
-    for (i = 0; i < m; ++i) {
+    for (int i = 0; i < m; ++i) {
       d[i] = y[i] / s[i];
     }
 
     /* Solve M dz = -err (Newton-Raphson): */
-    data.m = m;
-    data.n = n;
-    data.A = A;
-    data.d = d;
-    memset(dz, 0, stride * sizeof(double));
+    Data data = {
+      .m = m,
+      .n = n,
+      .A = A,
+      .d = d,
+    };
+    memset(dz, 0x00, stride * sizeof(double));
     cr(stride, apply_matrix, err, dz, 1e-9, &data);
     vec_neg(stride, dz);
 
     /* Adjust stepsize to remain feasible (y, s > 0): */
-    step = 1.0;
-    for (i = 0; i < m; ++i) {
+    double step = 1.0;
+    for (int i = 0; i < m; ++i) {
       if (y[i] + step * dz[i] < 0.0) {
         step = -y[i] / dz[i];
       }
