@@ -10,6 +10,12 @@ typedef struct _Point Point;
 typedef tope_Vertex Vertex;
 typedef tope_Facet Facet;
 
+typedef struct _List List;
+struct _List {
+  List* tail;
+  void* head;
+};
+
 typedef struct _HashMap {
   u32 cap;     /* current capacity */
   u32 len;     /* number of elements */
@@ -49,8 +55,8 @@ struct _tope_Facet {
   bool visible;
   double* centroid;
   double* normal;
-  Ridge** ridges;  /* d ridges */
-  Vertex** vertices;  /* d verts */
+  Ridge** ridges;  /* d+ ridges */
+  List* verts;  /* d+ verts */
 };
 
 struct _Ridge {
