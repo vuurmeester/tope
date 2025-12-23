@@ -642,10 +642,9 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
     double h = vec_dot(tope->dim, outsidepoints->pos, facet->normal) - facet->dist;
 
     /* Visit neighbours, skipping horizon ridge: */
-    Ridge** ridges = facet->ridges;
     Facet* prev = NULL;
     for (int iridge = 1; iridge < d; ++iridge) {
-      Ridge* ridge = ridges[iridge];
+      Ridge* ridge = facet->ridges[iridge];
       Facet* neighbour = NULL;
       if (ridge->facets[0] == facet) {
         neighbour = ridge->facets[1];
@@ -663,7 +662,6 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
       if (nh > h) {
         prev = facet;
         facet = neighbour;
-        ridges = facet->ridges;
         h = nh;
         iridge = 0; /* reset iteration (new base facet) */
       }
@@ -1099,8 +1097,6 @@ void tope_interpolate(
 
   double totalweight = 0.0;
   while (1) {
-    Ridge** ridges = currentfacet->ridges;
-
     /* In the current facet, find the ridge where xi is highest above: */
     totalweight = 0.0;
     double hmin = HUGE_VAL;
@@ -1108,7 +1104,7 @@ void tope_interpolate(
     List* li = currentfacet->verts;
     for (int iridge = 0; iridge < tope->dim; ++iridge) {
       /* Retrieve ridge: */
-      Ridge* ridge = ridges[iridge];
+      Ridge* ridge = currentfacet->ridges[iridge];
       Vertex* vertex = li->head;
       li = li->tail;
 
