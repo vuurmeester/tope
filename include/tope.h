@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdint.h>
+
 typedef struct _Tope Tope;
 typedef struct _tope_Facet tope_Facet;
 typedef struct _tope_Vertex tope_Vertex;
@@ -74,3 +76,6 @@ tope_Vertex* tope_vertex_nextvertex(tope_Vertex* vertex);
 
 /** Vertex position. */
 void tope_vertex_getposition(Tope* tope, tope_Vertex* vertex, double* position);
+
+/** Memory used. */
+uint64_t tope_bytes_used(Tope* tope);

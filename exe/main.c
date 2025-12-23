@@ -90,7 +90,8 @@ int main(void)
   printf("facets      = %d\n"  , nfacets);
   printf("ridges      = %d\n"  , nridges);
   printf("verts       = %d\n"  , nverts);
-  printf("time        = %g\n\n", endtime - starttime);
+  printf("time        = %g\n", endtime - starttime);
+  printf("memory      = %llu\n\n", tope_bytes_used(tope));
 
   tope_delete(tope);
   free(points);
