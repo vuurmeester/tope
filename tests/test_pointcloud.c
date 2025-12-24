@@ -91,7 +91,7 @@ int main()
   ++m;
 
   /* Initialize tope with all but the last: */
-  tope = tope_frompoints(m - 1, 3, points);
+  tope = tope_frompoints(m - 1, 3, points, true);
   if (tope_getnumfacets(tope) != 12) {
     return -1;
   }

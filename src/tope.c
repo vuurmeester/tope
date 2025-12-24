@@ -469,7 +469,7 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
   Allocator* alc = &tope->alc;
 
   facet_remove(tope, facet);
-  facet->visible = true;
+  facet->volume = -1;
 
   /* Add facet to visible list: */
   Facet* visiblelist = facet;
@@ -510,7 +510,7 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
         ridge_remove(tope, ridge);
       }
       else {
-        if (!neighbour->visible) {
+        if (neighbour->volume >= 0) {
           /* Neighbour is untested. */
 
           /* Height of apex above neighbour: */
@@ -525,7 +525,7 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
             /* Prepend neighbour to visible list: */
             neighbour->next = visiblelist;
             visiblelist = neighbour;
-            neighbour->visible = true;
+            neighbour->volume = -1;
           }
           else {
             /* Neighbour not visible. Ridge belongs to horizon: */
@@ -728,7 +728,7 @@ Tope* tope_fromplanes(
   }
 
   /* Construct reciprocal tope: */
-  Tope* rectope = tope_frompoints(n, d, points);
+  Tope* rectope = tope_frompoints(n, d, points, false);
   free(points);
 
   /* Convert reciprocal tope to tope: */
@@ -749,7 +749,7 @@ Tope* tope_fromplanes(
     vec_add(d, points + ifacet * d, xc);
   }
 
-  Tope* tope = tope_frompoints(nfacets, d, points);
+  Tope* tope = tope_frompoints(nfacets, d, points, false);
 
   /* Clean up: */
   tope_delete(rectope);
@@ -760,7 +760,7 @@ Tope* tope_fromplanes(
 
 
 
-Tope* tope_frompoints(int npoints, int dim, double const* orgpoints)
+Tope* tope_frompoints(int npoints, int dim, double const* orgpoints, bool merge)
 {
   int ipoint;
   int idim;
@@ -772,6 +772,7 @@ Tope* tope_frompoints(int npoints, int dim, double const* orgpoints)
   Point* points;
 
   Tope* tope = tope_new();
+  tope->merge = merge;
 
   /* Initialize member variables: */
   tope->dim = dim;
