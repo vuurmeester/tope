@@ -11,11 +11,10 @@ typedef struct _Point Point;
 typedef tope_Vertex Vertex;
 typedef tope_Facet Facet;
 
-typedef struct _RVList RVList;
-struct _RVList {
-  RVList* next;
-  Vertex* vert;
-  Ridge* ridge;
+typedef struct _List List;
+struct _List {
+  List* next;
+  void* val;
 };
 
 typedef struct _HashMap {
@@ -57,7 +56,8 @@ struct _tope_Facet {
   Point* outsidetail; /* last entry in visible points list */
   double* centroid;
   double* normal;
-  RVList* rvs;  /* ridge/vertex list */
+  List* verts;  /* vertex list */
+  List* ridges;  /* ridge list */
 };
 
 struct _Ridge {
