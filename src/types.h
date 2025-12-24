@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tope.h>
+
 #include <stdbool.h>
 
 #include "allocator.h"
@@ -10,9 +11,9 @@ typedef struct _Point Point;
 typedef tope_Vertex Vertex;
 typedef tope_Facet Facet;
 
-typedef struct _List List;
-struct _List {
-  List* tail;
+typedef struct _RVList RVList;
+struct _RVList {
+  RVList* next;
   Vertex* vert;
   Ridge* ridge;
 };
@@ -56,7 +57,7 @@ struct _tope_Facet {
   bool visible;
   double* centroid;
   double* normal;
-  List* rvs;  /* ridge/vertex list */
+  RVList* rvs;  /* ridge/vertex list */
 };
 
 struct _Ridge {

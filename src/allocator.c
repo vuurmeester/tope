@@ -63,10 +63,7 @@ void* allocator_alloc(Allocator* alc, u16 numbytes)
   alc->blockfreep += numblocks;
 
 _return:
-#ifndef NDEBUG
   memset(mem, 0x00, numblocks * sizeof(Block));
-#endif
-
   return mem;
 }
 
