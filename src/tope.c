@@ -813,8 +813,8 @@ Tope* tope_frompoints(int npoints, int dim, double const* orgpoints, bool merge)
     points[ipoint].pos = positions + ipoint * dim;
     for (idim = 0; idim < tope->dim; ++idim) {
       points[ipoint].pos[idim] =
-          (orgpoints[ipoint * tope->dim + idim] - tope->shift[idim]) /
-          tope->scales[idim];
+        (orgpoints[ipoint * tope->dim + idim] - tope->shift[idim]) /
+        tope->scales[idim];
     }
   }
 
@@ -1086,8 +1086,10 @@ void tope_interpolate(
     for (int iridge = 0; iridge < tope->dim; ++iridge) {
       /* Retrieve ridge: */
       Ridge* ridge = li->ridge;
-      Vertex* vertex = li->vert;
+      Vertex* vertex = li->vert;  /* opposing vertex */
       li = li->next;
+
+      double sign = 1.0;
 
       /* On demand construction of ridge volume, distance and normal
        * (tope->dim - 1): */
@@ -1096,8 +1098,11 @@ void tope_interpolate(
 
         /* Matrix of vertex coordinates: */
         for (int ivertex = 0; ivertex < d; ++ivertex) {
-          Vertex* vertex = ridge->vertices[ivertex];
-          memcpy(&verts[ivertex * d], vertex->position, d * sizeof(double));
+          memcpy(
+            &verts[ivertex * d],
+            ridge->vertices[ivertex]->position,
+            d * sizeof(double)
+          );
         }
 
         /* Analyse ridge simplex: */
@@ -1105,7 +1110,7 @@ void tope_interpolate(
 
         /* Construct normal: */
         memcpy(ridge->vdn + 2, centroid, d * sizeof(double));
-        vec_sub(d, ridge->vdn + 2, currentfacet->centroid);
+        vec_sub(d, ridge->vdn + 2, vertex->position);
         for (int i = 0; i < d - 1; ++i) {
           double fac = vec_dot(d, ridge->vdn + 2, &verts[i * d]);
           vec_adds(d, ridge->vdn + 2, &verts[i * d], -fac);
@@ -1115,12 +1120,12 @@ void tope_interpolate(
         /* Ridge plane distance: */
         ridge->vdn[1] = vec_dot(d, ridge->vdn + 2, centroid);
       }
-
-      /* Sign of normal: */
-      double sign = 1.0;
-      if (vec_dot(d, currentfacet->centroid, ridge->vdn + 2) < ridge->vdn[1]) {
-        /* outward pointing normal */
-        sign = -1.0;
+      else {
+        /* Sign of normal: */
+        if (vec_dot(d, vertex->position, ridge->vdn + 2) < ridge->vdn[1]) {
+          /* outward pointing normal */
+          sign = -1.0;
+        }
       }
 
       /* Height of interpolation point above ridge: */
@@ -1139,6 +1144,7 @@ void tope_interpolate(
         minridge = ridge;
       }
     }
+    assert(li == NULL);
 
     /* If hmin insignificant, stop: */
     if (hmin > -EPS) {
