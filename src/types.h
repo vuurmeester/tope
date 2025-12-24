@@ -44,6 +44,7 @@ struct _Tope {
   Facet** newfacets;
   int newfacets_len;
   int newfacets_cap;
+  bool merge;
 };
 
 struct _tope_Facet {
@@ -54,7 +55,6 @@ struct _tope_Facet {
   double dist;        /* distance from origin */
   Point* outsidehead; /* visible points list */
   Point* outsidetail; /* last entry in visible points list */
-  bool visible;
   double* centroid;
   double* normal;
   RVList* rvs;  /* ridge/vertex list */

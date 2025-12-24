@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
 
 typedef struct _Tope Tope;
 typedef struct _tope_Facet tope_Facet;
@@ -19,7 +20,7 @@ Tope* tope_fromplanes(
 );
 
 /** Create tope from point cloud. */
-Tope* tope_frompoints(int npoints, int dim, double const* points);
+Tope* tope_frompoints(int npoints, int dim, double const* points, bool merge);
 
 /** Delaunay triangulation. */
 Tope* tope_delaunay(int npoints, int dim, double const* points);

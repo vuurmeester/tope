@@ -83,7 +83,7 @@ int main(void)
   
   /* Add points to tope: */
   double starttime = tope_gettime();
-  Tope* tope = tope_frompoints(npoints, d, points);
+  Tope* tope = tope_frompoints(npoints, d, points, true);
   double endtime = tope_gettime();
   int nfacets = tope_getnumfacets(tope);
   int nridges = tope_getnumridges(tope);
