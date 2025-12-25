@@ -15,6 +15,18 @@
 
 
 
+static double height(int d, Facet* facet, double const* x)
+{
+  /* Perpendicular distance of x from facet plane. */
+  double sum = 0.0;
+  for (int i = 0; i < d; ++i) {
+    sum += (x[i] - facet->centroid[i]) * facet->normal[i];
+  }
+  return sum;
+}
+
+
+
 /* Create and initialize a vertex struct with a position and id: */
 static Vertex* vertex_create(Tope* tope, double const* pos, int index)
 {
@@ -253,9 +265,6 @@ static void addfacet(Tope* tope, Facet* facet, Ridge** ridges)
   }
   vec_normalize(d, facet->normal);
 
-  /* Plane distance: */
-  facet->dist = vec_dot(d, facet->normal, facet->centroid);
-
   /* Assign ridges: */
   List** pli = &facet->ridges;
   for (int i = 0; i < d; ++i) {
@@ -409,7 +418,7 @@ static void initialsimplex(Tope* tope, int npoints, Point* points)
     Facet* facet = tope->firstfacet;
     while (facet != NULL) {
       /* Distance to facet: */
-      double h = vec_dot(d, facet->normal, points[p[i]].pos) - facet->dist;
+      double h = height(d, facet, points[p[i]].pos);
 
       /* If above facet, add it to outside set and move to next point. */
       if (h > EPS) {
@@ -478,8 +487,7 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
         /* Neighbour is untested. */
 
         /* Height of apex above neighbour: */
-        double* normal = neighbour->normal;
-        double h = vec_dot(d, apex->pos, normal) - neighbour->dist;
+        double h = height(d, neighbour, apex->pos);
 
         /* Decide if neighbour is visible: */
         if (h > EPS) {
@@ -570,7 +578,7 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
         neighbour = horizonridge->facets[0];
       }
       assert(neighbour != NULL);
-      double nh = vec_dot(d, neighbour->normal, apex->pos) - neighbour->dist;
+      double nh = height(d, neighbour, apex->pos);
       if (nh < -EPS) {
         goto _newfacet;
       }
@@ -664,7 +672,7 @@ _newfacet:
     Point* next = outsidepoints->next;
 
     /* Height of outside point above facet: */
-    double h = vec_dot(tope->dim, outsidepoints->pos, facet->normal) - facet->dist;
+    double h = height(tope->dim, facet, outsidepoints->pos);
 
     /* Visit neighbours, skipping horizon ridge: */
     Facet* prev = NULL;
@@ -683,7 +691,7 @@ _newfacet:
       }
 
       /* Neighbour height: */
-      double nh = vec_dot(d, outsidepoints->pos, neighbour->normal) - neighbour->dist;
+      double nh = height(d, neighbour, outsidepoints->pos);
       if (nh > h) {
         prev = facet;
         facet = neighbour;
@@ -785,7 +793,7 @@ Tope* tope_fromplanes(
   u32 ifacet = 0;
   for (Facet* facet = rectope->firstfacet; facet != NULL; facet = facet->next, ++ifacet) {
     /* Unscaled normal and distance: */
-    double dist = facet->dist;
+    double dist = vec_dot(d, facet->normal, facet->centroid);
     for (int i = 0; i < d; ++i) {
       points[ifacet * d + i] = facet->normal[i] / rectope->scales[i];
       dist += points[ifacet * d + i] * rectope->shift[i];
@@ -1007,7 +1015,7 @@ void tope_addvertex(Tope* tope, double const* point)
   Facet* maxfacet = NULL;
   Facet* facet = tope->firstfacet;
   while (facet != NULL) {
-    double h = vec_dot(tope->dim, pos, facet->normal) - facet->dist;
+    double h = height(tope->dim, facet, pos);
     if (h > EPS) {
       maxfacet = facet;
       break;
