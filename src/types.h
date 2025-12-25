@@ -11,47 +11,48 @@ typedef struct _Point Point;
 typedef tope_Vertex Vertex;
 typedef tope_Facet Facet;
 
+/* Non-intrusive singly linked list. */
 typedef struct _List List;
 struct _List {
-  List* next;
-  void* val;
+  List* next;  /* next in list */
+  void* val;  /* generic pointer */
 };
 
 typedef struct _HashMap {
-  u32 cap;     /* current capacity */
-  u32 len;     /* number of elements */
-  Ridge** ridges; /* entries */
-  u32* hashes;
+  u32 cap;  /* capacity (2^n) */
+  u32 len;  /* number of elements */
+  Ridge** ridges;  /* entries */
+  u32* hashes;  /* hash cache */
 } HashMap;
 
 struct _Tope {
-  Allocator alc;
-  int dim;
-  bool isdelaunay;
-  double* shift;
-  double* scales;
-  double* center;
-  int nfacets;
-  Facet* firstfacet;
-  Facet* lastfacet;
-  int nridges;
-  int nverts;
-  HashMap newridges;
-  Ridge** horizonridges;
+  Allocator alc;  /* allocator */
+  int dim;  /* tope dimension */
+  bool isdelaunay;  /* Delaunay triangulation? */
+  double* shift;  /* offset applied to input points */
+  double* scales;  /* scale applied to input points */
+  double* center;  /* interior point */
+  int nfacets;  /* facet count */
+  Facet* firstfacet;  /* first facet */
+  Facet* lastfacet;  /* last facet */
+  int nridges;  /* ridge count */
+  int nverts;  /* vertex count */
+  HashMap newridges;  /* used to keep track of new ridges */
+  Ridge** horizonridges;  /* used to keep track of horizon ridges */
   int horizonridges_len;
   int horizonridges_cap;
-  Facet** newfacets;
+  Facet** newfacets;  /* used to keep track of new facets */
   int newfacets_len;
   int newfacets_cap;
-  bool merge;
+  bool merge;  /* merge? (creates non-simplicial facets) */
 };
 
 struct _tope_Facet {
-  Facet* next;
+  Facet* next;  /* intrusive doubly linked list */
   Facet* prev;
 
   double volume;
-  Point* outsidehead; /* visible points list */
+  Point* outsidehead; /* first engry in visible points list */
   Point* outsidetail; /* last entry in visible points list */
   double* centroid;
   double* normal;
@@ -60,8 +61,8 @@ struct _tope_Facet {
 };
 
 struct _Ridge {
-  double* vdn;        /* volume, distance, normal */
-  Facet* facets[2];   /* 2 adjacent facets */
+  double* vdn;         /* volume, distance, normal */
+  Facet* facets[2];    /* 2 adjacent facets */
   Vertex* vertices[1]; /* d - 1 adjacent vertices */
 };
 
@@ -75,6 +76,6 @@ struct _Point {
   Point* next;
 
   int index;
-  double height;
-  double* pos;
+  double height;  /* height above facet which contains this point in 'outsidepoints' */
+  double* pos;  /* d-vector */
 };
