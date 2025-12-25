@@ -289,13 +289,13 @@ void mat_unit(int m, double* mat)
 
 
 void boundingbox(
-    int npoints,
-    int ndims,
-    double const* vertices,
-    int* minindices,
-    int* maxindices,
-    double* minima,
-    double* maxima
+  int npoints,
+  int ndims,
+  double const* vertices,
+  int* minindices,
+  int* maxindices,
+  double* minima,
+  double* maxima
 )
 {
   /* Initialize minima and maxima: */
@@ -325,7 +325,7 @@ void boundingbox(
 
 
 
-void analysesimplex(
+void analyzesimplex(
   int npoints,
   int ndims,
   double* points,
@@ -346,7 +346,7 @@ void analysesimplex(
   for (int i = 0; i < npoints - 1; ++i) {
     vec_sub(ndims, &points[i * ndims], &points[(npoints - 1) * ndims]);
   }
-  memset(&points[(npoints - 1) * ndims], 0, ndims * sizeof(double));
+  memset(&points[(npoints - 1) * ndims], 0x00, ndims * sizeof(double));
 
   *volume = 1.0;
   for (int i = 0; i < npoints - 1; ++i) {
@@ -368,8 +368,7 @@ void analysesimplex(
 
     /* Perform pivot: */
     if (pivot > i) {
-      memswp(&points[i * ndims], &points[pivot * ndims], ndims * sizeof(double)
-      );
+      memswp(&points[i * ndims], &points[pivot * ndims], ndims * sizeof(double));
     }
 
     /* Normalize: */
