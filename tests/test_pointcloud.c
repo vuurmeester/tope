@@ -92,13 +92,13 @@ int main()
 
   /* Initialize tope with all but the last: */
   tope = tope_frompoints(m - 1, 3, points, true);
-  if (tope_getnumfacets(tope) != 12) {
+  if (tope_getnumfacets(tope) != 6) {
     return -1;
   }
 
   /* Add the last point: */
   tope_addvertex(tope, &points[(m - 1) * DIM]);
-  if (tope_getnumfacets(tope) != 14) {
+  if (tope_getnumfacets(tope) != 9) {
     return -1;
   }
 

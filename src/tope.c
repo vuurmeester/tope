@@ -490,9 +490,8 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
     visiblelist = facet->next;
 
     /* Loop over ridges to visit neighbours: */
-    List* lst = facet->ridges;
-    for (int i = 0; i < d; ++i, lst = lst->next) {
-      /* Ridge i: */
+    for (List* lst = facet->ridges; lst != NULL; lst = lst->next) {
+      /* Ridge: */
       Ridge* ridge = lst->val;
 
       /* Retrieve neighbour: */
@@ -559,6 +558,7 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
   /* Add apex vertex to tope: */
   Vertex* vertex = vertex_create(tope, apex->pos, apex->index);
   Vertex** ridgeverts = alloca((d - 1) * sizeof(Vertex*));
+  Vertex** facetverts = alloca(d * sizeof(Vertex*));
   Ridge** facetridges = alloca(d * sizeof(Ridge*));
 
   hashmap_clear(&tope->newridges);
@@ -569,9 +569,34 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
     /* Pop a horizon ridge: */
     Ridge* horizonridge = tope->horizonridges[--tope->horizonridges_len];
 
+    /* Vertices for new facet: */
+    facetverts[0] = vertex;
+    for (int iridge = 1; iridge < d; ++iridge) {
+      facetverts[iridge] = horizonridge->vertices[iridge - 1];
+    }
+
+    /* Ridges for new facet: */
+    facetridges[0] = horizonridge;
+    for (int iridge = 1; iridge < d; ++iridge) {
+      /* Add all facet vertices except the one at index 'iridge': */
+      for (int ivertex = 0; ivertex < iridge; ++ivertex) {
+        ridgeverts[ivertex] = facetverts[ivertex];
+      }
+      for (int ivertex = iridge; ivertex < d - 1; ++ivertex) {
+        ridgeverts[ivertex] = facetverts[ivertex + 1];
+      }
+
+      /* Get or create new ridge: */
+      Ridge** pnewridge = hashmap_get(&tope->newridges, d, ridgeverts);
+      if (*pnewridge == NULL) {
+        /* Create new ridge: */
+        *pnewridge = ridge_create(tope, ridgeverts);
+      }
+      facetridges[iridge] = *pnewridge;
+    }
+
     Facet* facet = NULL;
     if (tope->merge) {
-      goto _newfacet;
       /* Adjacent facet: */
       Facet* neighbour = NULL;
       if (horizonridge->facets[0] == NULL) {
@@ -582,12 +607,50 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
       }
       assert(neighbour != NULL);
       double nh = vec_dot(d, neighbour->normal, apex->pos) - neighbour->dist;
-      if (nh > -EPS) {
+      if (nh < -EPS) {
         goto _newfacet;
       }
 
-      // MERGE:
+      // MERGE
+      facet = neighbour;
 
+      /* Append apex to vertex list: */
+      List** pvli = &facet->verts;
+      while (*pvli != NULL) {
+        pvli = &(*pvli)->next;
+      }
+      *pvli = allocator_alloc(alc, sizeof(List));
+      (*pvli)->val = vertex;
+
+      /* Append new ridges to ridge list: */
+      List** prli = &facet->ridges;
+      for (; *prli != NULL; prli = &(*prli)->next); /* scream to end of list */
+      for (int iridge = 1; iridge < d; ++iridge) {
+        *prli = allocator_alloc(alc, sizeof(List));
+        (*prli)->val = facetridges[iridge];
+        prli = &(*prli)->next;
+        if (facetridges[iridge]->facets[0] == NULL) {
+          facetridges[iridge]->facets[0] = facet;
+        }
+        else {
+          assert(facetridges[iridge]->facets[1] == NULL);
+          facetridges[iridge]->facets[1] = facet;
+        }
+      }
+
+      /* Remove horizon ridge from ridge list: */
+      prli = &facet->ridges;
+      for (; *prli != NULL; prli = &(*prli)->next) {
+        if ((*prli)->val == horizonridge) {
+          List* li = *prli;
+          *prli = (*prli)->next;
+          allocator_free(alc, li, sizeof(List));
+          break;
+        }
+      }
+
+      /* Remove horizon ridge: */
+      ridge_remove(tope, horizonridge);
     }
     else {
 _newfacet:
@@ -605,31 +668,10 @@ _newfacet:
       li->next = facet->verts; /* prepend */
       facet->verts = li;
 
-      facetridges[0] = horizonridge;
-      for (int iridge = 1; iridge < d; ++iridge) {
-        /* Add all facet vertices except the one at index 'iridge': */
-        List* li = facet->verts;
-        for (int ivertex = 0; ivertex < d - 1; ++ivertex) {
-          if (ivertex == iridge) {
-            li = li->next;
-          }
-          ridgeverts[ivertex] = li->val;
-          li = li->next;
-        }
-
-        /* Get or create new ridge: */
-        Ridge** pnewridge = hashmap_get(&tope->newridges, d, ridgeverts);
-        if (*pnewridge == NULL) {
-          /* Create new ridge: */
-          *pnewridge = ridge_create(tope, ridgeverts);
-        }
-        facetridges[iridge] = *pnewridge;
-      }
-
       addfacet(tope, facet, facetridges);
     }
 
-    /* Add new facet to newfacets array: */
+    /* Add facet to newfacets array: */
     if (tope->newfacets_len == tope->newfacets_cap) {
       tope->newfacets_cap = 3 * tope->newfacets_cap / 2 + 1;
       tope->newfacets = realloc(tope->newfacets, tope->newfacets_cap * sizeof(Facet*));
