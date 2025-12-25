@@ -235,61 +235,21 @@ static void addfacet(Tope* tope, Facet* facet, Ridge** ridges)
   Allocator* alc = &tope->alc;
   int d = tope->dim;
 
-  /* Facet centroid: */
-  vec_reset(d, facet->centroid);
-  for (List* lst = facet->verts; lst != NULL; lst = lst->next) {
-    vec_add(d, facet->centroid, ((Vertex*)lst->val)->position);
-  }
-  vec_scale(d, facet->centroid, 1.0 / (double)d);
-
-  /* Vertex span: */
-  double* dirs = alloca((d - 1) * d * sizeof(double));
+  /* Vertices: */
+  double* verts = alloca(d * d * sizeof(double));
   List* lst = facet->verts;
-  double* x0 = ((Vertex*)lst->val)->position;
-  lst = lst->next;
   for (int i = 0; lst != NULL; ++i, lst = lst->next) {
-    /* Vertex position difference: */
-    memcpy(dirs + i * d, ((Vertex*)lst->val)->position, d * sizeof(double));
-    vec_sub(d, dirs + i * d, x0);
+    memcpy(verts + i * d, ((Vertex*)lst->val)->position, d * sizeof(double));
   }
 
-  /* Basis and volume: */
-  facet->volume = 1.0;
-  for (int i = 0; i < d - 1; ++i) {
-    /* Pivot largest row on top: */
-    int pivot = i;
-    double maxnrmsq = vec_nrmsq(d, dirs + i * d);
-    for (int j = i + 1; j < d - 1; ++j) {
-      double nrmsq = vec_nrmsq(d, dirs + j * d);
-      if (nrmsq > maxnrmsq) {
-        maxnrmsq = nrmsq;
-        pivot = j;
-      }
-    }
-    if (pivot > i) {
-      memswp(dirs + i * d, dirs + pivot * d, d * sizeof(double));
-    }
-
-    /* Normalize: */
-    double nrm = sqrt(maxnrmsq);
-    vec_scale(d, dirs + i * d, 1.0 / nrm);
-
-    /* Orthogonalize: */
-    for (int j = i + 1; j < d - 1; ++j) {
-      double ip = vec_dot(d, dirs + j * d, dirs + i * d);
-      vec_adds(d, dirs + j * d, dirs + i * d, -ip);
-    }
-
-    /* Accumulate area: */
-    facet->volume *= nrm / (double)(i + 1);
-  }
+  analyzesimplex(d, d, verts, &facet->volume, facet->centroid);
 
   /* Compute normal: */
   memcpy(facet->normal, facet->centroid, d * sizeof(double));
   vec_sub(d, facet->normal, tope->center);
   for (int i = 0; i < d - 1; ++i) {
-    double ip = vec_dot(d, facet->normal, dirs + i * d);
-    vec_adds(d, facet->normal, dirs + i * d, -ip);
+    double ip = vec_dot(d, facet->normal, verts + i * d);
+    vec_adds(d, facet->normal, verts + i * d, -ip);
   }
   vec_normalize(d, facet->normal);
 
@@ -1126,12 +1086,12 @@ void tope_interpolate(
   double* weights
 )
 {
-  Allocator* alc = &tope->alc;
-
   assert(tope->isdelaunay);
 
-  /* Some space for various tasks: */
   int d = tope->dim - 1;
+  Allocator* alc = &tope->alc;
+
+  /* Some space for various tasks: */
   double* xiprime = alloca(d * sizeof(double));
   double* centroid = alloca(d * sizeof(double));
   double* verts = alloca(d * d * sizeof(double));
@@ -1175,7 +1135,7 @@ void tope_interpolate(
         }
 
         /* Analyse ridge simplex: */
-        analysesimplex(d, d, verts, ridge->vdn + 0, centroid);
+        analyzesimplex(d, d, verts, ridge->vdn + 0, centroid);
 
         /* Construct normal: */
         memcpy(ridge->vdn + 2, centroid, d * sizeof(double));

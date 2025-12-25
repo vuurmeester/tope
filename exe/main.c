@@ -11,6 +11,8 @@
 
 static int linenr = 0;
 
+
+
 static void error(char const* str, ...)
 {
   va_list args;
@@ -39,8 +41,15 @@ static char* read_line()
 
 
 
-int main(void)
+int main(int argc, char** argv)
 {
+  bool merge = false;
+  for (int i = 1; i < argc; ++i) {
+    if (strcmp(argv[i], "-m") == 0) {
+      merge = true;
+    }
+  }
+
   char* start = NULL;
   char* next = NULL;
 
@@ -83,7 +92,7 @@ int main(void)
   
   /* Add points to tope: */
   double starttime = tope_gettime();
-  Tope* tope = tope_frompoints(npoints, d, points, true);
+  Tope* tope = tope_frompoints(npoints, d, points, merge);
   double endtime = tope_gettime();
   int nfacets = tope_getnumfacets(tope);
   int nridges = tope_getnumridges(tope);
