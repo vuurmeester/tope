@@ -517,9 +517,13 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
 
   /* Add apex vertex to tope: */
   Vertex* vertex = vertex_create(tope, apex->pos, apex->index);
+
+  /* Some workspace: */
   Vertex** ridgeverts = alloca((d - 1) * sizeof(Vertex*));
   Vertex** facetverts = alloca(d * sizeof(Vertex*));
   Ridge** facetridges = alloca(d * sizeof(Ridge*));
+  double* centroid = alloca(d * sizeof(double));  /* needed for merge */
+  double* verts = alloca(d * d * sizeof(double));  /* needed for merge */
 
   hashmap_clear(&tope->newridges);
 
@@ -571,8 +575,22 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
         goto _newfacet;
       }
 
-      // MERGE
+      /* MERGE */
       facet = neighbour;
+
+      /* Volume, centroid of addition: */
+      for (int i = 0; i < d; ++i) {
+        memcpy(verts + i * d, facetverts[i]->position, 3 * sizeof(double));
+      }
+      double vol = 0.0;
+      vec_reset(d, centroid);
+      analyzesimplex(d, d, verts, &vol, centroid);
+
+      /* Merge volume and centroid: */
+      vec_scale(d, facet->centroid, facet->volume);
+      vec_adds(d, facet->centroid, centroid, vol);
+      facet->volume += vol;
+      vec_scale(d, facet->centroid, 1.0 / facet->volume);
 
       /* Append apex to vertex list: */
       List** pvli = &facet->verts;
