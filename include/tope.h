@@ -51,9 +51,6 @@ void tope_interpolate(
 /** First facet. */
 tope_Facet* tope_firstfacet(Tope* tope);
 
-/** First vertex. */
-tope_Vertex* tope_firstvertex(Tope* tope);
-
 /** Next facet. */
 tope_Facet* tope_facet_nextfacet(tope_Facet* facet);
 
@@ -72,11 +69,8 @@ double tope_facet_getvolume(Tope* tope, tope_Facet* facet);
 /** Number of facet vertices. */
 int tope_facet_getnumvertices(Tope* tope, tope_Facet* facet);
 
-/** Next vertex. */
-tope_Vertex* tope_vertex_nextvertex(tope_Vertex* vertex);
-
 /** Vertex position. */
 void tope_vertex_getposition(Tope* tope, tope_Vertex* vertex, double* position);
 
-/** Memory used. */
+/** Memory in use. */
 uint64_t tope_bytes_used(Tope* tope);
