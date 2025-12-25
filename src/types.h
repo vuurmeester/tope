@@ -51,7 +51,6 @@ struct _tope_Facet {
   Facet* prev;
 
   double volume;
-  double dist;        /* distance from origin */
   Point* outsidehead; /* visible points list */
   Point* outsidetail; /* last entry in visible points list */
   double* centroid;
