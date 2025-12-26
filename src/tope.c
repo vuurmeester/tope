@@ -197,20 +197,13 @@ static void facet_free(Tope* tope, Facet* facet)
   while (facet->ridges) {
     Ridge* ridge = facet->ridges->val;
     if (ridge->facets[0] == facet) {
-      if (ridge->facets[1] == NULL) {
-        ridge_remove(tope, ridge);
-      }
-      else {
-        ridge->facets[0] = NULL;
-      }
+      ridge->facets[0] = NULL;
     }
     else if (ridge->facets[1] == facet) {
-      if (ridge->facets[0] == NULL) {
-        ridge_remove(tope, ridge);
-      }
-      else {
-        ridge->facets[1] = NULL;
-      }
+      ridge->facets[1] = NULL;
+    }
+    if (ridge->facets[0] == NULL && ridge->facets[1] == NULL) {
+      ridge_remove(tope, ridge);
     }
 
     List* next = facet->ridges->next;
@@ -420,7 +413,7 @@ static void initialsimplex(Tope* tope, int npoints, Point* points)
 
     /* Vertex array filled, compute and integrate the facet: */
     /* Create facet: */
-    Facet* facet = facet_create(tope, facetverts, facetridges);
+    facet_create(tope, facetverts, facetridges);
   }
 
   /* Create outside sets (assign each remaining vertex to a facet which it
@@ -748,6 +741,11 @@ static Tope* tope_new()
 
 void tope_delete(Tope* tope)
 {
+  while (tope->firstfacet) {
+    Facet* next = tope->firstfacet->next;
+    facet_free(tope, tope->firstfacet);
+    tope->firstfacet = next;
+  }
   free(tope->newfacets);
   free(tope->horizonridges);
   hashmap_destroy(&tope->newridges);
