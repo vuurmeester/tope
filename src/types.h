@@ -52,7 +52,7 @@ struct _tope_Facet {
   Facet* prev;
 
   double volume;
-  Point* outsidehead; /* first engry in visible points list */
+  Point* outsidehead; /* first entry in visible points list */
   Point* outsidetail; /* last entry in visible points list */
   double* centroid;
   double* normal;
