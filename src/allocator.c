@@ -5,7 +5,6 @@
 #include "allocator.h"
 
 #define BLOCKSIZE_STEP 512
-#define USE_MALLOC
 
 
 
