@@ -5,6 +5,7 @@
 #include "allocator.h"
 
 #define BLOCKSIZE_STEP 512
+#define USE_MALLOC
 
 
 
@@ -24,6 +25,12 @@ void allocator_init(Allocator* alc)
 void* allocator_alloc(Allocator* alc, u16 numbytes)
 {
   Block* mem;
+
+#ifdef USE_MALLOC
+  mem = malloc(numbytes);
+  memset(mem, 0x00, numbytes);
+  return mem;
+#endif
 
   assert(0 < numbytes && numbytes <= ALLOCATOR_MAXSIZE);
 
@@ -71,6 +78,11 @@ _return:
 
 void allocator_free(Allocator* alc, void* mem, u16 numbytes)
 {
+#ifdef USE_MALLOC
+  free(mem);
+  return;
+#endif
+
   /* Check input: */
   assert(0 < numbytes && numbytes <= ALLOCATOR_MAXSIZE);
   assert(mem != NULL);

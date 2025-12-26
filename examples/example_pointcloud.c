@@ -34,21 +34,21 @@ double benchmark(int ntests, int npoints, int ndims, int cospherical)
   printf("ndims       = %d\n", ndims);
   printf("cospherical = %s\n", cospherical ? "true" : "false");
 
+  /* Random points: */
+  for (ipoint = 0; ipoint < npoints; ++ipoint) {
+    for (idim = 0; idim < ndims; ++idim) {
+      points[ipoint * ndims + idim] = random_getdouble() - 0.5;
+    }
+    if (cospherical) {
+      vec_normalize(ndims, &points[ipoint * ndims]);
+    }
+  }
+
   start = tope_gettime();
   nfacets = 0;
   nridges = 0;
   nverts = 0;
   for (itest = 0; itest < ntests; ++itest) {
-    /* Random points: */
-    for (ipoint = 0; ipoint < npoints; ++ipoint) {
-      for (idim = 0; idim < ndims; ++idim) {
-        points[ipoint * ndims + idim] = random_getdouble() - 0.5;
-      }
-      if (cospherical) {
-        vec_normalize(ndims, &points[ipoint * ndims]);
-      }
-    }
-
     /* Add points to tope: */
     tope = tope_frompoints(npoints, ndims, points, false);
 
