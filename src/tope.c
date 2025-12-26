@@ -741,11 +741,13 @@ static Tope* tope_new()
 
 void tope_delete(Tope* tope)
 {
+#ifdef USE_MALLOC
   while (tope->firstfacet) {
     Facet* next = tope->firstfacet->next;
     facet_free(tope, tope->firstfacet);
     tope->firstfacet = next;
   }
+#endif
   free(tope->newfacets);
   free(tope->horizonridges);
   hashmap_destroy(&tope->newridges);

@@ -7,6 +7,7 @@ typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
 
+//#define USE_MALLOC
 #define ALLOCATOR_MAXSIZE 512
 #define ALLOCATOR_MAXPOOLS 8
 
