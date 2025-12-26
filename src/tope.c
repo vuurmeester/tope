@@ -93,6 +93,7 @@ static void ridge_remove(Tope* tope, Ridge* ridge)
   for (int ivertex = 0; ivertex < tope->dim - 1; ++ivertex) {
     Vertex* vertex = ridge->vertices[ivertex];
     --vertex->nridges;
+    assert(vertex->nridges >= 0);
     if (vertex->nridges == 0) {
       /* Remove the vertex as well: */
       vertex_remove(tope, vertex);
@@ -194,6 +195,24 @@ static void facet_free(Tope* tope, Facet* facet)
     facet->verts = next;
   }
   while (facet->ridges) {
+    Ridge* ridge = facet->ridges->val;
+    if (ridge->facets[0] == facet) {
+      if (ridge->facets[1] == NULL) {
+        ridge_remove(tope, ridge);
+      }
+      else {
+        ridge->facets[0] = NULL;
+      }
+    }
+    else if (ridge->facets[1] == facet) {
+      if (ridge->facets[0] == NULL) {
+        ridge_remove(tope, ridge);
+      }
+      else {
+        ridge->facets[1] = NULL;
+      }
+    }
+
     List* next = facet->ridges->next;
     allocator_free(alc, facet->ridges, sizeof(List));
     facet->ridges = next;
@@ -470,39 +489,36 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
         neighbour = ridge->facets[0];
       }
 
-      if (neighbour == NULL) {
-        /* This neighbour was already removed, remove ridge. */
-
-        /* Remove the ridge from the tope: */
-        ridge_remove(tope, ridge);
+      if (neighbour == NULL || neighbour->volume < 0) {
+        /* Removed or visited. */
+        continue;
       }
-      else if (neighbour->volume >= 0) {
-        /* Neighbour is untested. */
 
-        /* Height of apex above neighbour: */
-        double h = height(d, neighbour, apex->pos);
+      /* Neighbour is untested. */
 
-        /* Decide if neighbour is visible: */
-        if (h > EPS) {
-          /* Remove neighbour from tope list: */
-          facet_unlink(tope, neighbour);
+      /* Height of apex above neighbour: */
+      double h = height(d, neighbour, apex->pos);
 
-          /* Prepend neighbour to visible list: */
-          neighbour->next = visiblelist;
-          visiblelist = neighbour;
-          neighbour->volume = -1;  /* mark visible */
+      /* Decide if neighbour is visible: */
+      if (h > EPS) {
+        /* Remove neighbour from tope list: */
+        facet_unlink(tope, neighbour);
+
+        /* Prepend neighbour to visible list: */
+        neighbour->next = visiblelist;
+        visiblelist = neighbour;
+        neighbour->volume = -1;  /* mark visible */
+      }
+      else {
+        /* Neighbour not visible. Ridge belongs to horizon: */
+        if (tope->horizonridges_len == tope->horizonridges_cap) {
+          tope->horizonridges_cap = 3 * tope->horizonridges_cap / 2 + 1;
+          tope->horizonridges = realloc(
+            tope->horizonridges,
+            tope->horizonridges_cap * sizeof(Ridge*)
+          );
         }
-        else {
-          /* Neighbour not visible. Ridge belongs to horizon: */
-          if (tope->horizonridges_len == tope->horizonridges_cap) {
-            tope->horizonridges_cap = 3 * tope->horizonridges_cap / 2 + 1;
-            tope->horizonridges = realloc(
-              tope->horizonridges,
-              tope->horizonridges_cap * sizeof(Ridge*)
-            );
-          }
-          tope->horizonridges[tope->horizonridges_len++] = ridge;
-        }
+        tope->horizonridges[tope->horizonridges_len++] = ridge;
       }
     }
 
@@ -939,24 +955,6 @@ Tope* tope_delaunay(int npoints, int dim, double const* orgpoints)
     Facet* next = facet->next;
     if (facet->normal[dim] > -EPS) {
       // Upper delaunay
-      List* lst = facet->ridges;
-      for (int i = 0; i <= dim; ++i) {
-        Ridge* ridge = lst->val;
-        lst = lst->next;
-        if (ridge->facets[0] == facet) {
-          ridge->facets[0] = NULL;
-          if (ridge->facets[1] == NULL) {
-            ridge_remove(tope, ridge);
-          }
-        }
-        else {
-          assert(ridge->facets[1] == facet);
-          ridge->facets[1] = NULL;
-          if (ridge->facets[0] == NULL) {
-            ridge_remove(tope, ridge);
-          }
-        }
-      }
       facet_unlink(tope, facet);
       facet_free(tope, facet);
     }
