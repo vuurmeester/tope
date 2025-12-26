@@ -391,12 +391,12 @@ static void initialsimplex(Tope* tope, int npoints, Point* points)
         ridgeverts[k] = facetverts[k + 1];
       }
 
-      Ridge** pnewridge = hashmap_get(&tope->newridges, d, ridgeverts);
-      if (*pnewridge == NULL) {
+      Ridge** pridge = hashmap_get(&tope->newridges, d, ridgeverts);
+      if (*pridge == NULL) {
         /* New ridge: */
-        *pnewridge = ridge_create(tope, ridgeverts);
+        *pridge = ridge_create(tope, ridgeverts);
       }
-      facetridges[j] = *pnewridge;
+      facetridges[j] = *pridge;
     }
 
     /* Vertex array filled, compute and integrate the facet: */
@@ -552,12 +552,12 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
       }
 
       /* Get or create new ridge: */
-      Ridge** pnewridge = hashmap_get(&tope->newridges, d, ridgeverts);
-      if (*pnewridge == NULL) {
+      Ridge** pridge = hashmap_get(&tope->newridges, d, ridgeverts);
+      if (*pridge == NULL) {
         /* Create new ridge: */
-        *pnewridge = ridge_create(tope, ridgeverts);
+        *pridge = ridge_create(tope, ridgeverts);
       }
-      facetridges[iridge] = *pnewridge;
+      facetridges[iridge] = *pridge;
     }
 
     Facet* facet = NULL;
@@ -1291,7 +1291,6 @@ void tope_vertex_getposition(Tope* tope, Vertex* vertex, double* position)
   double* scales = tope->scales;
   double* shift = tope->shift;
   int i = tope->dim;
-  i -= tope->isdelaunay ? 1 : 0;
   while (i--) {
     position[i] = vertex->position[i] * scales[i] + shift[i];
   }
