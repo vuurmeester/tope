@@ -47,6 +47,7 @@ endif()
 # Default install dir:
 set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/.." CACHE STRING "" FORCE)
 
+# compile_commands.json
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Switches to enable examples and/or tests
@@ -57,8 +58,8 @@ option(TESTS_ENABLED "enable tests" ON)
 set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/.." CACHE STRING "" FORCE)
 
 # Internal include directory:
-set(POLYTOOP_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include CACHE INTERNAL "include path")
-include_directories(${POLYTOOP_INCLUDE_DIR})
+set(TOPE_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include CACHE INTERNAL "include path")
+include_directories(${TOPE_INCLUDE_DIR})
 
 # Scan for source and header files:
 file(GLOB_RECURSE header_files include/*.h)
