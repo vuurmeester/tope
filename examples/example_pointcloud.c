@@ -13,18 +13,7 @@
 
 double benchmark(int ntests, int npoints, int ndims, int cospherical)
 {
-  int itest;
-  int ipoint;
-  int idim;
-  int nfacets;
-  int nridges;
-  int nverts;
-  double start;
-  double dt;
-  double* points;
-  Tope* tope;
-
-  points = malloc(npoints * ndims * sizeof(double));
+  double* points = malloc(npoints * ndims * sizeof(double));
 
   random_reset();
 
@@ -35,8 +24,8 @@ double benchmark(int ntests, int npoints, int ndims, int cospherical)
   printf("cospherical = %s\n", cospherical ? "true" : "false");
 
   /* Random points: */
-  for (ipoint = 0; ipoint < npoints; ++ipoint) {
-    for (idim = 0; idim < ndims; ++idim) {
+  for (int ipoint = 0; ipoint < npoints; ++ipoint) {
+    for (int idim = 0; idim < ndims; ++idim) {
       points[ipoint * ndims + idim] = random_getdouble() - 0.5;
     }
     if (cospherical) {
@@ -44,13 +33,13 @@ double benchmark(int ntests, int npoints, int ndims, int cospherical)
     }
   }
 
-  start = tope_gettime();
-  nfacets = 0;
-  nridges = 0;
-  nverts = 0;
-  for (itest = 0; itest < ntests; ++itest) {
+  double start = tope_gettime();
+  int nfacets = 0;
+  int nridges = 0;
+  int nverts = 0;
+  for (int itest = 0; itest < ntests; ++itest) {
     /* Add points to tope: */
-    tope = tope_frompoints(npoints, ndims, points, false);
+    Tope* tope = tope_frompoints(npoints, ndims, points, false);
 
     /* Accumulate total number of facets and vertices created: */
     nfacets += tope_getnumfacets(tope);
@@ -60,7 +49,7 @@ double benchmark(int ntests, int npoints, int ndims, int cospherical)
     /* Clean up: */
     tope_delete(tope);
   }
-  dt = tope_gettime() - start;
+  double dt = tope_gettime() - start;
   printf("facets      = %d\n", nfacets);
   printf("ridges      = %d\n", nridges);
   printf("verts       = %d\n", nverts);
