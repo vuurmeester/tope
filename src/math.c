@@ -189,7 +189,7 @@ void mat_matmul(
   double* result
 )
 {
-  memset(result, 0, m * o * sizeof(double));
+  memset(result, 0x00, m * o * sizeof(double));
   for (int i = 0; i < m; ++i) {
     for (int k = 0; k < n; ++k) {
       for (int j = 0; j < o; ++j) {
@@ -423,8 +423,7 @@ double gauss(int n, double* A, double* b)
 
   /* Backsubstitution: */
   for (--i; i >= 0; --i) {
-    b[i] = (b[i] - vec_dot(n - i - 1, b + i + 1, A + i * n + i + 1)) /
-           A[i * n + i];
+    b[i] = (b[i] - vec_dot(n - i - 1, b + i + 1, A + i * n + i + 1)) / A[i * n + i];
   }
 
   return det;

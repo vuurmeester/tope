@@ -37,19 +37,19 @@ void vec_scale(int n, double* x, double scale);
 /** Negate a vector. */
 void vec_neg(int n, double* x);
 
-/** Set all components of a vector. */
+/** Set all components of a vector to the same scalar. */
 void vec_set(int n, double* x, double scalar);
 
 /** Reset vector. */
 void vec_reset(int n, double* x);
 
-/** Inner product of two vectors. */
+/** Dot product of two vectors. */
 double vec_dot(int n, double const* x, double const* y);
 
-/** Squared norm of a vector. */
+/** Squared 2-norm of a vector. */
 double vec_nrmsq(int n, double const* x);
 
-/** Norm of a vector. */
+/** 2-Norm of a vector. */
 double vec_norm(int n, double const* x);
 
 /** Normalize the vector. */
@@ -58,10 +58,10 @@ void vec_normalize(int n, double* x);
 /** Sum of elements of a vector. */
 double vec_sum(int n, double const* x);
 
-/** Maximum element of a vector. */
+/** Index of maximum element of a vector. */
 int vec_maxindex(int n, double const* x);
 
-/** Minimum element of a vector. */
+/** Index of minimum element of a vector. */
 int vec_minindex(int n, double const* x);
 
 /** Print a vector to stdout. */
@@ -100,7 +100,8 @@ void boundingbox(
   double* maxima
 );
 
-/** Compute volume, centroid and span of multidimensional simplex. */
+/** Compute volume and centroid and of multidimensional simplex.
+    'points' will be replaced by orthonormal basis. */
 void analyzesimplex(
   int npoints,
   int ndims,

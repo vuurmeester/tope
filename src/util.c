@@ -22,7 +22,7 @@ void memswp(void* ptr1, void* ptr2, int numbytes)
   assert(
       (char*)ptr1 + numbytes <= (char*)ptr2 ||
       (char*)ptr2 + numbytes <= (char*)ptr1
-  );
+  );  /* non-overlapping */
   void* tmp = alloca(numbytes);
   memcpy(tmp, ptr1, numbytes);
   memcpy(ptr1, ptr2, numbytes);

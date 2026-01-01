@@ -19,5 +19,5 @@ double random_getdouble(void);
 /** Random number in range [lo, hi>. */
 int random_getint(int lo, int hi);
 
-/** Time difference [s] since last call. */
+/** Time [s] since reference time. */
 double tope_gettime(void);

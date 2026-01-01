@@ -10,33 +10,24 @@
 
 void benchmark(int ntests, int nplanes, int ndims)
 {
-  int itest;
-  int idim;
-  int iplane;
   int nfacets = 0;
   int nverts = 0;
   int nridges = 0;
-  double start;
-  double dt;
-  double* center;
-  double* normals;
-  double* dists;
-  Tope* tope;
 
-  start = tope_gettime();
+  double start = tope_gettime();
   random_reset();
-  for (itest = 0; itest < ntests; ++itest) {
+  for (int itest = 0; itest < ntests; ++itest) {
     /* Random center: */
-    center = malloc(ndims * sizeof(double));
-    for (idim = 0; idim < ndims; ++idim) {
+    double* center = malloc(ndims * sizeof(double));
+    for (int idim = 0; idim < ndims; ++idim) {
       center[idim] = 10.0 * (random_getdouble() - 0.5);
     }
 
     /* Random planes: */
-    normals = malloc(nplanes * ndims * sizeof(double));
-    dists = malloc(nplanes * sizeof(double));
-    for (iplane = 0; iplane < nplanes; ++iplane) {
-      for (idim = 0; idim < ndims; ++idim) {
+    double* normals = malloc(nplanes * ndims * sizeof(double));
+    double* dists = malloc(nplanes * sizeof(double));
+    for (int iplane = 0; iplane < nplanes; ++iplane) {
+      for (int idim = 0; idim < ndims; ++idim) {
         normals[iplane * ndims + idim] = random_getdouble() - 0.5;
       }
       vec_normalize(ndims, &normals[iplane * ndims]);
@@ -45,7 +36,7 @@ void benchmark(int ntests, int nplanes, int ndims)
     }
 
     /* Create tope object: */
-    tope = tope_fromplanes(nplanes, ndims, normals, dists, center);
+    Tope* tope = tope_fromplanes(nplanes, ndims, normals, dists, center);
 
     /* Accumulate total number of vertices created: */
     if (tope) {
@@ -59,14 +50,13 @@ void benchmark(int ntests, int nplanes, int ndims)
     free(normals);
     free(center);
   }
-  dt = tope_gettime() - start;
   printf("ntests      = %d\n", ntests);
   printf("nplanes     = %d\n", nplanes);
   printf("ndims       = %d\n", ndims);
   printf("facets      = %d\n", nfacets);
   printf("ridges      = %d\n", nridges);
   printf("verts       = %d\n", nverts);
-  printf("time        = %g\n\n", dt);
+  printf("time        = %g\n\n", tope_gettime() - start);
 }
 
 

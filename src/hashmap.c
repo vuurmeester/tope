@@ -27,22 +27,26 @@ static u32 hashvertset(int d, Vertex** verts)
 
 static void initarrays(Ridge*** ridges, u32** hashes, u32 cap)
 {
+  /* Allocate ridge and hash arrays together: */
   int numbytes = cap * (sizeof(Ridge*) + sizeof(u32));
   *ridges = malloc(numbytes);
   memset(*ridges, 0x00, numbytes);
-  *hashes = (u32*)(*ridges + cap);
+  *hashes = (u32*)(*ridges + cap);  /* hash array is past ridge array */
 }
 
 
 
 static void expand(HashMap* hashmap)
 {
-  u32 newcap = hashmap->cap * 2;
+  u32 newcap = hashmap->cap * 2;  /* double capacity */
   u32 newmask = newcap - 1;
+
+  /* Allocate new arrays: */
   Ridge** newridges;
   u32* newhashes;
   initarrays(&newridges, &newhashes, newcap);
 
+  /* Put existing entries in new arrays: */
   for (u32 i = 0; i < hashmap->cap; ++i) {
     if (hashmap->ridges[i] == NULL) {
       continue;
@@ -55,6 +59,7 @@ static void expand(HashMap* hashmap)
     newhashes[newindex] = hashmap->hashes[i];
   }
 
+  /* Release old arrays and assign new ones: */
   free(hashmap->ridges);
   hashmap->ridges = newridges;
   hashmap->hashes = newhashes;
@@ -105,12 +110,13 @@ Ridge** hashmap_get(HashMap* hashmap, int d, Vertex** verts)
           hashmap->ridges[index]->vertices,
           (d - 1) * sizeof(Vertex*)
         ) == 0) {
+      /* same hash and same vertset */
       return hashmap->ridges + index;
     }
     index = (index + 1) & (hashmap->cap - 1);  /* next in cluster */
   }
 
-  /* Not found, create new entry and return reference: */
+  /* Not found, create new entry and return reference (so that it can be filled): */
   hashmap->hashes[index] = hash;
   ++hashmap->len;
   return hashmap->ridges + index;
