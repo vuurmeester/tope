@@ -10,45 +10,43 @@
 
 void benchmark(int ntests, int nplanes, int ndims)
 {
+  /* Allocations: */
+  double* center = malloc(ndims * sizeof(double));
+  double* normals = malloc(nplanes * ndims * sizeof(double));
+  double* dists = malloc(nplanes * sizeof(double));
+
+  random_reset();
+
+  /* Random center: */
+  for (int idim = 0; idim < ndims; ++idim) {
+    center[idim] = 10.0 * (random_getdouble() - 0.5);
+  }
+
+  /* Random planes: */
+  for (int iplane = 0; iplane < nplanes; ++iplane) {
+    for (int idim = 0; idim < ndims; ++idim) {
+      normals[iplane * ndims + idim] = random_getdouble() - 0.5;
+    }
+    vec_normalize(ndims, &normals[iplane * ndims]);
+    dists[iplane] = 0.1 + random_getdouble() +
+                    vec_dot(ndims, center, &normals[iplane * ndims]);
+  }
+
+  double start = tope_gettime();
   int nfacets = 0;
   int nverts = 0;
   int nridges = 0;
-
-  double start = tope_gettime();
-  random_reset();
   for (int itest = 0; itest < ntests; ++itest) {
-    /* Random center: */
-    double* center = malloc(ndims * sizeof(double));
-    for (int idim = 0; idim < ndims; ++idim) {
-      center[idim] = 10.0 * (random_getdouble() - 0.5);
-    }
-
-    /* Random planes: */
-    double* normals = malloc(nplanes * ndims * sizeof(double));
-    double* dists = malloc(nplanes * sizeof(double));
-    for (int iplane = 0; iplane < nplanes; ++iplane) {
-      for (int idim = 0; idim < ndims; ++idim) {
-        normals[iplane * ndims + idim] = random_getdouble() - 0.5;
-      }
-      vec_normalize(ndims, &normals[iplane * ndims]);
-      dists[iplane] = 0.1 + random_getdouble() +
-                      vec_dot(ndims, center, &normals[iplane * ndims]);
-    }
-
     /* Create tope object: */
     Tope* tope = tope_fromplanes(nplanes, ndims, normals, dists, center);
 
     /* Accumulate total number of vertices created: */
-    if (tope) {
-      nfacets += tope_getnumfacets(tope);
-      nverts += tope_getnumvertices(tope);
-      nridges += tope_getnumridges(tope);
-      tope_delete(tope);
-    }
+    nfacets += tope_getnumfacets(tope);
+    nverts += tope_getnumvertices(tope);
+    nridges += tope_getnumridges(tope);
 
-    free(dists);
-    free(normals);
-    free(center);
+    /* Release tope object: */
+    tope_delete(tope);
   }
   printf("ntests      = %d\n", ntests);
   printf("nplanes     = %d\n", nplanes);
@@ -57,6 +55,10 @@ void benchmark(int ntests, int nplanes, int ndims)
   printf("ridges      = %d\n", nridges);
   printf("verts       = %d\n", nverts);
   printf("time        = %g\n\n", tope_gettime() - start);
+
+  free(dists);
+  free(normals);
+  free(center);
 }
 
 

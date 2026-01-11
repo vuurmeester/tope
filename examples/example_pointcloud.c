@@ -11,7 +11,7 @@
 
 
 
-double benchmark(int ntests, int npoints, int ndims, int cospherical)
+double benchmark(int ntests, int npoints, int ndims, bool cospherical)
 {
   double* points = malloc(npoints * ndims * sizeof(double));
 
@@ -67,28 +67,28 @@ int main(void)
   double t = 0.0;
 
   /* 4D non-cospherical: */
-  t += benchmark(200, 32, 4, 0);
-  t += benchmark(200, 64, 4, 0);
+  t += benchmark(200, 32, 4, false);
+  t += benchmark(200, 64, 4, false);
 
   /* 3D non-cospherical: */
-  t += benchmark(200, 64, 3, 0);
-  t += benchmark(200, 128, 3, 0);
+  t += benchmark(200, 64, 3, false);
+  t += benchmark(200, 128, 3, false);
 
   /* 3D cospherical: */
-  t += benchmark(200, 64, 3, 1);
-  t += benchmark(200, 128, 3, 1);
+  t += benchmark(200, 64, 3, true);
+  t += benchmark(200, 128, 3, true);
 
   /* Many small hulls: */
-  t += benchmark(2000, 16, 3, 1);
+  t += benchmark(2000, 16, 3, true);
 
   /* One large cospherical tope: */
-  t += benchmark(1, 20000, 3, 1);
+  t += benchmark(1, 20000, 3, true);
 
   /* Large 4D tope: */
-  t += benchmark(1, 200000, 4, 0);
+  t += benchmark(1, 200000, 4, false);
 
   /* Large 5D tope: */
-  t += benchmark(1, 50000, 5, 0);
+  t += benchmark(1, 50000, 5, false);
 
   printf("t_total = %g\n", t);
 
