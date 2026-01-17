@@ -1,4 +1,4 @@
-#ifdef _WIN32
+#ifdef _MSC_VER
 #include <windows.h>
 #else
 #define _POSIX_C_SOURCE 199309L
@@ -20,13 +20,13 @@ static double const s_nrmfac = 1.0 / ((double)UINT_MAX + 1.0);
 void memswp(void* ptr1, void* ptr2, int numbytes)
 {
   assert(
-      (char*)ptr1 + numbytes <= (char*)ptr2 ||
-      (char*)ptr2 + numbytes <= (char*)ptr1
+    (char*)ptr1 + numbytes <= (char*)ptr2 ||
+    (char*)ptr2 + numbytes <= (char*)ptr1
   );  /* non-overlapping */
   void* tmp = alloca(numbytes);
-  memcpy(tmp, ptr1, numbytes);
+  memcpy(tmp , ptr1, numbytes);
   memcpy(ptr1, ptr2, numbytes);
-  memcpy(ptr2, tmp, numbytes);
+  memcpy(ptr2, tmp , numbytes);
 }
 
 
@@ -58,7 +58,7 @@ int random_getint(int lo, int hi)
 
 
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 static double const maxdouble = (double)UINT_MAX + 1.0;
 static double large2double(LARGE_INTEGER const* i)
 {
@@ -72,7 +72,7 @@ static double const maxdouble = 1.0e6;
 
 static void getcounts(unsigned* hi, unsigned* lo)
 {
-#ifdef _WIN32
+#ifdef _MSC_VER
   LARGE_INTEGER temp;
   QueryPerformanceCounter(&temp);
   *hi = temp.HighPart;
@@ -89,7 +89,7 @@ static void getcounts(unsigned* hi, unsigned* lo)
 
 static double getperiod(void)
 {
-#ifdef _WIN32
+#ifdef _MSC_VER
   LARGE_INTEGER temp;
   QueryPerformanceFrequency(&temp);
   double period = 1.0 / large2double(&temp);

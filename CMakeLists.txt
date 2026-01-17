@@ -6,7 +6,7 @@ project(tope LANGUAGES C)
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "" FORCE)
 
 if(UNIX)
-  set(CMAKE_C_FLAGS "-fvisibility=hidden -fPIC -no-pie -Wall -Wextra -std=c99 -pedantic" CACHE STRING "" FORCE)
+  set(CMAKE_C_FLAGS "-Wl,--exclude-libs,ALL -fvisibility=hidden -fPIC -no-pie -Wall -Wextra -std=c99 -pedantic" CACHE STRING "" FORCE)
   set(CMAKE_C_FLAGS_DEBUG "-DDEBUG -D_DEBUG -g" CACHE STRING "" FORCE)
   set(CMAKE_C_FLAGS_RELEASE "-O2 -DNDEBUG -s" CACHE STRING "" FORCE)
 endif()
@@ -44,9 +44,6 @@ if (MSVC)
   unset(CMAKE_RC_FLAGS_RELWITHDEBINFO CACHE)
 endif()
 
-# Default install dir:
-set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/.." CACHE STRING "" FORCE)
-
 # compile_commands.json
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -64,15 +61,22 @@ include_directories(${TOPE_INCLUDE_DIR})
 # Scan for source and header files:
 file(GLOB_RECURSE header_files include/*.h)
 file(GLOB_RECURSE source_files src/*.c src/*.h)
+list(REMOVE_ITEM source_files "${CMAKE_SOURCE_DIR}/src/tope.c")
+message(${source_files})
 source_group(header FILES ${header_files})
 source_group(source FILES ${source_files})
 
-# Define library:
-add_library(tope ${header_files} ${source_files})
-set_target_properties(tope PROPERTIES LINKER_LANGUAGE C)
+# Intermediate library:
+add_library(obj STATIC ${source_files})
+target_compile_definitions(obj PUBLIC BUILDING_TOPE)
 if (UNIX)
-  target_link_libraries(tope m)
+  target_link_libraries(obj m)
 endif()
+
+# Define library:
+add_library(tope SHARED src/tope.c)
+target_link_libraries(tope obj)
+set_target_properties(tope PROPERTIES LINKER_LANGUAGE C)
 
 # Install library and headers:
 install(TARGETS tope ARCHIVE DESTINATION lib)
@@ -87,8 +91,8 @@ if(TESTS_ENABLED)
     get_filename_component(name ${sname} NAME_WE)
     set (exename tope_${name})
     add_executable(${exename} ${sname})
-    set_target_properties(${exename} PROPERTIES LINKER_LANGUAGE C)
     target_link_libraries(${exename} tope)
+    set_target_properties(${exename} PROPERTIES LINKER_LANGUAGE C)
     add_test(${exename} ${exename})
   endforeach()
 endif()
@@ -100,12 +104,12 @@ if(EXAMPLES_ENABLED)
     get_filename_component(name ${sname} NAME_WE)
     set (exename tope_${name})
     add_executable(${exename} ${sname})
-    set_target_properties(${exename} PROPERTIES LINKER_LANGUAGE C)
     target_link_libraries(${exename} tope)
+    set_target_properties(${exename} PROPERTIES LINKER_LANGUAGE C)
   endforeach()
 endif()
 
 # Executable:
 add_executable(poly exe/main.c)
-set_target_properties(poly PROPERTIES LINKER_LANGUAGE C)
 target_link_libraries(poly tope)
+set_target_properties(poly PROPERTIES LINKER_LANGUAGE C)
