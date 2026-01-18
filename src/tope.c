@@ -575,7 +575,7 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
       Facet* neighbour = NULL;
       if (horizonridge->facets[0] == NULL) {
         neighbour = horizonridge->facets[1];
-      } 
+      }
       else {
         assert(horizonridge->facets[1] == NULL);
         neighbour = horizonridge->facets[0];
@@ -611,19 +611,22 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
       (*pvli)->val = vertex;
 
       /* Append new ridges to ridge list: */
-      for (int iridge = 1; iridge < d; ++iridge) {
-        List** prli = &facet->ridges;
-        for (; *prli != NULL; prli = &(*prli)->next) { /* scream to end of list */
+      List** prli = &facet->ridges;
+      for (; *prli != NULL; prli = &(*prli)->next) { /* scream to end of list */
+        for (int iridge = 1; iridge < d; ++iridge) {
           if ((*prli)->val == facetridges[iridge]) {
-            break;
+            facetridges[iridge] = NULL;
           }
         }
-        if (*prli != NULL) {
+      }
+      for (int iridge = 1; iridge < d; ++iridge) {
+        if (facetridges[iridge] == NULL) {
           continue;
         }
 
         *prli = allocator_alloc(alc, sizeof(List));
         (*prli)->val = facetridges[iridge];
+        prli = &(*prli)->next;
         if (facetridges[iridge]->facets[0] == NULL) {
           facetridges[iridge]->facets[0] = facet;
         }
@@ -634,7 +637,7 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
       }
 
       /* Remove horizon ridge from ridge list: */
-      List** prli = &facet->ridges;
+      prli = &facet->ridges;
       for (; *prli != NULL; prli = &(*prli)->next) {
         if ((*prli)->val == horizonridge) {
           List* li = *prli;
