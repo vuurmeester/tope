@@ -67,15 +67,15 @@ source_group(header FILES ${header_files})
 source_group(source FILES ${source_files})
 
 # Intermediate library:
-add_library(obj STATIC ${source_files})
-target_compile_definitions(obj PUBLIC BUILDING_TOPE)
+add_library(internal STATIC ${source_files})
 if (UNIX)
-  target_link_libraries(obj m)
+  target_link_libraries(internal m)
 endif()
 
 # Define library:
 add_library(tope SHARED src/tope.c)
-target_link_libraries(tope obj)
+target_compile_definitions(tope PRIVATE BUILDING_TOPE)
+target_link_libraries(tope internal)
 set_target_properties(tope PROPERTIES LINKER_LANGUAGE C)
 
 # Install library and headers:
