@@ -589,6 +589,20 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
       /* MERGE */
       facet = neighbour;
 
+      /* Remove horizon ridge from ridge list: */
+      List** prli = &facet->ridges;
+      for (; *prli != NULL; prli = &(*prli)->next) {
+        if ((*prli)->val == horizonridge) {
+          List* li = *prli;
+          *prli = (*prli)->next;
+          allocator_free(alc, li, sizeof(List));
+          break;
+        }
+      }
+
+      /* Remove horizon ridge: */
+      ridge_remove(tope, horizonridge);
+
       /* Volume, centroid of addition: */
       for (int i = 0; i < d; ++i) {
         memcpy(verts + i * d, facetverts[i]->position, d * sizeof(double));
@@ -604,23 +618,15 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
 
       /* Append apex to vertex list: */
       List** pvli = &facet->verts;
-      while (*pvli != NULL) {
-        pvli = &(*pvli)->next;
-      }
+      for (; *pvli != NULL; pvli = &(*pvli)->next);  /* scream to end of list */
       *pvli = allocator_alloc(alc, sizeof(List));
       (*pvli)->val = vertex;
 
       /* Append new ridges to ridge list: */
-      List** prli = &facet->ridges;
-      for (; *prli != NULL; prli = &(*prli)->next) { /* scream to end of list */
-        for (int iridge = 1; iridge < d; ++iridge) {
-          if ((*prli)->val == facetridges[iridge]) {
-            facetridges[iridge] = NULL;
-          }
-        }
-      }
+      prli = &facet->ridges;
+      for (; *prli != NULL; prli = &(*prli)->next);  /* scream to end of list */
       for (int iridge = 1; iridge < d; ++iridge) {
-        if (facetridges[iridge] == NULL) {
+        if (facetridges[iridge]->facets[0] == facet) {
           continue;
         }
 
@@ -635,20 +641,6 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
           facetridges[iridge]->facets[1] = facet;
         }
       }
-
-      /* Remove horizon ridge from ridge list: */
-      prli = &facet->ridges;
-      for (; *prli != NULL; prli = &(*prli)->next) {
-        if ((*prli)->val == horizonridge) {
-          List* li = *prli;
-          *prli = (*prli)->next;
-          allocator_free(alc, li, sizeof(List));
-          break;
-        }
-      }
-
-      /* Remove horizon ridge: */
-      ridge_remove(tope, horizonridge);
     }
     else {
 _newfacet:
