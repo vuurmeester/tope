@@ -577,6 +577,7 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
         neighbour = horizonridge->facets[1];
       } 
       else {
+        assert(horizonridge->facets[1] == NULL);
         neighbour = horizonridge->facets[0];
       }
       assert(neighbour != NULL);
@@ -610,12 +611,19 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
       (*pvli)->val = vertex;
 
       /* Append new ridges to ridge list: */
-      List** prli = &facet->ridges;
-      for (; *prli != NULL; prli = &(*prli)->next); /* scream to end of list */
       for (int iridge = 1; iridge < d; ++iridge) {
+        List** prli = &facet->ridges;
+        for (; *prli != NULL; prli = &(*prli)->next) { /* scream to end of list */
+          if ((*prli)->val == facetridges[iridge]) {
+            break;
+          }
+        }
+        if (*prli != NULL) {
+          continue;
+        }
+
         *prli = allocator_alloc(alc, sizeof(List));
         (*prli)->val = facetridges[iridge];
-        prli = &(*prli)->next;
         if (facetridges[iridge]->facets[0] == NULL) {
           facetridges[iridge]->facets[0] = facet;
         }
@@ -626,7 +634,7 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
       }
 
       /* Remove horizon ridge from ridge list: */
-      prli = &facet->ridges;
+      List** prli = &facet->ridges;
       for (; *prli != NULL; prli = &(*prli)->next) {
         if ((*prli)->val == horizonridge) {
           List* li = *prli;
@@ -693,15 +701,13 @@ static void build(Tope* tope, int npoints, Point* points)
   /* Now, all vertices are either on the initial simplex OR
      added to the outside set of one of its facets OR
      inside the initial simplex. */
-  Facet* firstfacet = tope->firstfacet;
-  while (firstfacet->outsidehead) {
+  while (tope->firstfacet->outsidehead) {
     /* Pop head: */
-    Point* point = firstfacet->outsidehead;
-    firstfacet->outsidehead = point->next;
+    Point* point = tope->firstfacet->outsidehead;
+    tope->firstfacet->outsidehead = point->next;
 
     /* Add vertex to tope: */
     addpoint(tope, tope->firstfacet, point);
-    firstfacet = tope->firstfacet;
   }
 }
 

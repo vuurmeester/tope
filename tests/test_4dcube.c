@@ -13,14 +13,13 @@
 
 int main()
 {
-  int m;
   double points[NPOINTS * DIM];
   Tope* tope;
 
   /* Define a cube. */
-  for (m = 0; m < NPOINTS; ++m) {
-    for (int i = 0; i < DIM; ++i) {
-      points[m * DIM + i] = ((m >> (DIM - 1 - i)) & 1) - 0.5;
+  for (int i = 0; i < NPOINTS; ++i) {
+    for (int j = 0; j < DIM; ++j) {
+      points[i * DIM + j] = ((i >> (DIM - 1 - j)) & 1) - 0.5;
     }
   }
 
