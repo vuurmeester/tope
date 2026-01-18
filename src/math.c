@@ -361,10 +361,14 @@ void analyzesimplex(
       }
     }
 
+    if (maxnrmsq <= 0) {
+      *volume = 0;
+      break;
+    }
+
     /* Update volume: */
     double nrm = sqrt(maxnrmsq);
     *volume *= nrm / (double)(i + 1);
-    assert(nrm > 0.0);
 
     /* Perform pivot: */
     if (pivot > i) {

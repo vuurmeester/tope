@@ -590,10 +590,9 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
 
       /* Volume, centroid of addition: */
       for (int i = 0; i < d; ++i) {
-        memcpy(verts + i * d, facetverts[i]->position, 3 * sizeof(double));
+        memcpy(verts + i * d, facetverts[i]->position, d * sizeof(double));
       }
       double vol = 0.0;
-      vec_reset(d, centroid);
       analyzesimplex(d, d, verts, &vol, centroid);
 
       /* Merge volume and centroid: */
@@ -655,14 +654,17 @@ _newfacet:
 
   /* Assign outside verts: */
   while (outsidepoints) {
-    /* Remember next in list: */
-    Point* next = outsidepoints->next;
+    /* Pop: */
+    Point* point = outsidepoints;
+    outsidepoints = outsidepoints->next;
+    point->next = NULL;
+
     double hmax = -HUGE_VAL;
     int imax = -1;
     for (int i = 0; i < tope->newfacets_len; ++i) {
       Facet* facet = tope->newfacets[i];
       /* Height of outside point above facet: */
-      double h = height(tope->dim, facet, outsidepoints->pos);
+      double h = height(tope->dim, facet, point->pos);
       if (h > hmax) {
         hmax = h;
         imax = i;
@@ -671,12 +673,9 @@ _newfacet:
 
     if (hmax > EPS) {
       /* Outside. */
-      outsidepoints->height = hmax;
-      facet_addoutside(tope, tope->newfacets[imax], outsidepoints);
+      point->height = hmax;
+      facet_addoutside(tope, tope->newfacets[imax], point);
     }
-
-    /* Next in list: */
-    outsidepoints = next;
   }
 
   assert(tope->horizonridges_len == 0);
@@ -793,15 +792,6 @@ Tope* tope_fromplanes(
 
 Tope* tope_frompoints(int npoints, int dim, double const* orgpoints, bool merge)
 {
-  int ipoint;
-  int idim;
-  int* minindices;
-  int* maxindices;
-  double* minima;
-  double* maxima;
-  double* positions;
-  Point* points;
-
   Tope* tope = tope_new();
   tope->merge = merge;
 
@@ -813,10 +803,10 @@ Tope* tope_frompoints(int npoints, int dim, double const* orgpoints, bool merge)
   tope->center = malloc(tope->dim * sizeof(double));
 
   /* Bounding box: */
-  minindices = alloca(tope->dim * sizeof(int));
-  maxindices = alloca(tope->dim * sizeof(int));
-  minima     = alloca(tope->dim * sizeof(double));
-  maxima     = alloca(tope->dim * sizeof(double));
+  int* minindices = alloca(tope->dim * sizeof(int));
+  int* maxindices = alloca(tope->dim * sizeof(int));
+  double* minima  = alloca(tope->dim * sizeof(double));
+  double* maxima  = alloca(tope->dim * sizeof(double));
   boundingbox(
     npoints,
     tope->dim,
@@ -835,14 +825,14 @@ Tope* tope_frompoints(int npoints, int dim, double const* orgpoints, bool merge)
   memcpy(tope->shift, minima, tope->dim * sizeof(double));
 
   /* Points array: */
-  points = malloc(npoints * sizeof(Point));
-  positions = malloc(npoints * dim * sizeof(double));
-  for (ipoint = 0; ipoint < npoints; ++ipoint) {
+  Point* points = malloc(npoints * sizeof(Point));
+  double* positions = malloc(npoints * dim * sizeof(double));
+  for (int ipoint = 0; ipoint < npoints; ++ipoint) {
     points[ipoint].next = NULL;
     points[ipoint].index = ipoint;
     points[ipoint].height = 0.0;
     points[ipoint].pos = positions + ipoint * dim;
-    for (idim = 0; idim < tope->dim; ++idim) {
+    for (int idim = 0; idim < tope->dim; ++idim) {
       points[ipoint].pos[idim] =
         (orgpoints[ipoint * tope->dim + idim] - tope->shift[idim]) /
         tope->scales[idim];
