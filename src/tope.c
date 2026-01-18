@@ -654,44 +654,25 @@ _newfacet:
   }
 
   /* Assign outside verts: */
-  facet = tope->newfacets[0];
   while (outsidepoints) {
     /* Remember next in list: */
     Point* next = outsidepoints->next;
-
-    /* Height of outside point above facet: */
-    double h = height(tope->dim, facet, outsidepoints->pos);
-
-    /* Visit neighbours, skipping horizon ridge: */
-    Facet* prev = NULL;
-    for (List* lst = facet->ridges->next; lst != NULL; lst = lst->next) {
-      Ridge* ridge = lst->val;
-      Facet* neighbour = NULL;
-      if (ridge->facets[0] == facet) {
-        neighbour = ridge->facets[1];
-      }
-      else {
-        assert(ridge->facets[1] == facet);
-        neighbour = ridge->facets[0];
-      }
-      if (neighbour == prev) {
-        continue;
-      }
-
-      /* Neighbour height: */
-      double nh = height(d, neighbour, outsidepoints->pos);
-      if (nh > h) {
-        prev = facet;
-        facet = neighbour;
-        h = nh;
-        lst = facet->ridges; /* reset iteration (new base facet) */
+    double hmax = -HUGE_VAL;
+    int imax = -1;
+    for (int i = 0; i < tope->newfacets_len; ++i) {
+      Facet* facet = tope->newfacets[i];
+      /* Height of outside point above facet: */
+      double h = height(tope->dim, facet, outsidepoints->pos);
+      if (h > hmax) {
+        hmax = h;
+        imax = i;
       }
     }
 
-    if (h > EPS) {
+    if (hmax > EPS) {
       /* Outside. */
-      outsidepoints->height = h;
-      facet_addoutside(tope, facet, outsidepoints);
+      outsidepoints->height = hmax;
+      facet_addoutside(tope, tope->newfacets[imax], outsidepoints);
     }
 
     /* Next in list: */
