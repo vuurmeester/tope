@@ -92,7 +92,10 @@ int main(int argc, char** argv)
   
   /* Add points to tope: */
   double starttime = tope_gettime();
-  Tope* tope = tope_frompoints(npoints, d, points, merge);
+  Tope* tope = tope_frompoints(npoints, d, points);
+  if (merge) {
+    tope_merge(tope);
+  }
   double endtime = tope_gettime();
   int nfacets = tope_getnumfacets(tope);
   int nridges = tope_getnumridges(tope);

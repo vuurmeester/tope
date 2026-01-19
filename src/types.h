@@ -44,7 +44,6 @@ struct _Tope {
   Facet** newfacets;  /* used to keep track of new facets */
   int newfacets_len;
   int newfacets_cap;
-  bool merge;  /* merge? (creates non-simplicial facets) */
 };
 
 struct _tope_Facet {

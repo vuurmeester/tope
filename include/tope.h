@@ -34,7 +34,7 @@ TOPE_API Tope* tope_fromplanes(
 );
 
 /** Create tope from point cloud. */
-TOPE_API Tope* tope_frompoints(int npoints, int dim, double const* points, bool merge);
+TOPE_API Tope* tope_frompoints(int npoints, int dim, double const* points);
 
 /** Delaunay triangulation. */
 TOPE_API Tope* tope_delaunay(int npoints, int dim, double const* points);
@@ -88,3 +88,6 @@ TOPE_API void tope_vertex_getposition(Tope* tope, tope_Vertex* vertex, double* p
 
 /** Memory in use. */
 TOPE_API uint64_t tope_bytes_used(Tope* tope);
+
+/** Merge parallel facets. */
+TOPE_API void tope_merge(Tope* tope);

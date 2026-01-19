@@ -36,7 +36,7 @@ double benchmark(int ntests, int npoints, int ndims, bool cospherical)
   int nverts = 0;
   for (int itest = 0; itest < ntests; ++itest) {
     /* Add points to tope: */
-    Tope* tope = tope_frompoints(npoints, ndims, points, false);
+    Tope* tope = tope_frompoints(npoints, ndims, points);
 
     /* Accumulate total number of facets and vertices created: */
     nfacets += tope_getnumfacets(tope);

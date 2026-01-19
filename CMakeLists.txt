@@ -59,28 +59,29 @@ set(TOPE_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include CACHE INTERNAL "include
 include_directories(${TOPE_INCLUDE_DIR})
 
 # Scan for source and header files:
-file(GLOB_RECURSE header_files include/*.h)
-file(GLOB_RECURSE source_files src/*.c src/*.h)
+file(GLOB_RECURSE header_files src/*.h)
+file(GLOB_RECURSE source_files src/*.c)
 list(REMOVE_ITEM source_files "${CMAKE_SOURCE_DIR}/src/tope.c")
-message(${source_files})
 source_group(header FILES ${header_files})
 source_group(source FILES ${source_files})
 
 # Intermediate library:
-add_library(internal STATIC ${source_files})
+add_library(internal STATIC ${source_files} ${header_files})
 if (UNIX)
   target_link_libraries(internal m)
 endif()
 
 # Define library:
-add_library(tope SHARED src/tope.c)
+add_library(tope SHARED src/tope.c include/tope.h)
+source_group(header FILES include/tope.h)
+source_group(source FILES src/tope.c)
 target_compile_definitions(tope PRIVATE BUILDING_TOPE)
 target_link_libraries(tope internal)
 set_target_properties(tope PROPERTIES LINKER_LANGUAGE C)
 
 # Install library and headers:
 install(TARGETS tope ARCHIVE DESTINATION lib)
-install(FILES ${header_files} DESTINATION include/tope)
+install(FILES include/tope.h DESTINATION include/tope)
 
 # Tests:
 if(TESTS_ENABLED)

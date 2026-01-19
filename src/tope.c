@@ -15,6 +15,42 @@
 
 
 
+static Facet* facet_get_neighbour(Facet* facet, Ridge* ridge)
+{
+  if (ridge->facets[0] == facet) {
+    return ridge->facets[1];
+  }
+  assert(ridge->facets[1] == facet);
+  return ridge->facets[0];
+}
+
+
+
+static void ridge_remove_facet(Ridge* ridge, Facet* facet)
+{
+  if (ridge->facets[0] == facet) {
+    ridge->facets[0] = ridge->facets[1];
+    ridge->facets[1] = NULL;
+  }
+  else {
+    assert(ridge->facets[1] == facet);
+    ridge->facets[1] = NULL;
+  }
+}
+
+
+
+static void append_horizon_ridge(Tope* tope, Ridge* ridge)
+{
+  if (tope->horizonridges_len == tope->horizonridges_cap) {
+    tope->horizonridges_cap = 3 * tope->horizonridges_cap / 2 + 1;
+    tope->horizonridges = realloc(tope->horizonridges, tope->horizonridges_cap * sizeof(Ridge*));
+  }
+  tope->horizonridges[tope->horizonridges_len++] = ridge;
+}
+
+
+
 static double height(int d, Facet* facet, double const* x)
 {
   /* Perpendicular distance of x from facet plane. */
@@ -504,14 +540,7 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
       }
       else {
         /* Neighbour not visible. Ridge belongs to horizon: */
-        if (tope->horizonridges_len == tope->horizonridges_cap) {
-          tope->horizonridges_cap = 3 * tope->horizonridges_cap / 2 + 1;
-          tope->horizonridges = realloc(
-            tope->horizonridges,
-            tope->horizonridges_cap * sizeof(Ridge*)
-          );
-        }
-        tope->horizonridges[tope->horizonridges_len++] = ridge;
+        append_horizon_ridge(tope, ridge);
       }
     }
 
@@ -532,8 +561,6 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
   Vertex** ridgeverts = alloca((d - 1) * sizeof(Vertex*));
   Vertex** facetverts = alloca(d * sizeof(Vertex*));
   Ridge** facetridges = alloca(d * sizeof(Ridge*));
-  double* centroid = alloca(d * sizeof(double));  /* needed for merge */
-  double* verts = alloca(d * d * sizeof(double));  /* needed for merge */
 
   hashmap_clear(&tope->newridges);
 
@@ -569,83 +596,7 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
       facetridges[iridge] = *pridge;
     }
 
-    Facet* facet = NULL;
-    if (tope->merge) {
-      /* Adjacent facet: */
-      Facet* neighbour = NULL;
-      if (horizonridge->facets[0] == NULL) {
-        neighbour = horizonridge->facets[1];
-      }
-      else {
-        assert(horizonridge->facets[1] == NULL);
-        neighbour = horizonridge->facets[0];
-      }
-      assert(neighbour != NULL);
-      double nh = height(d, neighbour, apex->pos);
-      if (nh < -EPS) {
-        goto _newfacet;
-      }
-
-      /* MERGE */
-      facet = neighbour;
-
-      /* Remove horizon ridge from ridge list: */
-      List** prli = &facet->ridges;
-      for (; *prli != NULL; prli = &(*prli)->next) {
-        if ((*prli)->val == horizonridge) {
-          List* li = *prli;
-          *prli = (*prli)->next;
-          allocator_free(alc, li, sizeof(List));
-          break;
-        }
-      }
-
-      /* Remove horizon ridge: */
-      ridge_remove(tope, horizonridge);
-
-      /* Volume, centroid of addition: */
-      for (int i = 0; i < d; ++i) {
-        memcpy(verts + i * d, facetverts[i]->position, d * sizeof(double));
-      }
-      double vol = 0.0;
-      analyzesimplex(d, d, verts, &vol, centroid);
-
-      /* Merge volume and centroid: */
-      vec_scale(d, facet->centroid, facet->volume);
-      vec_adds(d, facet->centroid, centroid, vol);
-      facet->volume += vol;
-      vec_scale(d, facet->centroid, 1.0 / facet->volume);
-
-      /* Append apex to vertex list: */
-      List** pvli = &facet->verts;
-      for (; *pvli != NULL; pvli = &(*pvli)->next);  /* scream to end of list */
-      *pvli = allocator_alloc(alc, sizeof(List));
-      (*pvli)->val = vertex;
-
-      /* Append new ridges to ridge list: */
-      prli = &facet->ridges;
-      for (; *prli != NULL; prli = &(*prli)->next);  /* scream to end of list */
-      for (int iridge = 1; iridge < d; ++iridge) {
-        if (facetridges[iridge]->facets[0] == facet) {
-          continue;
-        }
-
-        *prli = allocator_alloc(alc, sizeof(List));
-        (*prli)->val = facetridges[iridge];
-        prli = &(*prli)->next;
-        if (facetridges[iridge]->facets[0] == NULL) {
-          facetridges[iridge]->facets[0] = facet;
-        }
-        else {
-          assert(facetridges[iridge]->facets[1] == NULL);
-          facetridges[iridge]->facets[1] = facet;
-        }
-      }
-    }
-    else {
-_newfacet:
-      facet = facet_create(tope, facetverts, facetridges);
-    }
+    Facet* facet = facet_create(tope, facetverts, facetridges);
 
     /* Add facet to newfacets array: */
     if (tope->newfacets_len == tope->newfacets_cap) {
@@ -759,7 +710,7 @@ Tope* tope_fromplanes(
   }
 
   /* Construct reciprocal tope: */
-  Tope* rectope = tope_frompoints(n, d, points, false);
+  Tope* rectope = tope_frompoints(n, d, points);
   free(points);
 
   /* Convert reciprocal tope to tope: */
@@ -780,7 +731,7 @@ Tope* tope_fromplanes(
     vec_add(d, points + ifacet * d, xc);
   }
 
-  Tope* tope = tope_frompoints(nfacets, d, points, false);
+  Tope* tope = tope_frompoints(nfacets, d, points);
 
   /* Clean up: */
   tope_delete(rectope);
@@ -791,10 +742,9 @@ Tope* tope_fromplanes(
 
 
 
-Tope* tope_frompoints(int npoints, int dim, double const* orgpoints, bool merge)
+Tope* tope_frompoints(int npoints, int dim, double const* orgpoints)
 {
   Tope* tope = tope_new();
-  tope->merge = merge;
 
   /* Initialize member variables: */
   tope->dim = dim;
@@ -818,11 +768,9 @@ Tope* tope_frompoints(int npoints, int dim, double const* orgpoints, bool merge)
     maxima
   );
 
-  /* Scales: */
+  /* Scale, offset: */
   memcpy(tope->scales, maxima, tope->dim * sizeof(double));
   vec_sub(tope->dim, tope->scales, minima);
-
-  /* Translation: */
   memcpy(tope->shift, minima, tope->dim * sizeof(double));
 
   /* Points array: */
@@ -1271,4 +1219,96 @@ void tope_vertex_getposition(Tope* tope, Vertex* vertex, double* position)
 u64 tope_bytes_used(Tope* tope)
 {
   return tope->alc.used;
+}
+
+
+
+void tope_merge(Tope* tope)
+{
+  int d = tope->dim;
+  Allocator* alc = &tope->alc;
+  double* diff = alloca(d * sizeof(double));
+
+  // Loop over facets:
+  for (Facet* facet = tope->firstfacet; facet; facet = facet->next) {
+    // Loop over ridges:
+    List** rli_end = &facet->ridges;
+    for (; *rli_end; rli_end = &(*rli_end)->next);  // scream to end of list
+    for (List** prli = &facet->ridges; *prli;) {
+      Ridge* divridge = (*prli)->val;  // dividing ridge
+      Facet* neighbour = facet_get_neighbour(facet, divridge);  // neighbour
+      if (facet == neighbour || neighbour == NULL) {
+        // Remove dangling ridge:
+        List* next = (*prli)->next;
+        allocator_free(alc, *prli, sizeof(List));
+        ridge_remove(tope, divridge);
+        *prli = next;
+        continue;
+      }
+
+      assert(neighbour && neighbour->volume >= 0.0);
+      memcpy(diff, facet->normal, d * sizeof(double));
+      vec_sub(d, diff, neighbour->normal);
+      if (vec_nrmsq(d, diff) > EPS * EPS) {
+        prli = &(*prli)->next;
+      }
+      else {
+        // Parallel. Merge with facet:
+        vec_scale(d, facet->centroid, facet->volume);
+        vec_adds(d, facet->centroid, neighbour->centroid, neighbour->volume);
+        facet->volume += neighbour->volume;
+        vec_scale(d, facet->centroid, 1.0 / facet->volume);
+        while (neighbour->ridges) {
+          // Pop value:
+          List* nrli = neighbour->ridges;
+          neighbour->ridges = neighbour->ridges->next;
+
+          // Ridge:
+          Ridge* nridge = nrli->val;
+
+          // If ridge is dividing ridge, remove reference:
+          if (nridge == divridge) {
+            allocator_free(alc, nrli, sizeof(List));
+            continue;
+          }
+          if (nridge->facets[0] == facet) {
+            nridge->facets[1] = NULL;
+            allocator_free(alc, nrli, sizeof(List));
+            continue;
+          }
+          if (nridge->facets[1] == facet) {
+            nridge->facets[0] = NULL;
+            allocator_free(alc, nrli, sizeof(List));
+            continue;
+          }
+
+          // Append to facet ridges:
+          *rli_end = nrli;
+          rli_end = &(*rli_end)->next;
+          *rli_end = NULL;
+
+          // Assign ridge to facet:
+          if (nridge->facets[0] == neighbour) {
+            nridge->facets[0] = facet;
+          }
+          else {
+            assert(nridge->facets[1] == neighbour);
+            nridge->facets[1] = facet;
+          }
+        }
+        assert(*rli_end == NULL);
+
+        // Remove neighbour facet:
+        facet_unlink(tope, neighbour);
+        assert(neighbour->ridges == NULL);
+        facet_free(tope, neighbour);
+
+        // Remove dividing ridge:
+        List* next = (*prli)->next;
+        allocator_free(alc, *prli, sizeof(List));
+        ridge_remove(tope, divridge);
+        *prli = next;
+      }
+    }
+  }
 }

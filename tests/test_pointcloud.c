@@ -91,10 +91,14 @@ int main()
   ++m;
 
   /* Initialize tope with all but the last: */
-  tope = tope_frompoints(m - 1, 3, points, true);
+  tope = tope_frompoints(m - 1, 3, points);
+  tope_merge(tope);
   if (tope_getnumfacets(tope) != 6) {
     return -1;
   }
+
+  /* Print the tope: */
+  tope_print(tope);
 
   /* Add the last point: */
   tope_addvertex(tope, &points[(m - 1) * DIM]);
