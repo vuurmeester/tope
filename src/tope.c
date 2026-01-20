@@ -190,14 +190,6 @@ static Facet* facet_create(Tope* tope, Vertex** verts, Ridge** ridges)
   }
   vec_normalize(d, facet->normal);
 
-  /* Assign vertices: */
-  List** pvli = &facet->verts;
-  for (int i = 0; i < d; ++i) {
-    *pvli = allocator_alloc(alc, sizeof(List));
-    (*pvli)->val = verts[i];
-    pvli = &(*pvli)->next;
-  }
-
   /* Assign ridges: */
   List** pli = &facet->ridges;
   for (int i = 0; i < d; ++i) {
@@ -225,11 +217,6 @@ static void facet_free(Tope* tope, Facet* facet)
 {
   int d = tope->dim;
   Allocator* alc = &tope->alc;
-  while (facet->verts) {
-    List* next = facet->verts->next;
-    allocator_free(alc, facet->verts, sizeof(List));
-    facet->verts = next;
-  }
   while (facet->ridges) {
     Ridge* ridge = facet->ridges->val;
     if (ridge->facets[0] == facet) {
@@ -960,16 +947,6 @@ void tope_print(Tope* tope)
     vec_print(d, normal);
     printf("\n");
 
-    printf("  vertices:\n");
-    List* li = facet->verts;
-    while (li) {
-      Vertex* vertex = li->val;
-      tope_vertex_getposition(tope, vertex, position);
-      vec_print(d, position);
-      li = li->next;
-    }
-    printf("\n");
-
     ++i;
     facet = facet->next;
   }
@@ -1015,10 +992,11 @@ void tope_interpolate(
   Allocator* alc = &tope->alc;
 
   /* Some space for various tasks: */
-  double* xiprime = alloca(d * sizeof(double));
+  double* xiprime  = alloca(d * sizeof(double));
   double* centroid = alloca(d * sizeof(double));
-  double* normal = alloca(d * sizeof(double));
-  double* verts = alloca(d * d * sizeof(double));
+  double* normal   = alloca(d * sizeof(double));
+  double* verts    = alloca(d * d * sizeof(double));
+  Vertex** fverts  = alloca((d + 1) * sizeof(Vertex));
 
   /* Transform xi to local coordinates: */
   for (int i = 0; i < d; ++i) {
@@ -1036,11 +1014,14 @@ void tope_interpolate(
     double hmin = HUGE_VAL;
     Ridge* minridge = NULL;
     List* rli = currentfacet->ridges;
-    List* vli = currentfacet->verts;
-    for (int iridge = 0; iridge < tope->dim; ++iridge, rli = rli->next, vli = vli->next) {
+    for (int ivert = 0; ivert < d; ++ivert) {
+      fverts[ivert + 1] = ((Ridge*)rli->val)->vertices[ivert];
+    }
+    fverts[0] = ((Ridge*)rli->next->val)->vertices[0];
+
+    for (int iridge = 0; iridge < tope->dim; ++iridge, rli = rli->next) {
       /* Retrieve ridge: */
       Ridge* ridge = rli->val;
-      Vertex* vertex = vli->val;  /* opposing vertex */
 
       /* Vertex coordinates: */
       for (int ivertex = 0; ivertex < d; ++ivertex) {
@@ -1056,7 +1037,7 @@ void tope_interpolate(
       analyzesimplex(d, d, verts, &volume, centroid);
 
       /* Construct normal: */
-      memcpy(normal, vertex->position, d * sizeof(double));
+      memcpy(normal, fverts[iridge]->position, d * sizeof(double));
       vec_sub(d, normal, centroid);
       for (int i = 0; i < d - 1; ++i) {
         double fac = vec_dot(d, normal, &verts[i * d]);
@@ -1072,7 +1053,7 @@ void tope_interpolate(
       totalweight += weights[iridge];
 
       /* Index for this ridge: */
-      indices[iridge] = vertex->index;
+      indices[iridge] = fverts[iridge]->index;
 
       /* Keep track of minimum height (if not boundary ridge): */
       if (h < hmin && ridge->facets[0] != NULL && ridge->facets[1] != NULL) {
@@ -1080,7 +1061,7 @@ void tope_interpolate(
         minridge = ridge;
       }
     }
-    assert(rli == NULL && vli == NULL);
+    assert(rli == NULL);
 
     /* If hmin insignificant, stop: */
     if (hmin > -EPS) {

@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -28,20 +29,20 @@ int main(void)
   ++m;
 
   points[m * DIM + 0] = -2.0;
-  points[m * DIM + 1] = 2.0;
+  points[m * DIM + 1] =  2.0;
   ++m;
 
-  points[m * DIM + 0] = 2.0;
+  points[m * DIM + 0] =  2.0;
   points[m * DIM + 1] = -2.0;
   ++m;
 
-  points[m * DIM + 0] = 2.0;
-  points[m * DIM + 1] = 2.0;
+  points[m * DIM + 0] =  2.0;
+  points[m * DIM + 1] =  2.0;
   ++m;
 
   /* Internal point: */
-  points[m * DIM + 0] = 0.0;
-  points[m * DIM + 1] = 0.0;
+  points[m * DIM + 0] =  0.0;
+  points[m * DIM + 1] =  0.0;
   ++m;
 
   /* Create tope object: */
@@ -60,6 +61,8 @@ int main(void)
   if (fabs(vec_sum(DIM + 1, weights) - 1.0) > 1.0e-6) {
     return -1;
   }
+
+  assert(indices[0] == 4 && indices[1] == 1 && indices[2] == 3);
 
   /* Print the tope: */
   tope_print(tope);

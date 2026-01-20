@@ -55,7 +55,6 @@ struct _tope_Facet {
   Point* outsidetail; /* last entry in visible points list */
   double* centroid;
   double* normal;
-  List* verts;  /* vertex list */
   List* ridges;  /* ridge list */
 };
 
