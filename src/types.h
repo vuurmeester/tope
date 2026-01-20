@@ -60,7 +60,6 @@ struct _tope_Facet {
 };
 
 struct _Ridge {
-  double* vdn;         /* volume, distance, normal */
   Facet* facets[2];    /* 2 adjacent facets */
   Vertex* vertices[1]; /* d - 1 adjacent vertices */
 };

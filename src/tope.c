@@ -51,12 +51,17 @@ static void append_horizon_ridge(Tope* tope, Ridge* ridge)
 
 
 
-static double height(int d, Facet* facet, double const* x)
+static double height(
+  int d,
+  double const* x,  // point
+  double const* c,  // ref
+  double const* n   // normal
+)
 {
-  /* Perpendicular distance of x from facet plane. */
+  /* Perpendicular distance of x from c on plane with normal n. */
   double sum = 0.0;
   for (int i = 0; i < d; ++i) {
-    sum += (x[i] - facet->centroid[i]) * facet->normal[i];
+    sum += (x[i] - c[i]) * n[i];
   }
   return sum;
 }
@@ -136,10 +141,6 @@ static void ridge_remove(Tope* tope, Ridge* ridge)
     }
   }
 
-  if (ridge->vdn != NULL) {
-    assert(tope->isdelaunay);
-    allocator_free(alc, ridge->vdn, (d + 1) * sizeof(double));
-  }
   allocator_free(
     alc, 
     ridge,
@@ -153,7 +154,6 @@ static void ridge_remove(Tope* tope, Ridge* ridge)
 static Facet* facet_create(Tope* tope, Vertex** verts, Ridge** ridges)
 {
   ++tope->nfacets;
- 
   Allocator* alc = &tope->alc;
   int d = tope->dim;
 
@@ -459,7 +459,7 @@ static void initialsimplex(Tope* tope, int npoints, Point* points)
     Facet* facet = tope->firstfacet;
     while (facet != NULL) {
       /* Distance to facet: */
-      double h = height(d, facet, points[p[i]].pos);
+      double h = height(d, points[p[i]].pos, facet->centroid, facet->normal);
 
       /* If above facet, add it to outside set and move to next point. */
       if (h > EPS) {
@@ -526,7 +526,7 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
       /* Neighbour is untested. */
 
       /* Height of apex above neighbour: */
-      double h = height(d, neighbour, apex->pos);
+      double h = height(d, apex->pos, neighbour->centroid, neighbour->normal);
 
       /* Decide if neighbour is visible: */
       if (h > EPS) {
@@ -618,7 +618,7 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
     for (int i = 0; i < tope->newfacets_len; ++i) {
       Facet* facet = tope->newfacets[i];
       /* Height of outside point above facet: */
-      double h = height(tope->dim, facet, point->pos);
+      double h = height(tope->dim, point->pos, facet->centroid, facet->normal);
       if (h > hmax) {
         hmax = h;
         imax = i;
@@ -912,7 +912,7 @@ void tope_addvertex(Tope* tope, double const* point)
   Facet* maxfacet = NULL;
   Facet* facet = tope->firstfacet;
   while (facet != NULL) {
-    double h = height(tope->dim, facet, pos);
+    double h = height(tope->dim, pos, facet->centroid, facet->normal);
     if (h > EPS) {
       maxfacet = facet;
       break;
@@ -1017,6 +1017,7 @@ void tope_interpolate(
   /* Some space for various tasks: */
   double* xiprime = alloca(d * sizeof(double));
   double* centroid = alloca(d * sizeof(double));
+  double* normal = alloca(d * sizeof(double));
   double* verts = alloca(d * d * sizeof(double));
 
   /* Transform xi to local coordinates: */
@@ -1041,50 +1042,33 @@ void tope_interpolate(
       Ridge* ridge = rli->val;
       Vertex* vertex = vli->val;  /* opposing vertex */
 
-      double sign = 1.0;
-
-      /* On demand construction of ridge volume, distance and normal
-       * (tope->dim - 1): */
-      if (ridge->vdn == NULL) {
-        ridge->vdn = allocator_alloc(alc, (2 + d) * sizeof(double));
-
-        /* Matrix of vertex coordinates: */
-        for (int ivertex = 0; ivertex < d; ++ivertex) {
-          memcpy(
-            &verts[ivertex * d],
-            ridge->vertices[ivertex]->position,
-            d * sizeof(double)
-          );
-        }
-
-        /* Analyse ridge simplex: */
-        analyzesimplex(d, d, verts, ridge->vdn + 0, centroid);
-
-        /* Construct normal: */
-        memcpy(ridge->vdn + 2, centroid, d * sizeof(double));
-        vec_sub(d, ridge->vdn + 2, vertex->position);
-        for (int i = 0; i < d - 1; ++i) {
-          double fac = vec_dot(d, ridge->vdn + 2, &verts[i * d]);
-          vec_adds(d, ridge->vdn + 2, &verts[i * d], -fac);
-        }
-        vec_normalize(d, ridge->vdn + 2);
-
-        /* Ridge plane distance: */
-        ridge->vdn[1] = vec_dot(d, ridge->vdn + 2, centroid);
-      }
-      else {
-        /* Sign of normal: */
-        if (vec_dot(d, vertex->position, ridge->vdn + 2) < ridge->vdn[1]) {
-          /* outward pointing normal */
-          sign = -1.0;
-        }
+      /* Vertex coordinates: */
+      for (int ivertex = 0; ivertex < d; ++ivertex) {
+        memcpy(
+          &verts[ivertex * d],
+          ridge->vertices[ivertex]->position,
+          d * sizeof(double)
+        );
       }
 
-      /* Height of interpolation point above ridge: */
-      double h = sign * (vec_dot(d, xiprime, ridge->vdn + 2) - ridge->vdn[1]);
+      /* Analyse ridge simplex: */
+      double volume = 0.0;
+      analyzesimplex(d, d, verts, &volume, centroid);
+
+      /* Construct normal: */
+      memcpy(normal, vertex->position, d * sizeof(double));
+      vec_sub(d, normal, centroid);
+      for (int i = 0; i < d - 1; ++i) {
+        double fac = vec_dot(d, normal, &verts[i * d]);
+        vec_adds(d, normal, &verts[i * d], -fac);
+      }
+      vec_normalize(d, normal);
+
+      /* Height of xi above ridge: */
+      double h = height(d, xiprime, centroid, normal);
 
       /* Weight for this ridge: */
-      weights[iridge] = h * ridge->vdn[0];
+      weights[iridge] = h * volume;
       totalweight += weights[iridge];
 
       /* Index for this ridge: */
