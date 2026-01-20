@@ -26,20 +26,6 @@ static Facet* facet_get_neighbour(Facet* facet, Ridge* ridge)
 
 
 
-static void ridge_remove_facet(Ridge* ridge, Facet* facet)
-{
-  if (ridge->facets[0] == facet) {
-    ridge->facets[0] = ridge->facets[1];
-    ridge->facets[1] = NULL;
-  }
-  else {
-    assert(ridge->facets[1] == facet);
-    ridge->facets[1] = NULL;
-  }
-}
-
-
-
 static void append_horizon_ridge(Tope* tope, Ridge* ridge)
 {
   if (tope->horizonridges_len == tope->horizonridges_cap) {
@@ -470,7 +456,6 @@ static void initialsimplex(Tope* tope, int npoints, Point* points)
 static void addpoint(Tope* tope, Facet* facet, Point* apex)
 {
   int d = tope->dim;
-  Allocator* alc = &tope->alc;
 
   facet_unlink(tope, facet);
   facet->volume = -1;  /* mark visible */
@@ -922,7 +907,6 @@ void tope_print(Tope* tope)
   double* sv       = alloca(d * sizeof(double));
   double* normal   = alloca(d * sizeof(double));
   double* centroid = alloca(d * sizeof(double));
-  double* position = alloca(d * sizeof(double));
 
   printf("%d facets\n", tope->nfacets);
   printf("%d ridges\n", tope->nridges);
@@ -989,7 +973,6 @@ void tope_interpolate(
   assert(tope->isdelaunay);
 
   int d = tope->dim - 1;
-  Allocator* alc = &tope->alc;
 
   /* Some space for various tasks: */
   double* xiprime  = alloca(d * sizeof(double));
