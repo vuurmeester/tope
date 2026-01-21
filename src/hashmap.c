@@ -17,7 +17,7 @@ static u32 hashvertset(int d, Vertex** verts)
   u32 hash = 0x811c9dc5;  /* fnv-1a */
   d -= 1; /* d - 1 vertices */
   while (d--) {
-    hash = hash ^ (u32)((u64)verts[d] >> 6);
+    hash = hash ^ verts[d]->index;
     hash *= 0x01000193;
   }
   return hash;
