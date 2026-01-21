@@ -58,17 +58,15 @@ static double height(
 static Vertex* vertex_create(Tope* tope, double const* pos, int index)
 {
   ++tope->nverts;
+  int d = tope->dim;
   Allocator* alc = &tope->alc;
 
   /* Allocate vertex: */
-  Vertex* vertex = allocator_alloc(
-    alc,
-    sizeof(Vertex) + (tope->dim - 1) * sizeof(double)
-  );
+  Vertex* vertex = allocator_alloc(alc, sizeof(Vertex) + (d - 1) * sizeof(double));
 
   /* Fill in other variables: */
   vertex->index = index;
-  memcpy(vertex->position, pos, tope->dim * sizeof(double));
+  memcpy(vertex->position, pos, d * sizeof(double));
 
   return vertex;
 }
@@ -87,14 +85,17 @@ static void vertex_remove(Tope* tope, Vertex* vertex)
 
 
 
-/* Create and initialize a ridge struct with vertices: */
+/* Create and initialize a simplicial ridge with d - 1 vertices: */
 static Ridge* ridge_create(Tope* tope, Vertex** vertices)
 {
+  ++tope->nridges;
   Allocator* alc = &tope->alc;
   int d = tope->dim;
 
-  /* Create ridge: */
+  /* Allocate ridge: */
   Ridge* ridge = allocator_alloc(alc, sizeof(Ridge));
+
+  /* Add vertices: */
   List** pli = &ridge->verts;
   for (int i = 0; i < d - 1; ++i) {
     *pli = allocator_alloc(alc, sizeof(List));
@@ -103,9 +104,6 @@ static Ridge* ridge_create(Tope* tope, Vertex** vertices)
     ++vertices[i]->nridges;
   }
 
-  /* Append ridge to tope list: */
-  ++tope->nridges;
-
   return ridge;
 }
 
@@ -113,9 +111,9 @@ static Ridge* ridge_create(Tope* tope, Vertex** vertices)
 
 static void ridge_remove(Tope* tope, Ridge* ridge)
 {
+  --tope->nridges;
   Allocator* alc = &tope->alc;
   int d = tope->dim;
-  --tope->nridges;
 
   for (List* vli = ridge->verts; vli != NULL; ) {
     // Disassociate vertex:
@@ -133,12 +131,13 @@ static void ridge_remove(Tope* tope, Ridge* ridge)
     vli = next;
   }
 
+  // Clean up ridge struct:
   allocator_free(alc, ridge, sizeof(Ridge));
 }
 
 
 
-/* Create and initialize a facet struct: */
+/* Create and initialize a simplicial facet with d ridges and verts: */
 static Facet* facet_create(Tope* tope, Vertex** verts, Ridge** ridges)
 {
   ++tope->nfacets;
@@ -169,7 +168,7 @@ static Facet* facet_create(Tope* tope, Vertex** verts, Ridge** ridges)
   /* Extract basis, volume, centroid: */
   analyzesimplex(d, d, basis, &facet->volume, facet->centroid);
 
-  /* Compute normal: */
+  /* Compute outward pointing normal: */
   memcpy(facet->normal, facet->centroid, d * sizeof(double));
   vec_sub(d, facet->normal, tope->center);
   for (int i = 0; i < d - 1; ++i) {
@@ -207,12 +206,14 @@ static void facet_free(Tope* tope, Facet* facet)
   Allocator* alc = &tope->alc;
   while (facet->ridges) {
     Ridge* ridge = facet->ridges->val;
+
     if (ridge->facets[0] == facet) {
       ridge->facets[0] = NULL;
     }
     else if (ridge->facets[1] == facet) {
       ridge->facets[1] = NULL;
     }
+
     if (ridge->facets[0] == NULL && ridge->facets[1] == NULL) {
       ridge_remove(tope, ridge);
     }
@@ -313,8 +314,9 @@ static void initialsimplex(Tope* tope, int npoints, Point* points)
 {
   int d = tope->dim;
 
-  /* Allocation: */
+  /* Allocations: */
   double* span = malloc((npoints - 1) * d * sizeof(double));
+  int* p = malloc(npoints * sizeof(int));
 
   /* Point furthest from unit box center: */
   int maxindex = -1;
@@ -343,7 +345,6 @@ static void initialsimplex(Tope* tope, int npoints, Point* points)
   }
 
   /* Permutation vector: */
-  int* p = malloc(npoints * sizeof(int));
   for (int i = 0; i < npoints; ++i) {
     p[i] = i;
   }
@@ -377,7 +378,7 @@ static void initialsimplex(Tope* tope, int npoints, Point* points)
 
   /* Initialize tope center to initial simplex centroid: */
   vec_reset(d, tope->center);
-  for (int i = 0; i < d + 1; ++i) {
+  for (int i = 0; i <= d; ++i) {
     vec_add(d, tope->center, points[p[i]].pos);
   }
   vec_scale(d, tope->center, 1.0 / (double)(tope->dim + 1));
@@ -423,16 +424,13 @@ static void initialsimplex(Tope* tope, int npoints, Point* points)
     }
 
     /* Vertex array filled, compute and integrate the facet: */
-    /* Create facet: */
     facet_create(tope, facetverts, facetridges);
   }
 
-  /* Create outside sets (assign each remaining vertex to a facet which it
-   * 'sees'): */
+  /* Create outside sets (assign each remaining point to a facet it 'sees'): */
   for (int i = tope->dim + 1; i < npoints; ++i) {
     /* Determine maximum distance: */
-    Facet* facet = tope->firstfacet;
-    while (facet != NULL) {
+    for (Facet* facet = tope->firstfacet; facet != NULL; facet = facet->next) {
       /* Distance to facet: */
       double h = height(d, points[p[i]].pos, facet->centroid, facet->normal);
 
@@ -442,8 +440,6 @@ static void initialsimplex(Tope* tope, int npoints, Point* points)
         facet_addoutside(tope, facet, points + p[i]);
         break;
       }
-
-      facet = facet->next;
     }
   }
 
@@ -616,7 +612,7 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
 static void build(Tope* tope, int npoints, Point* points)
 {
   assert(npoints >= tope->dim + 1);
-
+  tope->maxindex = npoints - 1;
   initialsimplex(tope, npoints, points);
 
   /* Now, all vertices are either on the initial simplex OR
@@ -637,10 +633,8 @@ static void build(Tope* tope, int npoints, Point* points)
 static Tope* tope_new()
 {
   Tope* tope = calloc(1, sizeof(Tope));
-
   allocator_init(&tope->alc);
   hashmap_init(&tope->newridges);
-
   return tope;
 }
 
@@ -869,7 +863,7 @@ void tope_addvertex(Tope* tope, double const* point)
   /* Initialize apex: */
   Point apex = {
     .next = NULL,
-    .index = tope->nverts,
+    .index = ++tope->maxindex,
     .height = 0.0,
     .pos = pos,
   };
@@ -884,20 +878,18 @@ void tope_addvertex(Tope* tope, double const* point)
   }
 
   /* Find facet that can see the point: */
-  Facet* maxfacet = NULL;
   Facet* facet = tope->firstfacet;
   while (facet != NULL) {
     double h = height(tope->dim, pos, facet->centroid, facet->normal);
     if (h > EPS) {
-      maxfacet = facet;
       break;
     }
     facet = facet->next;
   }
 
-  if (maxfacet != NULL) {
+  if (facet != NULL) {
     /* Add vertex to tope: */
-    addpoint(tope, maxfacet, &apex);
+    addpoint(tope, facet, &apex);
   }
 }
 
@@ -918,8 +910,7 @@ void tope_print(Tope* tope)
   vec_reset(d, sv);
 
   int i = 0;
-  Facet* facet = tope->firstfacet;
-  while (facet != NULL) {
+  for (Facet* facet = tope->firstfacet; facet != NULL; ++i, facet = facet->next) {
     tope_facet_getnormal(tope, facet, normal);
     double volume = tope_facet_getvolume(tope, facet);
     vec_adds(d, sv, normal, volume);
@@ -933,9 +924,6 @@ void tope_print(Tope* tope)
     printf("  normal: ");
     vec_print(d, normal);
     printf("\n");
-
-    ++i;
-    facet = facet->next;
   }
   assert(i == tope->nfacets);
   printf("  sv:\n");

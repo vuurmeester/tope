@@ -37,6 +37,7 @@ struct _Tope {
   Facet* lastfacet;  /* last facet */
   int nridges;  /* ridge count */
   int nverts;  /* vertex count */
+  int maxindex;  /* max vertex index */
   HashMap newridges;  /* used to keep track of new ridges */
   Ridge** horizonridges;  /* used to keep track of horizon ridges */
   int horizonridges_len;

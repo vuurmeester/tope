@@ -27,8 +27,7 @@ void* allocator_alloc(Allocator* alc, u16 numbytes)
 
 #ifdef USE_MALLOC
   mem = malloc(numbytes);
-  memset(mem, 0x00, numbytes);
-  return mem;
+  goto _return;
 #endif
 
   assert(0 < numbytes && numbytes <= ALLOCATOR_MAXSIZE);

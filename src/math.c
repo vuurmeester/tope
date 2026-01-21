@@ -48,7 +48,7 @@ void vec_set(int n, double* x, double scalar)
 
 void vec_reset(int n, double* x)
 {
-  memset(x, 0, n * sizeof(double));
+  memset(x, 0x00, n * sizeof(double));
 }
 
 
@@ -260,7 +260,7 @@ void mat_fprint(int m, int n, double const* mat, FILE* outstream)
 {
   int size = (1 + m + n + m * n) * 32;
   char* buffer = malloc(size);
-  memset(buffer, 0, size);
+  memset(buffer, 0x00, size);
   mat_sprint(m, n, mat, buffer);
   fprintf(outstream, "%s", buffer);
   free(buffer);

@@ -14,15 +14,13 @@
 
 int main(void)
 {
-  int m;
   int indices[DIM + 1];
   double points[NPOINTS * DIM];
   double weights[DIM + 1];
   double xi[DIM];
-  Tope* tope;
 
   /* Define a square. */
-  m = 0;
+  int m = 0;
 
   points[m * DIM + 0] = -2.0;
   points[m * DIM + 1] = -2.0;
@@ -46,7 +44,7 @@ int main(void)
   ++m;
 
   /* Create tope object: */
-  tope = tope_delaunay(m, 2, points);
+  Tope* tope = tope_delaunay(m, 2, points);
 
   if (tope_getnumfacets(tope) != 4) {
     return -1;

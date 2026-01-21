@@ -9,7 +9,6 @@
 
 int main(void)
 {
-  Tope* tope;
   double normals[(NPLANES + 1) * DIM];
   double distances[NPLANES + 1];
 
@@ -46,7 +45,7 @@ int main(void)
   xi[0] = 0.0;
   xi[1] = 0.0;
   xi[2] = 0.25;
-  tope = tope_fromplanes(m, DIM, normals, distances, xi);
+  Tope* tope = tope_fromplanes(m, DIM, normals, distances, xi);
 
   if (tope) {
     /* Print the tope: */

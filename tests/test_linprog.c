@@ -9,16 +9,11 @@
 
 int main()
 {
-  int itest;
-  int i;
-  int j;
-  double d;
-
   double start = tope_gettime();
   int nunb = 0;
   int nopt = 0;
   int ntests = 1000;
-  for (itest = 0; itest < ntests; ++itest) {
+  for (int itest = 0; itest < ntests; ++itest) {
     int n = random_getint(2, 5);     /* dimension */
     int m = random_getint(n, 8 * n); /* number of planes */
 
@@ -30,17 +25,17 @@ int main()
     double* center = malloc(n * sizeof(double));
 
     /* Random center: */
-    for (j = 0; j < n; ++j) {
+    for (int j = 0; j < n; ++j) {
       center[j] = 5.0 * (random_getdouble() - 0.5);
     }
 
     /* Distance from center: */
-    d = 0.1 + random_getdouble();
+    double d = 0.1 + random_getdouble();
 
     /* Planes: */
-    for (i = 0; i < m; ++i) {
+    for (int i = 0; i < m; ++i) {
       /* Normal: */
-      for (j = 0; j < n; ++j) {
+      for (int j = 0; j < n; ++j) {
         A[i * (n + 1) + j] = random_getdouble() - 0.5;
       }
       vec_normalize(n, A + i * (n + 1));
@@ -50,7 +45,7 @@ int main()
     }
 
     /* Extra dimension: */
-    for (i = 0; i < m; ++i) {
+    for (int i = 0; i < m; ++i) {
       A[i * (n + 1) + n] = 1.0;
     }
 

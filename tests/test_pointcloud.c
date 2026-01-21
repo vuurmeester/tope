@@ -13,12 +13,10 @@
 
 int main()
 {
-  int m;
   double points[NPOINTS * DIM];
-  Tope* tope;
 
   /* Define a cube. */
-  m = 0;
+  int m = 0;
 
   points[m * DIM + 0] = 0.0;
   points[m * DIM + 1] = 0.0;
@@ -91,7 +89,7 @@ int main()
   ++m;
 
   /* Initialize tope with all but the last: */
-  tope = tope_frompoints(m - 1, 3, points);
+  Tope* tope = tope_frompoints(m - 1, 3, points);
   tope_merge(tope);
   if (tope_getnumfacets(tope) != 6) {
     return -1;
