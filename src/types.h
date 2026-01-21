@@ -59,8 +59,8 @@ struct _tope_Facet {
 };
 
 struct _Ridge {
-  Facet* facets[2];    /* 2 adjacent facets */
-  Vertex* vertices[1]; /* d - 1 adjacent vertices */
+  Facet* facets[2];  /* 2 adjacent facets */
+  List* verts;  /* vertex list */
 };
 
 struct _tope_Vertex {

@@ -25,6 +25,18 @@ static u32 hashvertset(int d, Vertex** verts)
 
 
 
+static bool vertsets_equal(int d, Vertex** a, List* l)
+{
+  for (int i = 0; i < d; ++i, l = l->next) {
+    if (a[i] != l->val) {
+      return false;
+    }
+  }
+  return true;
+}
+
+
+
 static void initarrays(Ridge*** ridges, u32** hashes, u32 cap)
 {
   /* Allocate ridge and hash arrays together: */
@@ -104,12 +116,7 @@ Ridge** hashmap_get(HashMap* hashmap, int d, Vertex** verts)
   u32 index = hash & (hashmap->cap - 1);
 
   while (hashmap->ridges[index] != NULL) {
-    if (hashmap->hashes[index] == hash &&
-        memcmp(
-          verts,
-          hashmap->ridges[index]->vertices,
-          (d - 1) * sizeof(Vertex*)
-        ) == 0) {
+    if (hashmap->hashes[index] == hash && vertsets_equal(d - 1, verts, hashmap->ridges[index]->verts)) {
       /* same hash and same vertset */
       return hashmap->ridges + index;
     }

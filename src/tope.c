@@ -94,11 +94,12 @@ static Ridge* ridge_create(Tope* tope, Vertex** vertices)
   int d = tope->dim;
 
   /* Create ridge: */
-  Ridge* ridge = allocator_alloc(alc, sizeof(Ridge) + (d - 2) * sizeof(Vertex*));
-  memcpy(ridge->vertices, vertices, (d - 1) * sizeof(Vertex*));
-
-  /* Associate vertices with ridge: */
+  Ridge* ridge = allocator_alloc(alc, sizeof(Ridge));
+  List** pli = &ridge->verts;
   for (int i = 0; i < d - 1; ++i) {
+    *pli = allocator_alloc(alc, sizeof(List));
+    (*pli)->val = vertices[i];
+    pli = &(*pli)->next;
     ++vertices[i]->nridges;
   }
 
@@ -116,22 +117,23 @@ static void ridge_remove(Tope* tope, Ridge* ridge)
   int d = tope->dim;
   --tope->nridges;
 
-  /* Remove reference to this ridge from adjacent vertices: */
-  for (int ivertex = 0; ivertex < tope->dim - 1; ++ivertex) {
-    Vertex* vertex = ridge->vertices[ivertex];
+  for (List* vli = ridge->verts; vli != NULL; ) {
+    // Disassociate vertex:
+    Vertex* vertex = vli->val;
     --vertex->nridges;
     assert(vertex->nridges >= 0);
     if (vertex->nridges == 0) {
       /* Remove the vertex as well: */
       vertex_remove(tope, vertex);
     }
+
+    // Clean up list node:
+    List* next = vli->next;
+    allocator_free(alc, vli, sizeof(List));
+    vli = next;
   }
 
-  allocator_free(
-    alc, 
-    ridge,
-    sizeof(Ridge) + (d - 2) * sizeof(Vertex*)
-  );
+  allocator_free(alc, ridge, sizeof(Ridge));
 }
 
 
@@ -544,8 +546,9 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
 
     /* Vertices for new facet: */
     facetverts[0] = vertex;
-    for (int iridge = 1; iridge < d; ++iridge) {
-      facetverts[iridge] = horizonridge->vertices[iridge - 1];
+    List* vli = horizonridge->verts;
+    for (int iridge = 1; iridge < d; ++iridge, vli = vli->next) {
+      facetverts[iridge] = vli->val;
     }
 
     /* Ridges for new facet: */
@@ -997,22 +1000,22 @@ void tope_interpolate(
     double hmin = HUGE_VAL;
     Ridge* minridge = NULL;
     List* rli = currentfacet->ridges;
-    for (int ivert = 0; ivert < d; ++ivert) {
-      fverts[ivert + 1] = ((Ridge*)rli->val)->vertices[ivert];
+    Ridge* ridge = rli->val;
+    List* vli = ridge->verts;
+    for (int ivert = 0; ivert < d; ++ivert, vli = vli->next) {
+      fverts[ivert + 1] = vli->val;
     }
-    fverts[0] = ((Ridge*)rli->next->val)->vertices[0];
+    fverts[0] = ((Ridge*)rli->next->val)->verts->val;  // first vertex of second ridge
 
     for (int iridge = 0; iridge < tope->dim; ++iridge, rli = rli->next) {
       /* Retrieve ridge: */
-      Ridge* ridge = rli->val;
+      ridge = rli->val;
 
       /* Vertex coordinates: */
-      for (int ivertex = 0; ivertex < d; ++ivertex) {
-        memcpy(
-          &verts[ivertex * d],
-          ridge->vertices[ivertex]->position,
-          d * sizeof(double)
-        );
+      vli = ridge->verts;
+      for (int ivertex = 0; ivertex < d; ++ivertex, vli = vli->next) {
+        Vertex* vert = vli->val;
+        memcpy(&verts[ivertex * d], vert->position, d * sizeof(double));
       }
 
       /* Analyse ridge simplex: */
@@ -1171,6 +1174,27 @@ u64 tope_bytes_used(Tope* tope)
 
 
 
+static void check(Tope* tope)
+{
+  int ndup = 0;
+  for (Facet* facet = tope->firstfacet; facet; facet = facet->next) {
+    for (List* rli1 = facet->ridges; rli1; rli1 = rli1->next) {
+      Ridge* ridge1 = rli1->val;
+      for (List* rli2 = rli1->next; rli2; rli2 = rli2->next) {
+        Ridge* ridge2 = rli2->val;
+        if ((ridge1->facets[0] == ridge2->facets[0] && ridge1->facets[1] == ridge2->facets[1]) ||
+            (ridge1->facets[0] == ridge2->facets[1] && ridge1->facets[1] == ridge2->facets[0])) {
+          ++ndup;
+          printf("dup\n");
+        }
+      }
+    }
+  }
+  printf("ndup = %d\n", ndup);
+}
+
+
+
 void tope_merge(Tope* tope)
 {
   int d = tope->dim;
@@ -1259,4 +1283,6 @@ void tope_merge(Tope* tope)
       }
     }
   }
+
+  check(tope);
 }
