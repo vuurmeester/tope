@@ -1177,23 +1177,28 @@ u64 tope_bytes_used(Tope* tope)
 static void ridges_merge(Tope* tope)
 {
   Allocator* alc = &tope->alc;
+  // Loop over facets:
   for (Facet* facet = tope->firstfacet; facet; facet = facet->next) {
+    // Loop over ridges:
     for (List* rli1 = facet->ridges; rli1; rli1 = rli1->next) {
-_reset:
       Ridge* ridge1 = rli1->val;
-      for (List* rli2 = rli1->next; rli2; rli2 = rli2->next) {
-        Ridge* ridge2 = rli2->val;
+      // Loop over other ridges:
+      for (List** prli2 = &rli1->next; *prli2; ) {
+        Ridge* ridge2 = (*prli2)->val;
         if ((ridge1->facets[0] == ridge2->facets[0] && ridge1->facets[1] == ridge2->facets[1]) ||
             (ridge1->facets[0] == ridge2->facets[1] && ridge1->facets[1] == ridge2->facets[0])) {
+          // Ridges have the same facets.
+
+          // Move unique vertices from ridge2 to ridge1:
           List** pvli1 = &ridge1->verts;
           while (ridge2->verts) {
             List* next2 = ridge2->verts->next;
             if (*pvli1 == ridge2->verts) {
-              // Vertex already in 1:
+              // Vertex already in ridge1, remove link from ridge2:
               allocator_free(alc, ridge2->verts, sizeof(List));
             }
             else {
-              // Insert in list 1:
+              // Insert vertex in ridge1:
               List* next1 = (*pvli1)->next;
               *pvli1 = ridge2->verts;
               (*pvli1)->next = next1;
@@ -1202,22 +1207,28 @@ _reset:
             ridge2->verts = next2;
           }
 
-          // Remove ridge2 from both facets:
-          for (int i = 0; i < 2; ++i) {
-            Facet* faceta = ridge1->facets[i];
-            List** prlia = &faceta->ridges;
-            for (; *prlia; prlia = &(*prlia)->next) {
-              if ((*prlia)->val == ridge2) {
-                List* next = (*prlia)->next;
-                allocator_free(alc, *prlia, sizeof(List));
-                *prlia = next;
-                break;
-              }
+          // Remove ridge2 from this facet:
+          List* next = (*prli2)->next;
+          allocator_free(alc, *prli2, sizeof(List));
+          *prli2 = next;
+
+          // Remove ridge2 from other facet:
+          Facet* faceta = ridge1->facets[0] == facet ? ridge1->facets[1] : ridge1->facets[0];
+          List** prlia = &faceta->ridges;
+          for (; *prlia; prlia = &(*prlia)->next) {
+            if ((*prlia)->val == ridge2) {
+              List* next = (*prlia)->next;
+              allocator_free(alc, *prlia, sizeof(List));
+              *prlia = next;
+              break;
             }
           }
 
+          // Deallocate the ridge itself:
           ridge_remove(tope, ridge2);
-          goto _reset;
+        }
+        else {
+          prli2 = &(*prli2)->next;
         }
       }
     }
