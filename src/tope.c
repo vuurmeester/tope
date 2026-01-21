@@ -1174,23 +1174,54 @@ u64 tope_bytes_used(Tope* tope)
 
 
 
-static void check(Tope* tope)
+static void ridges_merge(Tope* tope)
 {
-  int ndup = 0;
+  Allocator* alc = &tope->alc;
   for (Facet* facet = tope->firstfacet; facet; facet = facet->next) {
     for (List* rli1 = facet->ridges; rli1; rli1 = rli1->next) {
+_reset:
       Ridge* ridge1 = rli1->val;
       for (List* rli2 = rli1->next; rli2; rli2 = rli2->next) {
         Ridge* ridge2 = rli2->val;
         if ((ridge1->facets[0] == ridge2->facets[0] && ridge1->facets[1] == ridge2->facets[1]) ||
             (ridge1->facets[0] == ridge2->facets[1] && ridge1->facets[1] == ridge2->facets[0])) {
-          ++ndup;
-          printf("dup\n");
+          List** pvli1 = &ridge1->verts;
+          while (ridge2->verts) {
+            List* next2 = ridge2->verts->next;
+            if (*pvli1 == ridge2->verts) {
+              // Vertex already in 1:
+              allocator_free(alc, ridge2->verts, sizeof(List));
+            }
+            else {
+              // Insert in list 1:
+              List* next1 = (*pvli1)->next;
+              *pvli1 = ridge2->verts;
+              (*pvli1)->next = next1;
+            }
+            pvli1 = &(*pvli1)->next;
+            ridge2->verts = next2;
+          }
+
+          // Remove ridge2 from both facets:
+          for (int i = 0; i < 2; ++i) {
+            Facet* faceta = ridge1->facets[i];
+            List** prlia = &faceta->ridges;
+            for (; *prlia; prlia = &(*prlia)->next) {
+              if ((*prlia)->val == ridge2) {
+                List* next = (*prlia)->next;
+                allocator_free(alc, *prlia, sizeof(List));
+                *prlia = next;
+                break;
+              }
+            }
+          }
+
+          ridge_remove(tope, ridge2);
+          goto _reset;
         }
       }
     }
   }
-  printf("ndup = %d\n", ndup);
 }
 
 
@@ -1284,5 +1315,5 @@ void tope_merge(Tope* tope)
     }
   }
 
-  check(tope);
+  ridges_merge(tope);
 }
