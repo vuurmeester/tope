@@ -15,13 +15,13 @@
 
 
 
-static void list_append(List** plist, void* val, Allocator* alc)
+/* Append to list, return next append address. */
+static List** list_append(List** plist, void* val, Allocator* alc)
 {
-  while (*plist != NULL) {
-    plist = &(*plist)->next;
-  }
+  for (; *plist != NULL; plist = &(*plist)->next);  // scream to end of list
   *plist = allocator_alloc(alc, sizeof(List));
   (*plist)->val = val;
+  return &(*plist)->next;
 }
 
 
@@ -432,13 +432,13 @@ static void initialsimplex(Tope* tope, int npoints, Point* points)
       /* Set d - 1 ridge verts: */
       List* fvli = facetverts;
       List* ridgeverts = NULL;
-
+      List** list_end = &ridgeverts;
       for (int k = 0; k < j; ++k, fvli = fvli->next) {
-        list_append(&ridgeverts, fvli->val, alc);
+        list_end = list_append(list_end, fvli->val, alc);
       }
       fvli = fvli->next;
       for (int k = j + 1; k < d; ++k, fvli = fvli->next) {
-        list_append(&ridgeverts, fvli->val, alc);
+        list_end = list_append(list_end, fvli->val, alc);
       }
 
       Ridge** pridge = hashmap_get(&tope->newridges, ridgeverts);
@@ -571,9 +571,9 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
 
     /* Vertices for new facet: */
     List* facetverts = NULL;
-    list_append(&facetverts, vertex, alc);  // the apex
+    List** list_end = list_append(&facetverts, vertex, alc);  // the apex
     for (List* vli = horizonridge->verts; vli; vli = vli->next) {
-      list_append(&facetverts, vli->val, alc);  // the horizon verts
+      list_end = list_append(list_end, vli->val, alc);  // the horizon verts
     }
 
     /* Ridges for new facet: */
@@ -583,12 +583,13 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
     for (List* fvli = facetverts->next; fvli; fvli = fvli->next, ++iridge) {
       /* Add all facet vertices except the one at index 'iridge': */
       List* ridgeverts = NULL;
+      list_end = &ridgeverts;
       for (List* rvli = facetverts; rvli; rvli = rvli->next) {
         if (rvli->val == fvli->val) {
           // Skip one.
           continue;
         }
-        list_append(&ridgeverts, rvli->val, alc);
+        list_end = list_append(list_end, rvli->val, alc);
       }
 
       /* Get or create new ridge: */
