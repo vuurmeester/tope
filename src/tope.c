@@ -432,16 +432,13 @@ static void initialsimplex(Tope* tope, int npoints, Point* points)
       /* Set d - 1 ridge verts: */
       List* fvli = facetverts;
       List* ridgeverts = NULL;
-      List** prvli = &ridgeverts;
 
-      for (int k = 0; k < d - 1; ++k) {
-        if (k == j) {
-          fvli = fvli->next;
-        }
-        *prvli = allocator_alloc(alc, sizeof(List));
-        (*prvli)->val = fvli->val;
-        prvli = &(*prvli)->next;
-        fvli = fvli->next;
+      for (int k = 0; k < j; ++k, fvli = fvli->next) {
+        list_append(&ridgeverts, fvli->val, alc);
+      }
+      fvli = fvli->next;
+      for (int k = j + 1; k < d; ++k, fvli = fvli->next) {
+        list_append(&ridgeverts, fvli->val, alc);
       }
 
       Ridge** pridge = hashmap_get(&tope->newridges, ridgeverts);
@@ -460,16 +457,21 @@ static void initialsimplex(Tope* tope, int npoints, Point* points)
   /* Create outside sets (assign each remaining point to a facet it 'sees'): */
   for (int i = tope->dim + 1; i < npoints; ++i) {
     /* Determine maximum distance: */
+    double hmax = -HUGE_VAL;
+    Facet* maxfacet = NULL;
     for (Facet* facet = tope->firstfacet; facet != NULL; facet = facet->next) {
       /* Distance to facet: */
       double h = height(d, points[p[i]].pos, facet->centroid, facet->normal);
-
-      /* If above facet, add it to outside set and move to next point. */
-      if (h > EPS) {
-        points[p[i]].height = h;
-        facet_addoutside(tope, facet, points + p[i]);
-        break;
+      if (h > hmax) {
+        hmax = h;
+        maxfacet = facet;
       }
+    }
+
+    /* If above facet, add it to outside set and move to next point. */
+    if (hmax > EPS) {
+      points[p[i]].height = hmax;
+      facet_addoutside(tope, maxfacet, points + p[i]);
     }
   }
 
@@ -616,22 +618,24 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
     outsidepoints = outsidepoints->next;
     point->next = NULL;
 
+    /* Max height: */
     double hmax = -HUGE_VAL;
-    int imax = -1;
+    Facet* maxfacet = NULL;
     for (int i = 0; i < tope->newfacets_len; ++i) {
       Facet* facet = tope->newfacets[i];
+
       /* Height of outside point above facet: */
       double h = height(tope->dim, point->pos, facet->centroid, facet->normal);
       if (h > hmax) {
         hmax = h;
-        imax = i;
+        maxfacet = facet;
       }
     }
 
     if (hmax > EPS) {
       /* Outside. */
       point->height = hmax;
-      facet_addoutside(tope, tope->newfacets[imax], point);
+      facet_addoutside(tope, maxfacet, point);
     }
   }
 
