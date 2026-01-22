@@ -12,12 +12,12 @@
 
 
 
-static u32 hashvertset(int d, Vertex** verts)
+static u32 hashvertset(List* verts)
 {
   u32 hash = 0x811c9dc5;  /* fnv-1a */
-  d -= 1; /* d - 1 vertices */
-  while (d--) {
-    hash = hash ^ verts[d]->index;
+  for (; verts; verts = verts->next) {
+    Vertex* vert = verts->val;
+    hash = hash ^ vert->index;
     hash *= 0x01000193;
   }
   return hash;
@@ -25,14 +25,15 @@ static u32 hashvertset(int d, Vertex** verts)
 
 
 
-static bool vertsets_equal(int d, Vertex** a, List* l)
+static bool vertsets_equal(List* l1, List* l2)
 {
-  for (int i = 0; i < d; ++i, l = l->next) {
-    if (a[i] != l->val) {
+  for (; l1 != NULL && l2 != NULL; l1 = l1->next, l2 = l2->next) {
+    if (l1->val != l2->val) {
       return false;
     }
   }
-  return true;
+
+  return l1 == l2;  // both should be null
 }
 
 
@@ -105,18 +106,18 @@ void hashmap_clear(HashMap* hashmap)
 
 
 
-Ridge** hashmap_get(HashMap* hashmap, int d, Vertex** verts)
+Ridge** hashmap_get(HashMap* hashmap, List* vli)
 {
   if (4 * hashmap->len >= 3 * hashmap->cap) {
     /* More than 75% filled. */
     expand(hashmap);
   }
 
-  u32 hash = hashvertset(d, verts);
+  u32 hash = hashvertset(vli);
   u32 index = hash & (hashmap->cap - 1);
 
   while (hashmap->ridges[index] != NULL) {
-    if (hashmap->hashes[index] == hash && vertsets_equal(d - 1, verts, hashmap->ridges[index]->verts)) {
+    if (hashmap->hashes[index] == hash && vertsets_equal(vli, hashmap->ridges[index]->verts)) {
       /* same hash and same vertset */
       return hashmap->ridges + index;
     }
