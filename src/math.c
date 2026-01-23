@@ -218,7 +218,7 @@ void mat_sprint(int m, int n, double const* mat, char* str)
   for (int i = 0; i < m; ++i) {
     for (int j = 0; j < n; ++j) {
       double number = mat[i * n + j];
-      if (fabs(number) == 0.0) {
+      if (fabs(number) < 1e-12 * maxel) {
         number = 0.0;
       }
 
@@ -238,7 +238,7 @@ void mat_sprint(int m, int n, double const* mat, char* str)
   for (int i = 0; i < m; ++i) {
     for (int j = 0; j < n; ++j) {
       double number = mat[i * n + j];
-      if (fabs(number) == 0.0) {
+      if (fabs(number) < 1e-12 * maxel) {
         number = 0.0;
       }
       str += sprintf(str, format, number);

@@ -52,7 +52,8 @@ static void append_horizon_ridge(Tope* tope, Ridge* ridge)
 {
   if (tope->horizonridges_len == tope->horizonridges_cap) {
     tope->horizonridges_cap = 3 * tope->horizonridges_cap / 2 + 1;
-    tope->horizonridges = realloc(tope->horizonridges, tope->horizonridges_cap * sizeof(Ridge*));
+    tope->horizonridges = realloc(tope->horizonridges,
+                                  tope->horizonridges_cap * sizeof(Ridge*));
   }
   tope->horizonridges[tope->horizonridges_len++] = ridge;
 }
@@ -84,7 +85,8 @@ static Vertex* vertex_create(Tope* tope, double const* pos, int index)
   Allocator* alc = &tope->alc;
 
   /* Allocate vertex: */
-  Vertex* vertex = allocator_alloc(alc, sizeof(Vertex) + (d - 1) * sizeof(double));
+  Vertex* vertex = allocator_alloc(alc,
+                                   sizeof(Vertex) + (d - 1) * sizeof(double));
 
   /* Fill in other variables: */
   vertex->index = index;
@@ -126,6 +128,19 @@ static Ridge* ridge_create(Tope* tope, List* vli)
     ++vertex->nridges;
   }
 
+  /* Vertices: */
+  double* verts = alloca((d - 1) * d * sizeof(double));
+  int nverts = 0;
+  for (vli = ridge->verts; vli != NULL; vli = vli->next, ++nverts) {
+    Vertex* vertex = vli->val;
+    memcpy(verts + nverts * d, vertex->position, d * sizeof(double));
+  }
+  assert(nverts == d - 1);  // assume simplex
+
+  /* Volume, centroid, etc: */
+  ridge->centroid = allocator_alloc(alc, d * sizeof(double));
+  analyzesimplex(d - 1, d, verts, &ridge->volume, ridge->centroid);
+
   return ridge;
 }
 
@@ -136,6 +151,8 @@ static void ridge_remove(Tope* tope, Ridge* ridge)
   --tope->nridges;
   Allocator* alc = &tope->alc;
   int d = tope->dim;
+
+  allocator_free(alc, ridge->centroid, d * sizeof(double));
 
   for (List* vli = ridge->verts; vli != NULL; ) {
     // Disassociate vertex:
@@ -416,14 +433,10 @@ static void initialsimplex(Tope* tope, int npoints, Point* points)
     List* facetverts = NULL;
     List** pvli = &facetverts;
     for (int j = 0; j < i; ++j) {
-      *pvli = allocator_alloc(alc, sizeof(List));
-      (*pvli)->val = vertices[j];
-      pvli = &(*pvli)->next;
+      pvli = list_append(pvli, vertices[j], alc);
     }
     for (int j = i; j < d; ++j) {
-      *pvli = allocator_alloc(alc, sizeof(List));
-      (*pvli)->val = vertices[j + 1];
-      pvli = &(*pvli)->next;
+      pvli = list_append(pvli, vertices[j + 1], alc);
     }
 
     /* Add d ridges: */
@@ -607,7 +620,8 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
     /* Add facet to newfacets array: */
     if (tope->newfacets_len == tope->newfacets_cap) {
       tope->newfacets_cap = 3 * tope->newfacets_cap / 2 + 1;
-      tope->newfacets = realloc(tope->newfacets, tope->newfacets_cap * sizeof(Facet*));
+      tope->newfacets = realloc(tope->newfacets,
+                                tope->newfacets_cap * sizeof(Facet*));
     }
     tope->newfacets[tope->newfacets_len++] = facet;
   }
@@ -718,13 +732,15 @@ Tope* tope_fromplanes(
   /* Construct reciprocal tope: */
   Tope* rectope = tope_frompoints(n, d, points);
   free(points);
+  tope_merge(rectope);
 
   /* Convert reciprocal tope to tope: */
   int nfacets = tope_getnumfacets(rectope);
   points = malloc(nfacets * d * sizeof(double));
-
   u32 ifacet = 0;
-  for (Facet* facet = rectope->firstfacet; facet != NULL; facet = facet->next, ++ifacet) {
+  for (Facet* facet = rectope->firstfacet;
+       facet != NULL;
+       facet = facet->next, ++ifacet) {
     /* Unscaled normal and distance: */
     double dist = vec_dot(d, facet->normal, facet->centroid);
     for (int i = 0; i < d; ++i) {
@@ -738,10 +754,11 @@ Tope* tope_fromplanes(
   }
 
   Tope* tope = tope_frompoints(nfacets, d, points);
+  free(points);
+  tope_merge(tope);
 
   /* Clean up: */
   tope_delete(rectope);
-  free(points);
 
   return tope;
 }
@@ -954,13 +971,21 @@ void tope_print(Tope* tope)
     tope_facet_getcentroid(tope, facet, centroid);
 
     printf("facet %d\n", i + 1);
-    printf("  volume: %g\n", volume);
+    printf("  size: %g\n", volume);
     printf("  centroid: ");
     vec_print(d, centroid);
     printf("\n");
     printf("  normal: ");
     vec_print(d, normal);
     printf("\n");
+
+    int j = 0;
+    for (List* rli = facet->ridges; rli; rli = rli->next, ++j) {
+      Ridge* ridge = rli->val;
+      printf("  ridge %d\n", j + 1);
+      printf("    size: %g\n", ridge->volume);
+      printf("    centroid: "); vec_print(d, ridge->centroid); printf("\n");
+    }
   }
   assert(i == tope->nfacets);
   printf("  sv:\n");
@@ -1202,6 +1227,8 @@ u64 tope_bytes_used(Tope* tope)
 static void ridges_merge(Tope* tope)
 {
   Allocator* alc = &tope->alc;
+  int d = tope->dim;
+
   // Loop over facets:
   for (Facet* facet = tope->firstfacet; facet; facet = facet->next) {
     // Loop over ridges:
@@ -1213,6 +1240,12 @@ static void ridges_merge(Tope* tope)
         if ((ridge1->facets[0] == ridge2->facets[0] && ridge1->facets[1] == ridge2->facets[1]) ||
             (ridge1->facets[0] == ridge2->facets[1] && ridge1->facets[1] == ridge2->facets[0])) {
           // Ridges have the same facets.
+
+          // Merge centroid/volume:
+          vec_scale(d, ridge1->centroid, ridge1->volume);
+          vec_adds(d, ridge1->centroid, ridge2->centroid, ridge2->volume);
+          ridge1->volume += ridge2->volume;
+          vec_scale(d, ridge1->centroid, 1.0 / ridge1->volume);
 
           // Move unique vertices from ridge2 to ridge1:
           List** pvli1 = &ridge1->verts;

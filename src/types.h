@@ -62,6 +62,8 @@ struct _tope_Facet {
 struct _Ridge {
   Facet* facets[2];  /* 2 adjacent facets */
   List* verts;  /* vertex list */
+  double volume;
+  double* centroid;
 };
 
 struct _tope_Vertex {
