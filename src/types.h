@@ -5,18 +5,12 @@
 #include <stdbool.h>
 
 #include "allocator.h"
+#include "list.h"
 
 typedef struct _Ridge Ridge;
 typedef struct _Point Point;
 typedef tope_Vertex Vertex;
 typedef tope_Facet Facet;
-
-/* Non-intrusive singly linked list. */
-typedef struct _List List;
-struct _List {
-  List* next;  /* next in list */
-  void* val;  /* generic pointer */
-};
 
 typedef struct _HashMap {
   u32 cap;  /* capacity (2^n) */
