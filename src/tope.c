@@ -26,12 +26,35 @@ static List** list_append(List** plist, void* val, Allocator* alc)
 
 
 
-static void list_free(Allocator* alc, List* list)
+/* Prepend to list. */
+static void list_prepend(List** plist, void* val, Allocator* alc)
 {
-  while (list) {
-    List* next = list->next;
-    allocator_free(alc, list, sizeof(List));
-    list = next;
+  List* newnode = allocator_alloc(alc, sizeof(List));
+  newnode->next = *plist;
+  newnode->val = val;
+  *plist = newnode;
+}
+
+
+
+/* Pop value from list. */
+static void* list_pop(List** plist, Allocator* alc)
+{
+  List* next = (*plist)->next;
+  void* val = (*plist)->val;
+  allocator_free(alc, *plist, sizeof(List));
+  *plist = next;
+  return val;
+}
+
+
+
+static void list_free(List** plist, Allocator* alc)
+{
+  while (*plist) {
+    List* next = (*plist)->next;
+    allocator_free(alc, *plist, sizeof(List));
+    (*plist) = next;
   }
 }
 
@@ -44,18 +67,6 @@ static Facet* facet_get_neighbour(Facet* facet, Ridge* ridge)
   }
   assert(ridge->facets[1] == facet);
   return ridge->facets[0];
-}
-
-
-
-static void append_horizon_ridge(Tope* tope, Ridge* ridge)
-{
-  if (tope->horizonridges_len == tope->horizonridges_cap) {
-    tope->horizonridges_cap = 3 * tope->horizonridges_cap / 2 + 1;
-    tope->horizonridges = realloc(tope->horizonridges,
-                                  tope->horizonridges_cap * sizeof(Ridge*));
-  }
-  tope->horizonridges[tope->horizonridges_len++] = ridge;
 }
 
 
@@ -464,7 +475,7 @@ static void initialsimplex(Tope* tope, int npoints, Point* points)
 
     /* Vertex array filled, compute and integrate the facet: */
     facet_create(tope, facetverts, facetridges);
-    list_free(alc, facetverts);
+    list_free(&facetverts, alc);
   }
 
   /* Create outside sets (assign each remaining point to a facet it 'sees'): */
@@ -501,14 +512,15 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
   int d = tope->dim;
   Allocator* alc = &tope->alc;
 
+  /* Add facet to visible list: */
   facet_unlink(tope, facet);
   facet->volume = -1;  /* mark visible */
-
-  /* Add facet to visible list: */
   Facet* visiblelist = facet;
 
-  /* Initialize outside points list: */
+  /* More lists: */
   Point* outsidepoints = NULL;
+  List* horizonridges = NULL;
+  List* newfacets = NULL;
 
   while (visiblelist != NULL) {
     /* Pop a value: */
@@ -556,7 +568,7 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
       }
       else {
         /* Neighbour not visible. Ridge belongs to horizon: */
-        append_horizon_ridge(tope, ridge);
+        list_prepend(&horizonridges, ridge, alc);
       }
     }
 
@@ -573,14 +585,14 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
   /* Add apex vertex to tope: */
   Vertex* vertex = vertex_create(tope, apex->pos, apex->index);
 
-  /* Clear newridges: */
+  /* Clear new ridges hashmap: */
   hashmap_clear(&tope->newridges);
 
   /* Form new facets: */
-  while (tope->horizonridges_len > 0) {
+  while (horizonridges) {
 
     /* Pop a horizon ridge: */
-    Ridge* horizonridge = tope->horizonridges[--tope->horizonridges_len];
+    Ridge* horizonridge = list_pop(&horizonridges, alc);
 
     /* Vertices for new facet: */
     List* facetverts = NULL;
@@ -615,16 +627,12 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
     }
 
     Facet* facet = facet_create(tope, facetverts, facetridges);
-    list_free(alc, facetverts);
+    list_free(&facetverts, alc);
 
     /* Add facet to newfacets array: */
-    if (tope->newfacets_len == tope->newfacets_cap) {
-      tope->newfacets_cap = 3 * tope->newfacets_cap / 2 + 1;
-      tope->newfacets = realloc(tope->newfacets,
-                                tope->newfacets_cap * sizeof(Facet*));
-    }
-    tope->newfacets[tope->newfacets_len++] = facet;
-  }
+    list_prepend(&newfacets, facet, alc);
+  }  // end loop over horizonridges
+  assert(horizonridges == NULL);
 
   /* Assign outside verts: */
   while (outsidepoints) {
@@ -636,8 +644,8 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
     /* Max height: */
     double hmax = -HUGE_VAL;
     Facet* maxfacet = NULL;
-    for (int i = 0; i < tope->newfacets_len; ++i) {
-      Facet* facet = tope->newfacets[i];
+    for (List* fli = newfacets; fli; fli = fli->next) {
+      Facet* facet = fli->val;
 
       /* Height of outside point above facet: */
       double h = height(tope->dim, point->pos, facet->centroid, facet->normal);
@@ -653,9 +661,7 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
       facet_addoutside(tope, maxfacet, point);
     }
   }
-
-  assert(tope->horizonridges_len == 0);
-  tope->newfacets_len = 0;
+  list_free(&newfacets, alc);
 }
 
 
@@ -700,8 +706,6 @@ void tope_delete(Tope* tope)
     tope->firstfacet = next;
   }
 #endif
-  free(tope->newfacets);
-  free(tope->horizonridges);
   hashmap_destroy(&tope->newridges);
   allocator_destroy(&tope->alc);
   free(tope->center);
