@@ -44,3 +44,12 @@ void list_free(List** plist, Allocator* alc)
     (*plist) = next;
   }
 }
+
+
+
+int list_len(List* list)
+{
+  int n = 0;
+  for (; list; list = list->next, ++n);
+  return n;
+}

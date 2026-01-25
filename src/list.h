@@ -20,3 +20,6 @@ void* list_pop(List** plist, Allocator* alc);
 
 /* Free list O(n). */
 void list_free(List** plist, Allocator* alc);
+
+/* Number of items in list O(n). */
+int list_len(List* list);
