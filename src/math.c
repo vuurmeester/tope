@@ -91,6 +91,37 @@ double vec_norm(int n, double const* x)
 
 
 
+void vec_normal(int n, int d, double const* x, double* normal)
+{
+  // Largest value of each dimension in normal:
+  vec_reset(d, normal);
+  for (int i = 0; i < n; ++i) {
+    for (int j = 0; j < d; ++j) {
+      double val = fabs(x[i * d + j]);
+      if (val > normal[j]) {
+        normal[j] = val;
+      }
+    }
+  }
+
+  // Put one in the dimension where the largest value is the smallest.
+  // The most 'underrepresented' dimension.
+  int minindex = vec_minindex(d, normal);
+  vec_reset(d, normal);
+  normal[minindex] = 1.0;
+
+  // Gram-Schmidt as per usual:
+  for (int i = 0; i < n; ++i) {
+    double ip = vec_dot(d, &x[i * d], normal);
+    vec_adds(d, normal, &x[i * d], -ip);
+  }
+
+  // Normalize:
+  vec_normalize(d, normal);
+}
+
+
+
 void vec_adds(int n, double* x, double const* y, double scale)
 {
   while (n--) {

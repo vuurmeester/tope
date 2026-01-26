@@ -39,7 +39,7 @@ struct _tope_Facet {
   Facet* next;  /* intrusive doubly linked list */
   Facet* prev;
 
-  double volume;
+  double size;
   Point* outsidehead; /* first entry in visible points list */
   Point* outsidetail; /* last entry in visible points list */
   double* centroid;
@@ -50,8 +50,10 @@ struct _tope_Facet {
 struct _Ridge {
   Facet* facets[2];  /* 2 adjacent facets */
   List* verts;  /* vertex list */
-  double volume;
-  double* centroid;
+  double size;
+  double* centroid;  /* d-dimensional vector */
+  double* normal1;  /* d-dimensional normal vector */
+  double* normal2;  /* d-dimensional normal vector */
 };
 
 struct _tope_Vertex {

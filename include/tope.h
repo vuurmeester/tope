@@ -77,8 +77,8 @@ TOPE_API void tope_facet_getcentroid(Tope* tope, tope_Facet* facet, double* cent
 /** Facet plane offset. */
 TOPE_API double tope_facet_getoffset(Tope* tope, tope_Facet* facet);
 
-/** Facet volume. */
-TOPE_API double tope_facet_getvolume(Tope* tope, tope_Facet* facet);
+/** Facet size (length/area/volume,etc). */
+TOPE_API double tope_facet_getsize(Tope* tope, tope_Facet* facet);
 
 /** Number of facet vertices. */
 TOPE_API int tope_facet_getnumvertices(Tope* tope, tope_Facet* facet);

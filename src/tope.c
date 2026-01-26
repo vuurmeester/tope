@@ -102,11 +102,18 @@ static Ridge* ridge_create(Tope* tope, List* vli)
     Vertex* vertex = vli->val;
     memcpy(verts + nverts * d, vertex->position, d * sizeof(double));
   }
-  assert(nverts == d - 1);  // assume simplex
+  assert(nverts == d - 1);  // assume simplicial
 
   /* Volume, centroid, etc: */
   ridge->centroid = allocator_alloc(alc, d * sizeof(double));
-  analyzesimplex(d - 1, d, verts, &ridge->volume, ridge->centroid);
+  analyzesimplex(d - 1, d, verts, &ridge->size, ridge->centroid);
+
+  /* Normals: */
+  ridge->normal1 = allocator_alloc(alc, d * sizeof(double));
+  vec_normal(d - 2, d, verts, ridge->normal1);  // normal1
+  memcpy(verts + (d - 2) * d, ridge->normal1, d * sizeof(double));
+  ridge->normal2 = allocator_alloc(alc, d * sizeof(double));
+  vec_normal(d - 1, d, verts, ridge->normal2);  // normal2
 
   return ridge;
 }
@@ -191,9 +198,9 @@ static Facet* facet_create(Tope* tope, List* rli)
     memcpy(basis + n * d, ridge->centroid, d * sizeof(double));
   }
 
-  /* Extract basis, volume, centroid: */
-  analyzesimplex(n, d, basis, &facet->volume, facet->centroid);
-  facet->volume = 1;  /* invalid */
+  /* Extract basis, size, centroid: */
+  analyzesimplex(n, d, basis, &facet->size, facet->centroid);
+  facet->size = 1;  /* invalid */
 
   /* Compute outward pointing normal: */
   memcpy(facet->normal, facet->centroid, d * sizeof(double));
@@ -356,7 +363,7 @@ static void initialsimplex(Tope* tope, int npoints, Point* points)
   }
 
   /* Due to pivoting, the permutation vector will represent the point order
-     which leads to the greatest volume. */
+     which leads to the greatest size. */
   for (int i = 0; i < d; ++i) {
     /* Max norm: */
     double maxnormsq = 0.0;
@@ -463,7 +470,7 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
 
   /* Add facet to visible list: */
   facet_unlink(tope, facet);
-  facet->volume = -1;  /* mark visible */
+  facet->size = -1;  /* mark visible */
   Facet* visiblelist = facet;
 
   /* More lists: */
@@ -495,7 +502,7 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
       }
       neighbour = ridge->facets[0];
 
-      if (neighbour == NULL || neighbour->volume < 0) {
+      if (neighbour == NULL || neighbour->size < 0) {
         /* Removed or visited. */
         continue;
       }
@@ -513,7 +520,7 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
         /* Prepend neighbour to visible list: */
         neighbour->next = visiblelist;
         visiblelist = neighbour;
-        neighbour->volume = -1;  /* mark visible */
+        neighbour->size = -1;  /* mark visible */
       }
       else {
         /* Neighbour not visible. Ridge belongs to horizon: */
@@ -914,12 +921,12 @@ void tope_print(Tope* tope)
   int i = 0;
   for (Facet* facet = tope->firstfacet; facet != NULL; ++i, facet = facet->next) {
     tope_facet_getnormal(tope, facet, normal);
-    double volume = tope_facet_getvolume(tope, facet);
-    vec_adds(d, sv, normal, volume);
+    double size = tope_facet_getsize(tope, facet);
+    vec_adds(d, sv, normal, size);
     tope_facet_getcentroid(tope, facet, centroid);
 
     printf("facet %d\n", i + 1);
-    printf("  size: %g\n", volume);
+    printf("  size: %g\n", size);
     printf("  centroid: ");
     vec_print(d, centroid);
     printf("\n");
@@ -931,8 +938,10 @@ void tope_print(Tope* tope)
     for (List* rli = facet->ridges; rli; rli = rli->next, ++j) {
       Ridge* ridge = rli->val;
       printf("  ridge %d\n", j + 1);
-      printf("    size: %g\n", ridge->volume);
+      printf("    size: %g\n", ridge->size);
       printf("    centroid: "); vec_print(d, ridge->centroid); printf("\n");
+      printf("    normal1: "); vec_print(d, ridge->normal1); printf("\n");
+      printf("    normal2: "); vec_print(d, ridge->normal2); printf("\n");
     }
   }
   assert(i == tope->nfacets);
@@ -1017,8 +1026,8 @@ void tope_interpolate(
       }
 
       /* Analyse ridge simplex: */
-      double volume = 0.0;
-      analyzesimplex(d, d, verts, &volume, centroid);
+      double size = 0.0;
+      analyzesimplex(d, d, verts, &size, centroid);
 
       /* Construct normal: */
       memcpy(normal, fverts[iridge]->position, d * sizeof(double));
@@ -1033,7 +1042,7 @@ void tope_interpolate(
       double h = height(d, xiprime, centroid, normal);
 
       /* Weight for this ridge: */
-      weights[iridge] = h * volume;
+      weights[iridge] = h * size;
       totalweight += weights[iridge];
 
       /* Index for this ridge: */
@@ -1120,12 +1129,12 @@ double tope_facet_getoffset(Tope* tope, Facet* facet)
 
 
 
-double tope_facet_getvolume(Tope* tope, Facet* facet)
+double tope_facet_getsize(Tope* tope, Facet* facet)
 {
   int d = tope->dim;
   double* s = tope->scales;
   double* n = facet->normal;
-  double volume = facet->volume;
+  double size = facet->size;
 
   /* Transformed normal: */
   double scale = 0.0;
@@ -1139,9 +1148,9 @@ double tope_facet_getvolume(Tope* tope, Facet* facet)
     prod *= s[i];
   }
 
-  volume *= prod * sqrt(scale);
+  size *= prod * sqrt(scale);
 
-  return volume;
+  return size;
 }
 
 
@@ -1190,11 +1199,11 @@ static void ridges_merge(Tope* tope)
             (ridge1->facets[0] == ridge2->facets[1] && ridge1->facets[1] == ridge2->facets[0])) {
           // Ridges have the same facets.
 
-          // Merge centroid/volume:
-          vec_scale(d, ridge1->centroid, ridge1->volume);
-          vec_adds(d, ridge1->centroid, ridge2->centroid, ridge2->volume);
-          ridge1->volume += ridge2->volume;
-          vec_scale(d, ridge1->centroid, 1.0 / ridge1->volume);
+          // Merge centroid/size:
+          vec_scale(d, ridge1->centroid, ridge1->size);
+          vec_adds(d, ridge1->centroid, ridge2->centroid, ridge2->size);
+          ridge1->size += ridge2->size;
+          vec_scale(d, ridge1->centroid, 1.0 / ridge1->size);
 
           // Move unique vertices from ridge2 to ridge1:
           List** pvli1 = &ridge1->verts;
@@ -1267,7 +1276,7 @@ void tope_merge(Tope* tope)
         continue;
       }
 
-      assert(neighbour && neighbour->volume >= 0.0);
+      assert(neighbour && neighbour->size >= 0.0);
       memcpy(diff, facet->normal, d * sizeof(double));
       vec_sub(d, diff, neighbour->normal);
       if (vec_nrmsq(d, diff) > EPS * EPS) {
@@ -1275,10 +1284,10 @@ void tope_merge(Tope* tope)
       }
       else {
         // Parallel. Merge with facet:
-        vec_scale(d, facet->centroid, facet->volume);
-        vec_adds(d, facet->centroid, neighbour->centroid, neighbour->volume);
-        facet->volume += neighbour->volume;
-        vec_scale(d, facet->centroid, 1.0 / facet->volume);
+        vec_scale(d, facet->centroid, facet->size);
+        vec_adds(d, facet->centroid, neighbour->centroid, neighbour->size);
+        facet->size += neighbour->size;
+        vec_scale(d, facet->centroid, 1.0 / facet->size);
         while (neighbour->ridges) {
           // Pop value:
           List* nrli = neighbour->ridges;
