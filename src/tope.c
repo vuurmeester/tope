@@ -986,9 +986,7 @@ void tope_interpolate(
 
   /* Some space for various tasks: */
   double* xiprime  = alloca(d * sizeof(double));
-  double* centroid = alloca(d * sizeof(double));
   double* normal   = alloca(d * sizeof(double));
-  double* verts    = alloca(d * d * sizeof(double));
   Vertex** fverts  = alloca((d + 1) * sizeof(Vertex));
 
   /* Transform xi to local coordinates: */
@@ -1018,31 +1016,21 @@ void tope_interpolate(
       /* Retrieve ridge: */
       ridge = rli->val;
 
-      /* Vertex coordinates: */
-      vli = ridge->verts;
-      for (int ivertex = 0; ivertex < d; ++ivertex, vli = vli->next) {
-        Vertex* vert = vli->val;
-        memcpy(&verts[ivertex * d], vert->position, d * sizeof(double));
-      }
-
-      /* Analyse ridge simplex: */
-      double size = 0.0;
-      analyzesimplex(d, d, verts, &size, centroid);
-
       /* Construct normal: */
       memcpy(normal, fverts[iridge]->position, d * sizeof(double));
-      vec_sub(d, normal, centroid);
-      for (int i = 0; i < d - 1; ++i) {
-        double fac = vec_dot(d, normal, &verts[i * d]);
-        vec_adds(d, normal, &verts[i * d], -fac);
-      }
+      vec_sub(d, normal, ridge->centroid);
+      double alpha = vec_dot(d, normal, ridge->normal1);
+      double beta  = vec_dot(d, normal, ridge->normal2);
+      memcpy(normal, ridge->normal1, d * sizeof(double));
+      vec_scale(d, normal, alpha);
+      vec_adds(d, normal, ridge->normal2, beta);
       vec_normalize(d, normal);
 
       /* Height of xi above ridge: */
-      double h = height(d, xiprime, centroid, normal);
+      double h = height(d, xiprime, ridge->centroid, normal);
 
       /* Weight for this ridge: */
-      weights[iridge] = h * size;
+      weights[iridge] = -h * ridge->size * currentfacet->normal[d];
       totalweight += weights[iridge];
 
       /* Index for this ridge: */
