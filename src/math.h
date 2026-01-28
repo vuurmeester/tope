@@ -52,8 +52,8 @@ double vec_nrmsq(int n, double const* x);
 /** 2-Norm of a vector. */
 double vec_norm(int n, double const* x);
 
-/** d-normal to set of n d-vectors. */
-void vec_normal(int n, int d, double const* x, double* normal);
+/** normal to orthonormal basis of n d-vectors (n < d). */
+void vec_normal(int n, int d, double const* basis, double* normal);
 
 /** Normalize the vector. */
 void vec_normalize(int n, double* x);

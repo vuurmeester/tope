@@ -107,6 +107,7 @@ static Ridge* ridge_create(Tope* tope, List* vli)
   /* Volume, centroid, etc: */
   ridge->centroid = allocator_alloc(alc, d * sizeof(double));
   analyzesimplex(d - 1, d, verts, &ridge->size, ridge->centroid);
+  assert(ridge->size > 0);
 
   /* Normals: */
   ridge->normal1 = allocator_alloc(alc, d * sizeof(double));
@@ -114,6 +115,7 @@ static Ridge* ridge_create(Tope* tope, List* vli)
   memcpy(verts + (d - 2) * d, ridge->normal1, d * sizeof(double));
   ridge->normal2 = allocator_alloc(alc, d * sizeof(double));
   vec_normal(d - 1, d, verts, ridge->normal2);  // normal2
+  assert(fabs(vec_dot(d, ridge->normal1, ridge->normal2)) < EPS);
 
   return ridge;
 }
@@ -173,8 +175,7 @@ static Facet* facet_create(Tope* tope, List* rli)
   facet->next = NULL;
 
   /* Ridge count: */
-  int n = list_len(rli);
-  assert(n == d);
+  assert(list_len(rli) == d);  // assume simplicial
 
   /* Assign ridges: */
   facet->ridges = rli;
@@ -192,15 +193,16 @@ static Facet* facet_create(Tope* tope, List* rli)
   }
 
   /* Ridge centroids: */
-  double* basis = alloca(n * d * sizeof(double));
-  for (rli = facet->ridges, n = 0; rli; ++n, rli = rli->next) {
+  double* basis = alloca(d * d * sizeof(double));
+  int n = 0;
+  for (rli = facet->ridges; rli; ++n, rli = rli->next) {
     Ridge* ridge = rli->val;
     memcpy(basis + n * d, ridge->centroid, d * sizeof(double));
   }
+  assert(n == d);
 
   /* Extract basis, size, centroid: */
   analyzesimplex(n, d, basis, &facet->size, facet->centroid);
-  facet->size = 1;  /* invalid */
 
   /* Compute outward pointing normal: */
   memcpy(facet->normal, facet->centroid, d * sizeof(double));
@@ -210,6 +212,30 @@ static Facet* facet_create(Tope* tope, List* rli)
     vec_adds(d, facet->normal, basis + i * d, -ip);
   }
   vec_normalize(d, facet->normal);
+
+  /* Compute volume: */
+  double* normal = alloca(d * sizeof(double));
+  facet->size = 0;
+  for (rli = facet->ridges; rli; rli = rli->next) {
+    Ridge* ridge = rli->val;
+
+    /* Ridge normal: */
+    memcpy(normal, ridge->centroid, d * sizeof(double));
+    vec_sub(d, normal, facet->centroid);
+    double a1 = vec_dot(d, normal, ridge->normal1);
+    double a2 = vec_dot(d, normal, ridge->normal2);
+    memcpy(normal, ridge->normal1, d * sizeof(double));
+    vec_scale(d, normal, a1);
+    vec_adds(d, normal, ridge->normal2, a2);
+    vec_scale(d, normal, 1.0 / sqrt(a1 * a1 + a2 * a2));
+    assert(fabs(vec_norm(d, normal) - 1) < EPS);
+    assert(fabs(vec_dot(d, normal, facet->normal)) < EPS);
+
+    double c0 = vec_dot(d, basis, ridge->centroid);
+    double n0 = vec_dot(d, basis, normal);
+    facet->size += c0 * n0 * ridge->size;
+  }
+  assert(facet->size > 0);
 
   return facet;
 }
