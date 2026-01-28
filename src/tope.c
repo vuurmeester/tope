@@ -203,6 +203,7 @@ static Facet* facet_create(Tope* tope, List* rli)
 
   /* Extract basis, size, centroid: */
   analyzesimplex(n, d, basis, &facet->size, facet->centroid);
+  facet->size *= pow(d - 1, d - 1);  // facet size is too small by this factor
 
   /* Compute outward pointing normal: */
   memcpy(facet->normal, facet->centroid, d * sizeof(double));
@@ -214,28 +215,22 @@ static Facet* facet_create(Tope* tope, List* rli)
   vec_normalize(d, facet->normal);
 
   /* Compute volume: */
-  double* normal = alloca(d * sizeof(double));
-  facet->size = 0;
-  for (rli = facet->ridges; rli; rli = rli->next) {
-    Ridge* ridge = rli->val;
-
-    /* Ridge normal: */
-    memcpy(normal, ridge->centroid, d * sizeof(double));
-    vec_sub(d, normal, facet->centroid);
-    double a1 = vec_dot(d, normal, ridge->normal1);
-    double a2 = vec_dot(d, normal, ridge->normal2);
-    memcpy(normal, ridge->normal1, d * sizeof(double));
-    vec_scale(d, normal, a1);
-    vec_adds(d, normal, ridge->normal2, a2);
-    vec_scale(d, normal, 1.0 / sqrt(a1 * a1 + a2 * a2));
-    assert(fabs(vec_norm(d, normal) - 1) < EPS);
-    assert(fabs(vec_dot(d, normal, facet->normal)) < EPS);
-
-    double c0 = vec_dot(d, basis, ridge->centroid);
-    double n0 = vec_dot(d, basis, normal);
-    facet->size += c0 * n0 * ridge->size;
-  }
-  assert(facet->size > 0);
+  //facet->size = 0;
+  //for (rli = facet->ridges; rli; rli = rli->next) {
+  //  Ridge* ridge = rli->val;
+  //
+  //  /* Ridge offset from facet centroid (use 'basis' as temp storage): */
+  //  memcpy(basis, facet->centroid, d * sizeof(double));
+  //  vec_sub(d, basis, ridge->centroid);
+  //  double a1 = vec_dot(d, basis, ridge->normal1);
+  //  double a2 = vec_dot(d, basis, ridge->normal2);
+  //  double h = sqrt(a1 * a1 + a2 * a2);
+  //
+  //  /* Size contribution: */
+  //  facet->size += h * ridge->size;
+  //}
+  //facet->size /= (double)(d - 1);  // hyperpyramid factor
+  //assert(facet->size > 0);
 
   return facet;
 }

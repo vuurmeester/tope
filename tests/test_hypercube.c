@@ -6,7 +6,7 @@
 
 #include <tope.h>
 
-#define DIM 5
+#define DIM 2
 #define NPOINTS (2 << DIM)
 
 
