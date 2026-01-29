@@ -49,7 +49,7 @@ struct _tope_Facet {
 
 struct _Ridge {
   Facet* facets[2];  /* 2 adjacent facets */
-  List* verts;  /* vertex list */
+  Vertex** verts;  /* d-1 verts */
   double size;
   double* centroid;  /* d-dimensional vector */
   double* normal1;  /* d-dimensional normal vector */

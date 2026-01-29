@@ -90,7 +90,7 @@ int main()
 
   /* Initialize tope with all but the last: */
   Tope* tope = tope_frompoints(m - 1, 3, points);
-  //tope_merge(tope);
+  tope_merge(tope);
 
   /* Print the tope: */
   tope_print(tope);
