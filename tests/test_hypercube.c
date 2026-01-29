@@ -6,7 +6,7 @@
 
 #include <tope.h>
 
-#define DIM 6
+#define DIM 8
 #define NPOINTS (2 << DIM)
 
 
@@ -23,7 +23,7 @@ int main()
 
   /* Create tope: */
   Tope* tope = tope_frompoints(NPOINTS, DIM, points);
-  //tope_merge(tope);
+  tope_merge(tope);
 
   /* Print the tope: */
   tope_print(tope);

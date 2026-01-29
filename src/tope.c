@@ -83,6 +83,8 @@ static Ridge* ridge_create(Tope* tope, List* vli)
   Allocator* alc = &tope->alc;
   int d = tope->dim;
 
+  assert(list_len(vli) == d - 1);
+
   /* Allocate ridge: */
   Ridge* ridge = allocator_alloc(alc, sizeof(Ridge));
 
@@ -503,6 +505,16 @@ static void ridges_merge(Tope* tope, Facet* facet)
           (ridge1->facets[0] == ridge2->facets[1] && ridge1->facets[1] == ridge2->facets[0])) {
         // Ridges have the same facets.
 
+        //printf("ridge1 verts:\n");
+        //for (List* vli = ridge1->verts; vli; vli = vli->next) {
+        //  printf("  %p\n", vli->val);
+        //}
+        //
+        //printf("ridge2 verts:\n");
+        //for (List* vli = ridge2->verts; vli; vli = vli->next) {
+        //  printf("  %p\n", vli->val);
+        //}
+
         // Merge centroid/size:
         vec_scale(d, ridge1->centroid, ridge1->size);
         vec_adds(d, ridge1->centroid, ridge2->centroid, ridge2->size);
@@ -513,23 +525,32 @@ static void ridges_merge(Tope* tope, Facet* facet)
         List** pvli1 = &ridge1->verts;
         while (ridge2->verts) {
           List* next2 = ridge2->verts->next;
-          Vertex* v1 = (*pvli1)->val;
-          Vertex* v2 = ridge2->verts->val;
-          if (v1 < v2) {
-            pvli1 = &(*pvli1)->next; // advance 1
+          bool found = false;
+          for (List* vli1 = *pvli1; vli1; vli1 = vli1->next) {
+            if (ridge2->verts->val == vli1->val) {
+              found = true;
+              break;
+            }
           }
-          else if (v1 > v2) {
-            List* next1 = (*pvli1)->next;
+          if (found) {
+            // remove vert2
+            allocator_free(alc, ridge2->verts, sizeof(List));
+            ridge2->verts = next2;
+          }
+          else {
+            // insert vert2
+            List* next1 = *pvli1;
             *pvli1 = ridge2->verts;
             (*pvli1)->next = next1;
             ridge2->verts = next2;
           }
-          else {
-            // Vertex already in ridge1, remove link from ridge2:
-            allocator_free(alc, ridge2->verts, sizeof(List));
-            ridge2->verts = next2;
-          }
+          pvli1 = &(*pvli1)->next; // advance 1
         }
+
+        //printf("merged verts:\n");
+        //for (List* vli = ridge1->verts; vli; vli = vli->next) {
+        //  printf("  %p\n", vli->val);
+        //}
 
         // Remove ridge2 from this facet:
         List* next = (*prli2)->next;
