@@ -72,33 +72,13 @@ static Ridge* ridge_create(Tope* tope, Vertex** verts)
   int d = tope->dim;
 
   /* Allocate ridge: */
-  Ridge* ridge = allocator_alloc(alc, sizeof(Ridge));
-  ridge->verts = allocator_alloc(alc, (d - 1) * sizeof(Vertex*));
+  Ridge* ridge = allocator_alloc(alc, sizeof(Ridge) + (d - 2) * sizeof(Vertex*));
 
   // Assign and associate verts:
   for (int i = 0; i < d - 1; ++i) {
     ++verts[i]->nridges;
     ridge->verts[i] = verts[i];
   }
-
-  /* Copy vertex positions: */
-  double* basis = alloca((d - 1) * d * sizeof(double));
-  for (int i = 0; i < d - 1; ++i) {
-    memcpy(basis + i * d, verts[i]->position, d * sizeof(double));
-  }
-
-  /* Volume, centroid, etc: */
-  ridge->centroid = allocator_alloc(alc, d * sizeof(double));
-  analyzesimplex(d - 1, d, basis, &ridge->size, ridge->centroid);
-  assert(ridge->size > 0);
-
-  /* Normals: */
-  ridge->normal1 = allocator_alloc(alc, d * sizeof(double));
-  vec_normal(d - 2, d, basis, ridge->normal1);  // normal1
-  memcpy(basis + (d - 2) * d, ridge->normal1, d * sizeof(double));
-  ridge->normal2 = allocator_alloc(alc, d * sizeof(double));
-  vec_normal(d - 1, d, basis, ridge->normal2);  // normal2
-  assert(fabs(vec_dot(d, ridge->normal1, ridge->normal2)) < EPS);
 
   return ridge;
 }
@@ -123,17 +103,13 @@ static void ridge_remove(Tope* tope, Ridge* ridge)
   }
 
   // Clean up ridge struct:
-  allocator_free(alc, ridge->normal2, d * sizeof(double));
-  allocator_free(alc, ridge->normal1, d * sizeof(double));
-  allocator_free(alc, ridge->centroid, d * sizeof(double));
-  allocator_free(alc, ridge->verts, (d - 1) * sizeof(Vertex*));
-  allocator_free(alc, ridge, sizeof(Ridge));
+  allocator_free(alc, ridge, sizeof(Ridge) + (d - 2) * sizeof(Vertex*));
 }
 
 
 
-/* Create and initialize a simplicial facet with d ridges: */
-static Facet* facet_create(Tope* tope, List* rli)
+/* Create and initialize a simplicial facet with d vertices: */
+static Facet* facet_create(Tope* tope, Vertex** fverts)
 {
   ++tope->nfacets;
   Allocator* alc = &tope->alc;
@@ -154,33 +130,45 @@ static Facet* facet_create(Tope* tope, List* rli)
   tope->lastfacet = facet;
   facet->next = NULL;
 
-  /* Assign ridges: */
-  facet->ridges = rli;
-  for (; rli; rli = rli->next) {
-    Ridge* ridge = rli->val;
+    /* Add d ridges: */
+  Vertex** ridgeverts = alloca((d - 1) * sizeof(Vertex*));
+  for (int i = 0; i < d; ++i) {
+    /* Set d - 1 ridge verts: */
+    int nverts = 0;
+    for (int j = 0; j < d; ++j) {
+      if (j == i) {
+        continue;
+      }
+      ridgeverts[nverts++] = fverts[j];
+    }
+    assert(nverts == d - 1);
+
+    Ridge** pridge = hashmap_get(&tope->newridges, nverts, ridgeverts);
+    if (*pridge == NULL) {
+      /* New ridge: */
+      *pridge = ridge_create(tope, ridgeverts);
+    }
+    list_append(&facet->ridges, *pridge, alc);
+    
     /* Remember facet. */
-    if (ridge->facets[0] == NULL) {
-      assert(ridge->facets[0] == NULL);
-      ridge->facets[0] = facet;
+    if ((*pridge)->facets[0] == NULL) {
+      assert((*pridge)->facets[0] == NULL);
+      (*pridge)->facets[0] = facet;
     }
     else {
-      assert(ridge->facets[1] == NULL);
-      ridge->facets[1] = facet;
+      assert((*pridge)->facets[1] == NULL);
+      (*pridge)->facets[1] = facet;
     }
   }
 
   /* Ridge centroids: */
   double* basis = alloca(d * d * sizeof(double));
-  int n = 0;
-  for (rli = facet->ridges; rli; ++n, rli = rli->next) {
-    Ridge* ridge = rli->val;
-    memcpy(basis + n * d, ridge->centroid, d * sizeof(double));
+  for (int i = 0; i < d; ++i) {
+    memcpy(basis + i * d, fverts[i]->position, d * sizeof(double));
   }
-  assert(n == d);
 
   /* Extract basis, size, centroid: */
-  analyzesimplex(n, d, basis, &facet->size, facet->centroid);
-  facet->size *= pow(d - 1, d - 1);  // yes, weird
+  analyzesimplex(d, d, basis, &facet->size, facet->centroid);
 
   /* Compute outward pointing normal: */
   memcpy(facet->normal, facet->centroid, d * sizeof(double));
@@ -384,37 +372,20 @@ static void initialsimplex(Tope* tope, int npoints, Point* points)
 
   hashmap_clear(&tope->newridges);
 
-  Vertex** ridgeverts = alloca((d - 1) * sizeof(Vertex*));
+  Vertex** fverts = alloca(d * sizeof(Vertex*));
 
   /* Create facets: */
   for (int i = 0; i < d + 1; ++i) {
-    /* Add d ridges: */
-    List* facetridges = NULL;
+    int nverts = 0;
     for (int j = 0; j < d + 1; ++j) {
       if (j == i) {
         continue;
       }
-
-      /* Set d - 1 ridge verts: */
-      int nverts = 0;
-      for (int k = 0; k < d + 1; ++k) {
-        if (k == i || k == j) {
-          continue;
-        }
-        ridgeverts[nverts++] = vertices[k];
-      }
-      assert(nverts == d - 1);
-
-      Ridge** pridge = hashmap_get(&tope->newridges, nverts, ridgeverts);
-      if (*pridge == NULL) {
-        /* New ridge: */
-        *pridge = ridge_create(tope, ridgeverts);
-      }
-      list_append(&facetridges, *pridge, alc);
+      fverts[nverts++] = vertices[j];
     }
 
     /* Vertex array filled, compute and integrate the facet: */
-    facet_create(tope, facetridges);
+    facet_create(tope, fverts);
   }
 
   /* Create outside sets (assign each remaining point to a facet it 'sees'): */
@@ -526,47 +497,22 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
   /* Clear new ridges hashmap: */
   hashmap_clear(&tope->newridges);
 
-  /* Temporary array for creating vertsets: */
-  Vertex** ridgeverts = alloca((d - 1) * sizeof(Vertex*));
+  Vertex** fverts = alloca(d * sizeof(Vertex*));
 
   /* Form new facets: */
   while (horizonridges) {
 
     /* Pop horizon ridge: */
     Ridge* horizonridge = list_pop(&horizonridges, alc);
+    Ridge** pridge = hashmap_get(&tope->newridges, d - 1, horizonridge->verts);
+    assert(*pridge == NULL);
+    *pridge = horizonridge;
 
-    /* New facet will contain the horizon ridge: */
-    List* facetridges = NULL;
-    list_append(&facetridges, horizonridge, alc);
-
-    /* Apex: */
-    ridgeverts[0] = vertex;
-
-    /* And ridges formed by the apex and all but one of the horizon ridge vertices: */
-    for (int iridge1 = 0; iridge1 < d - 1; ++iridge1) {
-      /** Add all horizon verts but one: */
-      int nverts = 1;  /* only apex */
-      for (int iridge2 = 0; iridge2 < d - 1; ++iridge2) {
-        if (iridge1 == iridge2) {
-          // Skip one.
-          continue;
-        }
-        ridgeverts[nverts++] = horizonridge->verts[iridge2];
-      }
-      assert(nverts == d - 1);
-
-      /* Get or create new ridge: */
-      Ridge** pridge = hashmap_get(&tope->newridges, nverts, ridgeverts);
-      if (*pridge == NULL) {
-        /* Create new ridge: */
-        *pridge = ridge_create(tope, ridgeverts);
-      }
-      list_append(&facetridges, *pridge, alc);
+    fverts[0] = vertex;
+    for (int i = 1; i < d; ++i) {
+      fverts[i] = horizonridge->verts[i - 1];
     }
-
-    Facet* facet = facet_create(tope, facetridges);
-
-    /* Add facet to newfacets array: */
+    Facet* facet = facet_create(tope, fverts);
     list_prepend(&newfacets, facet, alc);
   }  // end loop over horizonridges
 
@@ -971,6 +917,8 @@ void tope_interpolate(
   /* Some space for various tasks: */
   double* xiprime  = alloca(d * sizeof(double));
   double* normal   = alloca(d * sizeof(double));
+  double* centroid = alloca(d * sizeof(double));
+  double* basis    = alloca(d * d * sizeof(double));
   Vertex** fverts  = alloca((d + 1) * sizeof(Vertex));
 
   /* Transform xi to local coordinates: */
@@ -999,21 +947,27 @@ void tope_interpolate(
       /* Retrieve ridge: */
       ridge = rli->val;
 
+      for (int i = 0; i < d; ++i) {
+        memcpy(basis + i * d, ridge->verts[i]->position, d * sizeof(double));
+      }
+
+      double size;
+      analyzesimplex(d, d, basis, &size, centroid);
+
       /* Construct normal: */
       memcpy(normal, fverts[iridge]->position, d * sizeof(double));
-      vec_sub(d, normal, ridge->centroid);
-      double a1 = vec_dot(d, normal, ridge->normal1);
-      double a2 = vec_dot(d, normal, ridge->normal2);
-      memcpy(normal, ridge->normal1, d * sizeof(double));
-      vec_scale(d, normal, a1);
-      vec_adds(d, normal, ridge->normal2, a2);
+      vec_sub(d, normal, centroid);
+      for (int i = 0; i < d - 1; ++i) {
+        double ip = vec_dot(d, normal, basis + i * d);
+        vec_adds(d, normal, basis + i * d, -ip);
+      }
       vec_normalize(d, normal);
 
       /* Height of xi above ridge: */
-      double h = height(d, xiprime, ridge->centroid, normal);
+      double h = height(d, xiprime, centroid, normal);
 
       /* Weight for this ridge: */
-      weights[iridge] = -h * ridge->size * currentfacet->normal[d];
+      weights[iridge] = h * size;
       totalweight += weights[iridge];
 
       /* Index for this ridge: */

@@ -45,15 +45,12 @@ struct _tope_Facet {
   double* centroid;
   double* normal;
   List* ridges;  /* ridge list */
+  List* verts;  /* vertex list */
 };
 
 struct _Ridge {
   Facet* facets[2];  /* 2 adjacent facets */
-  Vertex** verts;  /* d-1 verts */
-  double size;
-  double* centroid;  /* d-dimensional vector */
-  double* normal1;  /* d-dimensional normal vector */
-  double* normal2;  /* d-dimensional normal vector */
+  Vertex* verts[1];  /* d-1 verts */
 };
 
 struct _tope_Vertex {
