@@ -11,44 +11,6 @@
 
 #define EPS 1.0e-9
 
-typedef struct {
-  int m;
-  int n;
-  double const* A;
-  double const* d;
-} Data;
-
-
-
-void apply_matrix(int stride, double const* z, double* w, void const* pdata)
-{
-  Data const* data = pdata;
-  int m = data->m;
-  int n = data->n;
-  double const* A = data->A;
-  double const* d = data->d;
-  (void)stride;
-
-  /*    0   A     1 */
-  /*   A^T  0     0 */
-  /*    1   0   S^-1 Y */
-  /* */
-  /* z = [y; x; s] */
-  /* w = [A x + s; A^T y; y + S^-1 Y s] */
-
-  /* A x + s: */
-  mat_vecmul(m, n, A, z + m, w);
-  vec_add(m, w, z + m + n);
-
-  /* A^T y: */
-  mat_matmul(1, m, n, z, A, w + m);
-
-  /* y + S^-1 Y s: */
-  for (int i = 0; i < m; ++i) {
-    w[m + n + i] = z[i] + d[i] * z[m + n + i];
-  }
-}
-
 
 
 int linprog(
@@ -63,8 +25,7 @@ int linprog(
   double* y = alloca(m * sizeof(double));        /* dual */
   double* s = alloca(m * sizeof(double));        /* slack */
   double* err = alloca(stride * sizeof(double)); /* error */
-  double* dz = alloca(stride * sizeof(double));  /* step */
-  double* d = alloca(m * sizeof(double));        /* diagonal */
+  double* mat = alloca(stride * stride * sizeof(double));
 
   vec_set(m, y, 1.0);
   vec_set(m, s, 1.0);
@@ -77,6 +38,20 @@ int linprog(
     double nu = 0.1 * vec_dot(m, s, y) / (double)m;
     if (nu < EPS) {
       break;
+    }
+
+    /*    0   A     1    */
+    /*   A^T  0     0    */
+    /*    1   0   S^-1 Y */
+    memset(mat, 0x00, stride * stride * sizeof(double));
+    for (int i = 0; i < m; ++i) {
+      mat[i * stride + m + n + i] = 1.0;
+      mat[(m + n + i) * stride + i] = 1.0;
+      mat[(m + n + i) * stride + m + n + i] = y[i] / s[i];
+      for (int j = 0; j < n; ++j) {
+        mat[i * stride + m + j] = A[i * n + j];
+        mat[(m + j) * stride + i] = A[i * n + j];
+      }
     }
 
     /* A x - b + s: */
@@ -93,40 +68,28 @@ int linprog(
       err[m + n + i] = y[i] - nu / s[i];
     }
 
-    /* S^-1 Y (diagonal): */
-    for (int i = 0; i < m; ++i) {
-      d[i] = y[i] / s[i];
-    }
-
     /* Solve M dz = -err (Newton-Raphson): */
-    Data data = {
-      .m = m,
-      .n = n,
-      .A = A,
-      .d = d,
-    };
-    memset(dz, 0x00, stride * sizeof(double));
-    cr(stride, apply_matrix, err, dz, 1e-9, &data);
-    vec_neg(stride, dz);
+    gauss(stride, mat, err);
+    vec_neg(stride, err);
 
     /* Adjust stepsize to remain feasible (y, s > 0): */
     double step = 1.0;
     for (int i = 0; i < m; ++i) {
-      if (y[i] + step * dz[i] < 0.0) {
-        step = -y[i] / dz[i];
+      if (y[i] + step * err[i] < 0.0) {
+        step = -y[i] / err[i];
       }
-      if (s[i] + step * dz[m + n + i] < 0.0) {
-        step = -s[i] / dz[m + n + i];
+      if (s[i] + step * err[m + n + i] < 0.0) {
+        step = -s[i] / err[m + n + i];
       }
     }
     step *= 0.98;
 
     /* Perform step: */
-    vec_adds(m, y, dz, step);
-    vec_adds(n, x, dz + m, step);
-    vec_adds(m, s, dz + m + n, step);
+    vec_adds(m, y, err, step);
+    vec_adds(n, x, err + m, step);
+    vec_adds(m, s, err + m + n, step);
 
-    if (step * vec_norm(stride, dz) <= EPS) {
+    if (step * vec_norm(stride, err) <= EPS) {
       break;
     }
   }

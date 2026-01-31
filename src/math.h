@@ -52,9 +52,6 @@ double vec_nrmsq(int n, double const* x);
 /** 2-Norm of a vector. */
 double vec_norm(int n, double const* x);
 
-/** normal to orthonormal basis of n d-vectors (n < d). */
-void vec_normal(int n, int d, double const* basis, double* normal);
-
 /** Normalize the vector. */
 void vec_normalize(int n, double* x);
 
@@ -131,18 +128,6 @@ int linprog(
   double* x
 );
 
-
-
 /** Solve A x = b  nonsingular square system (A clobbered, b <- x).
     Return determinant. Gaussian LU eliminiation, partial pivoting. */
 double gauss(int n, double* A, double* b);
-
-/** Conjugate residual method for symmetric matrices. */
-void cr(
-  int n,
-  void (*applymatrix)(int n, double const* x, double* y, void const* data),
-  double const* b,
-  double* x,
-  double tol,
-  void const* data
-);

@@ -91,31 +91,6 @@ double vec_norm(int n, double const* x)
 
 
 
-void vec_normal(int n, int d, double const* basis, double* normal)
-{
-  // Dimensional representations (use 'normal' as temp storage):
-  vec_reset(d, normal);
-  for (int i = 0; i < n; ++i) {
-    for (int j = 0; j < d; ++j) {
-      normal[j] += basis[i * d + j] * basis[i * d + j];
-    }
-  }
-
-  // The most 'underrepresented' dimension gets a one:
-  int minindex = vec_minindex(d, normal);
-  vec_reset(d, normal);
-  normal[minindex] = 1.0;
-
-  // Gram-Schmidt / orthonormalization:
-  for (int i = 0; i < n; ++i) {
-    double ip = vec_dot(d, basis + i * d, normal);
-    vec_adds(d, normal, basis + i * d, -ip);
-  }
-  vec_normalize(d, normal);
-}
-
-
-
 void vec_adds(int n, double* x, double const* y, double scale)
 {
   while (n--) {
@@ -438,7 +413,7 @@ double gauss(int n, double* A, double* b)
 
     /* Guard singular: */
     if (A[i * n + i] == 0.0) {
-      memset(b + i, 0, (n - i) * sizeof(double));
+      memset(b + i, 0x00, (n - i) * sizeof(double));
       break;
     }
 
@@ -456,78 +431,4 @@ double gauss(int n, double* A, double* b)
   }
 
   return det;
-}
-
-
-
-void cr(
-  int n,
-  void (*applymatrix)(int n, double const* x, double* y, void const* data),
-  double const* b,
-  double* x,
-  double tol,
-  void const* data
-)
-{
-  /* Allocations: */
-  double* r = alloca(n * sizeof(double));
-  double* p = alloca(n * sizeof(double));
-  double* ap = alloca(n * sizeof(double));
-  double* ar = alloca(n * sizeof(double));
-
-  /* Initialization: */
-  double oldrar = HUGE_VAL;
-  int niter = 0;
-  vec_reset(n, p);
-  vec_reset(n, ap);
-
-  /* Initial residual: r = b - A x: */
-  applymatrix(n, x, r, data);
-  vec_neg(n, r);
-  vec_add(n, r, b);
-
-  while (true) {
-    ++niter;
-
-    /* A r: */
-    applymatrix(n, r, ar, data);
-
-    /* r' A r: */
-    double rar = vec_dot(n, r, ar);
-    if (fabs(rar) < tol * tol) {
-      break;
-    }
-
-    /* p = r + beta p: */
-    double beta = rar / oldrar;
-    vec_scale(n, p, beta);
-    vec_add(n, p, r);
-
-    /* Save rar: */
-    oldrar = rar;
-
-    /* A p: */
-    vec_scale(n, ap, beta);
-    vec_add(n, ap, ar);
-
-    /* p' A' A p: */
-    double paap = vec_nrmsq(n, ap);
-    if (paap == 0) {
-      break;
-    }
-
-    /* alfa = (r' A r) / (p' A' A p): */
-    double alfa = rar / paap;
-    if (fabs(alfa) * vec_norm(n, p) < tol * vec_norm(n, x)) {
-      break;
-    }
-
-    /* Take step (update solution and residual): */
-    vec_adds(n, x, p, alfa);   /* x <-- x + alfa * p */
-    vec_adds(n, r, ap, -alfa); /* r <-- r - alfa * A * p */
-  }
-
-#ifndef NDEBUG
-  printf("cr: niter = %d\n", niter);
-#endif
 }
