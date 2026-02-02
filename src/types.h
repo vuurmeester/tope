@@ -32,7 +32,6 @@ struct _Tope {
   int nridges;  /* ridge count */
   int nverts;  /* vertex count */
   int maxindex;  /* max vertex index */
-  HashMap newridges;  /* used to keep track of new ridges */
 };
 
 struct _tope_Facet {

@@ -356,7 +356,8 @@ static void initialsimplex(Tope* tope, int npoints, Point* points)
     sverts[i] = vertex_create(tope, points[i].pos, points[i].index);
   }
 
-  hashmap_clear(&tope->newridges);
+  HashMap newridges;
+  hashmap_init(&newridges);
 
   Vertex** fverts = alloca(d * sizeof(Vertex*));
   Vertex** rverts = alloca((d - 1) * sizeof(Vertex*));
@@ -387,7 +388,7 @@ static void initialsimplex(Tope* tope, int npoints, Point* points)
       }
       assert(nrv == d - 1);
 
-      Ridge** pridge = hashmap_get(&tope->newridges, nrv, rverts);
+      Ridge** pridge = hashmap_get(&newridges, nrv, rverts);
       if (*pridge == NULL) {
         /* New ridge: */
         *pridge = ridge_create(tope, rverts);
@@ -398,6 +399,8 @@ static void initialsimplex(Tope* tope, int npoints, Point* points)
     /* Vertex array filled, compute and integrate the facet: */
     facet_create(tope, fverts, rli);
   }
+
+  hashmap_destroy(&newridges);
 
   /* Create outside sets (assign each remaining point to a facet it 'sees'): */
   for (int i = tope->dim + 1; i < npoints; ++i) {
@@ -505,8 +508,9 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
   /* Add apex vertex to tope: */
   Vertex* vertex = vertex_create(tope, apex->pos, apex->index);
 
-  /* Clear new ridges hashmap: */
-  hashmap_clear(&tope->newridges);
+  /* New ridges hashmap: */
+  HashMap newridges;
+  hashmap_init(&newridges);
 
   Vertex** fverts = alloca(d * sizeof(Vertex*));
   Vertex** rverts = alloca((d - 1) * sizeof(Vertex*));
@@ -532,7 +536,7 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
         }
         rverts[nrv++] = fverts[k];
       }
-      Ridge** pridge = hashmap_get(&tope->newridges, d - 1, rverts);
+      Ridge** pridge = hashmap_get(&newridges, d - 1, rverts);
       if (*pridge == NULL) {
         *pridge = ridge_create(tope, rverts);
       }
@@ -542,6 +546,8 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
     Facet* facet = facet_create(tope, fverts, rli);
     list_prepend(&newfacets, facet, alc);
   }  // end loop over horizonridges
+
+  hashmap_destroy(&newridges);
 
   /* Assign outside verts: */
   while (outsidepoints) {
@@ -600,7 +606,6 @@ static Tope* tope_new()
 {
   Tope* tope = calloc(1, sizeof(Tope));
   allocator_init(&tope->alc);
-  hashmap_init(&tope->newridges);
   return tope;
 }
 
@@ -615,7 +620,6 @@ void tope_delete(Tope* tope)
     tope->firstfacet = next;
   }
 #endif
-  hashmap_destroy(&tope->newridges);
   allocator_destroy(&tope->alc);
   free(tope->center);
   free(tope->scales);
