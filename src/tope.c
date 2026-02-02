@@ -109,11 +109,13 @@ static void ridge_remove(Tope* tope, Ridge* ridge)
 
 
 /* Create and initialize a simplicial facet with d vertices: */
-static Facet* facet_create(Tope* tope, Vertex** fverts)
+static Facet* facet_create(Tope* tope, Vertex** fverts, List* rli)
 {
   ++tope->nfacets;
   Allocator* alc = &tope->alc;
   int d = tope->dim;
+
+  assert(list_len(rli) == d);
 
   Facet* facet    = allocator_alloc(alc,     sizeof(Facet ));
   facet->centroid = allocator_alloc(alc, d * sizeof(double));
@@ -130,38 +132,22 @@ static Facet* facet_create(Tope* tope, Vertex** fverts)
   tope->lastfacet = facet;
   facet->next = NULL;
 
-    /* Add d ridges: */
-  Vertex** ridgeverts = alloca((d - 1) * sizeof(Vertex*));
-  for (int i = 0; i < d; ++i) {
-    /* Set d - 1 ridge verts: */
-    int nverts = 0;
-    for (int j = 0; j < d; ++j) {
-      if (j == i) {
-        continue;
-      }
-      ridgeverts[nverts++] = fverts[j];
-    }
-    assert(nverts == d - 1);
-
-    Ridge** pridge = hashmap_get(&tope->newridges, nverts, ridgeverts);
-    if (*pridge == NULL) {
-      /* New ridge: */
-      *pridge = ridge_create(tope, ridgeverts);
-    }
-    list_append(&facet->ridges, *pridge, alc);
-    
+  /* Add d ridges: */
+  facet->ridges = rli;
+  for (; rli; rli = rli->next) {
     /* Remember facet. */
-    if ((*pridge)->facets[0] == NULL) {
-      assert((*pridge)->facets[0] == NULL);
-      (*pridge)->facets[0] = facet;
+    Ridge* ridge = rli->val;
+    if (ridge->facets[0] == NULL) {
+      assert(ridge->facets[0] == NULL);
+      ridge->facets[0] = facet;
     }
     else {
-      assert((*pridge)->facets[1] == NULL);
-      (*pridge)->facets[1] = facet;
+      assert(ridge->facets[1] == NULL);
+      ridge->facets[1] = facet;
     }
   }
 
-  /* Ridge centroids: */
+  /* Vertex coordinates: */
   double* basis = alloca(d * d * sizeof(double));
   for (int i = 0; i < d; ++i) {
     memcpy(basis + i * d, fverts[i]->position, d * sizeof(double));
@@ -364,28 +350,53 @@ static void initialsimplex(Tope* tope, int npoints, Point* points)
   }
   vec_scale(d, tope->center, 1.0 / (double)(tope->dim + 1));
 
-  /* Create initial simplex vertices: */
-  Vertex** vertices = alloca((d + 1) * sizeof(Vertex*));
+  /* Simplex vertices: */
+  Vertex** sverts = alloca((d + 1) * sizeof(Vertex*));
   for (int i = 0; i < d + 1; ++i) {
-    vertices[i] = vertex_create(tope, points[i].pos, points[i].index);
+    sverts[i] = vertex_create(tope, points[i].pos, points[i].index);
   }
 
   hashmap_clear(&tope->newridges);
 
   Vertex** fverts = alloca(d * sizeof(Vertex*));
+  Vertex** rverts = alloca((d - 1) * sizeof(Vertex*));
 
   /* Create facets: */
   for (int i = 0; i < d + 1; ++i) {
-    int nverts = 0;
+    /* Facet vertices: */
+    int nfv = 0;
     for (int j = 0; j < d + 1; ++j) {
       if (j == i) {
         continue;
       }
-      fverts[nverts++] = vertices[j];
+      fverts[nfv++] = sverts[j];
+    }
+    assert(nfv == d);
+
+    /* Create ridges: */
+    List* rli = NULL;
+    List** prli = &rli;
+    for (int j = 0; j < d; ++j) {
+      /* Set d - 1 ridge verts: */
+      int nrv = 0;
+      for (int k = 0; k < d; ++k) {
+        if (k == j) {
+          continue;
+        }
+        rverts[nrv++] = fverts[k];
+      }
+      assert(nrv == d - 1);
+
+      Ridge** pridge = hashmap_get(&tope->newridges, nrv, rverts);
+      if (*pridge == NULL) {
+        /* New ridge: */
+        *pridge = ridge_create(tope, rverts);
+      }
+      prli = list_append(prli, *pridge, alc);
     }
 
     /* Vertex array filled, compute and integrate the facet: */
-    facet_create(tope, fverts);
+    facet_create(tope, fverts, rli);
   }
 
   /* Create outside sets (assign each remaining point to a facet it 'sees'): */
@@ -498,21 +509,37 @@ static void addpoint(Tope* tope, Facet* facet, Point* apex)
   hashmap_clear(&tope->newridges);
 
   Vertex** fverts = alloca(d * sizeof(Vertex*));
+  Vertex** rverts = alloca((d - 1) * sizeof(Vertex*));
 
   /* Form new facets: */
   while (horizonridges) {
 
     /* Pop horizon ridge: */
     Ridge* horizonridge = list_pop(&horizonridges, alc);
-    Ridge** pridge = hashmap_get(&tope->newridges, d - 1, horizonridge->verts);
-    assert(*pridge == NULL);
-    *pridge = horizonridge;
 
     fverts[0] = vertex;
     for (int i = 1; i < d; ++i) {
       fverts[i] = horizonridge->verts[i - 1];
     }
-    Facet* facet = facet_create(tope, fverts);
+    
+    List* rli = NULL;
+    List** prli = list_append(&rli, horizonridge, alc);
+    for (int j = 1; j < d; ++j) {
+      int nrv = 0;
+      for (int k = 0; k < d; ++k) {
+        if (k == j) {
+          continue;
+        }
+        rverts[nrv++] = fverts[k];
+      }
+      Ridge** pridge = hashmap_get(&tope->newridges, d - 1, rverts);
+      if (*pridge == NULL) {
+        *pridge = ridge_create(tope, rverts);
+      }
+      prli = list_append(prli, *pridge, alc);
+    }
+
+    Facet* facet = facet_create(tope, fverts, rli);
     list_prepend(&newfacets, facet, alc);
   }  // end loop over horizonridges
 
@@ -1146,8 +1173,6 @@ void tope_merge(Tope* tope)
           // Pop value:
           List* nrli = neighbour->ridges;
           neighbour->ridges = neighbour->ridges->next;
-
-          // Ridge:
           Ridge* nridge = nrli->val;
 
           // If ridge is dividing ridge, remove reference:

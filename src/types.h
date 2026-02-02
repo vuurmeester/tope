@@ -45,12 +45,11 @@ struct _tope_Facet {
   double* centroid;
   double* normal;
   List* ridges;  /* ridge list */
-  List* verts;  /* vertex list */
 };
 
 struct _Ridge {
   Facet* facets[2];  /* 2 adjacent facets */
-  Vertex* verts[1];  /* d-1 verts */
+  Vertex* verts[1];  /* d - 1 verts */
 };
 
 struct _tope_Vertex {
@@ -63,6 +62,6 @@ struct _Point {
   Point* next;
 
   int index;
-  double height;  /* height above facet which contains this point in 'outsidepoints' */
+  double height;  /* height above facet */
   double* pos;  /* d-vector */
 };

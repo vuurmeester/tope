@@ -49,8 +49,8 @@ int linprog(
       mat[(m + n + i) * stride + i] = 1.0;
       mat[(m + n + i) * stride + m + n + i] = y[i] / s[i];
       for (int j = 0; j < n; ++j) {
-        mat[i * stride + m + j] = A[i * n + j];
-        mat[(m + j) * stride + i] = A[i * n + j];
+        mat[i       * stride + m + j] = A[i * n + j];
+        mat[(m + j) * stride + i    ] = A[i * n + j];
       }
     }
 
