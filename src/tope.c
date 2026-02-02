@@ -356,9 +356,8 @@ static void initialsimplex(Tope* tope, int npoints, Point* points)
     sverts[i] = vertex_create(tope, points[i].pos, points[i].index);
   }
 
-  HashMap newridges;
-  hashmap_init(&newridges);
-
+  int nridges = 0;
+  Ridge** newridges = alloca(d * (d + 1) / 2 * sizeof(Ridge*));
   Vertex** fverts = alloca(d * sizeof(Vertex*));
   Vertex** rverts = alloca((d - 1) * sizeof(Vertex*));
 
@@ -388,19 +387,25 @@ static void initialsimplex(Tope* tope, int npoints, Point* points)
       }
       assert(nrv == d - 1);
 
-      Ridge** pridge = hashmap_get(&newridges, nrv, rverts);
-      if (*pridge == NULL) {
-        /* New ridge: */
-        *pridge = ridge_create(tope, rverts);
+      Ridge* ridge = NULL;
+      for (int iridge = 0; iridge < nridges; ++iridge) {
+        if (memcmp(rverts, newridges[iridge]->verts, (d - 1) * sizeof(Vertex*)) == 0) {
+          ridge = newridges[iridge];
+          break;
+        }
       }
-      prli = list_append(prli, *pridge, alc);
+      if (ridge == NULL) {
+        /* New ridge: */
+        assert(nridges < d * (d + 1) / 2);
+        ridge = ridge_create(tope, rverts);
+        newridges[nridges++] = ridge;
+      }
+      prli = list_append(prli, ridge, alc);
     }
 
     /* Vertex array filled, compute and integrate the facet: */
     facet_create(tope, fverts, rli);
   }
-
-  hashmap_destroy(&newridges);
 
   /* Create outside sets (assign each remaining point to a facet it 'sees'): */
   for (int i = tope->dim + 1; i < npoints; ++i) {
