@@ -674,13 +674,11 @@ Tope* tope_fromplanes(
     vec_scale(d, points + ifacet * d, 1.0 / dist);
     vec_add(d, points + ifacet * d, xc);
   }
+  tope_delete(rectope);
 
   Tope* tope = tope_frompoints(nfacets, d, points);
   free(points);
   tope_merge(tope);
-
-  /* Clean up: */
-  tope_delete(rectope);
 
   return tope;
 }
@@ -987,7 +985,7 @@ void tope_interpolate(
         memcpy(basis + i * d, ridge->verts[i]->position, d * sizeof(double));
       }
 
-      double size;
+      double size = 0.0;
       analyzesimplex(d, d, basis, &size, centroid);
 
       /* Construct normal: */
@@ -1104,12 +1102,12 @@ double tope_facet_getsize(Tope* tope, Facet* facet)
   }
 
   /* Determinant of S: */
-  double prod = 1.0;
+  double det = 1.0;
   for (int i = 0; i < d; ++i) {
-    prod *= s[i];
+    det *= s[i];
   }
 
-  size *= prod * sqrt(scale);
+  size *= det * sqrt(scale);
 
   return size;
 }
